@@ -23,7 +23,7 @@ jobs:
           repository: Courseplay/Courseplay_FS22
           path: Courseplay_FS22
       - name: Setup Lua
-        uses: xpol/setup-lua@v1
+        uses: xpol/setup-lua@v0.3
       - name: Run unit tests
         run: |
           cd CourseGenerator/test
