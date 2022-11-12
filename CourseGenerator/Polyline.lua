@@ -1,0 +1,125 @@
+local Polyline = CpObject()
+
+---@param vertices cg.Vector
+function Polyline:init(vertices)
+    if vertices then
+        for i, v in ipairs(vertices) do
+            self[i] = v:clone()
+        end
+    end
+end
+
+---@param vertex cg.Vector
+function Polyline:append(vertex)
+    table.insert(self, vertex)
+end
+
+--- Get the center of the polyline (centroid, average of all vertices)
+function Polyline:getCenter()
+    local center = cg.Vector(0, 0)
+    for _, v in ipairs(self) do
+        center = center + v
+    end
+    return center / #self
+end
+
+--- Get the bounding box
+function Polyline:getBoundingBox()
+    local xMin, xMax, yMin, yMax = math.huge, -math.huge, math.huge, -math.huge
+    for _, v in ipairs(self) do
+        xMin = math.min(xMin, v.x)
+        yMin = math.min(yMin, v.y)
+        xMax = math.max(xMax, v.x)
+        yMax = math.max(yMax, v.y)
+    end
+    return xMin, yMin, xMax, yMax
+end
+
+function Polyline:calculateEdges()
+    local edges = {}
+    for _, e in self:edges() do
+        table.insert(edges, e)
+    end
+    return edges
+end
+
+--- vertex iterator
+function Polyline:vertices()
+    local i = 0
+    return function()
+        i = i + 1
+        if i > #self then
+            return nil, nil
+        else
+            return i, self[i]
+        end
+    end
+end
+
+--- edge iterator
+---@return number, cg.LineSegment
+function Polyline:edges()
+    local i = 1
+    return function()
+        i = i + 1
+        if i > #self then
+            return nil, nil
+        else
+            return i, cg.LineSegment.fromVectors(self[i - 1], self[i])
+        end
+    end
+end
+
+---@param offsetVector cg.Vector offset to move the edges, relative to the edge's direction
+---@return cg.LineSegment[] an array of edges parallel to the existing ones, same length
+--- but offset by offsetVector
+function Polyline:generateOffsetEdges(offsetVector)
+    local offsetEdges = {}
+    for _, e in self:edges() do
+        local newOffsetEdge = e:clone()
+        newOffsetEdge:offset(offsetVector.x, offsetVector.y)
+        table.insert(offsetEdges, newOffsetEdge)
+    end
+    return offsetEdges
+end
+
+function Polyline:cleanEdges(edges, minEdgeLength, preserveCorners)
+    local cleanEdges = {edges[1]}
+    for i = 2, #edges do
+        local previousEdge = cleanEdges[#cleanEdges]
+        local currentEdge = edges[i]
+        local gapFiller = cg.LineSegment.connect(previousEdge, currentEdge, minEdgeLength, preserveCorners)
+        if gapFiller then
+            table.insert(cleanEdges, gapFiller)
+        end
+        table.insert(cleanEdges, currentEdge)
+        previousEdge = currentEdge
+    end
+    return cleanEdges
+end
+
+--- Generate a polyline parallel to this one, offset by the offsetVector
+---@param offsetVector cg.Vector offset to move the edges, relative to the edge's direction
+---@param minEdgeLength number see LineSegment.connect()
+---@param preserveCorners number see LineSegment.connect()
+function Polyline:createOffset(offsetVector, minEdgeLength, preserveCorners)
+    local offsetEdges = self:generateOffsetEdges(offsetVector)
+    local cleanOffsetEdges = self:cleanEdges(offsetEdges, minEdgeLength, preserveCorners)
+    local offsetPolyline = cg.Polyline()
+    for _, e in ipairs(cleanOffsetEdges) do
+        offsetPolyline:append(e:getBase())
+    end
+    offsetPolyline:append(cleanOffsetEdges[#cleanOffsetEdges]:getEnd())
+    return offsetPolyline
+end
+
+function Polyline:__tostring()
+    local result = ''
+    for i, v in ipairs(self) do
+        result = result .. string.format('%d %s\n', i, v)
+    end
+    return result
+end
+
+---@class cg.Polyline
+cg.Polyline = Polyline
