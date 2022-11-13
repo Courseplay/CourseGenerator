@@ -17,6 +17,7 @@ jobs:
     steps:
       - name: Checkout this repository
         uses: actions/checkout@v3
+        # we need some base classes from the Courseplay repo
       - name: Checkout Courseplay repository
         uses: actions/checkout@v3
         with:

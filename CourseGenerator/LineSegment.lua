@@ -50,6 +50,15 @@ function LineSegment:setEnd(v)
     self.slope = v - self.base
 end
 
+--- Get the heading of the line segment in radians
+function LineSegment:getHeading()
+    return self.slope:getHeading()
+end
+
+function LineSegment:getLength()
+    return self.slope:length()
+end
+
 --- Move the segment in the direction of the offset vector
 ---@param dx number x offset relative to the segment, 1 is forward one unit, -1 back, etc.
 ---@param dy number y offset relative to the segment, 1 is left one unit, -1 right, etc.

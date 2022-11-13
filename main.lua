@@ -11,9 +11,16 @@ local showWidth = false
 local currentWaypointIndex = 1
 local offset = 0
 
+local workingWidth = AdjustableParameter(6, 'W', 'w', 0.2, 0, 100)
+
 ---@type cg.Field
 local field
 local savedFields
+local headland
+
+local function generate()
+    headland = cg.Headland(field:getBoundary(), workingWidth:get())
+end
 
 function love.load(arg)
     local fileName = arg[1]
@@ -36,7 +43,6 @@ function love.load(arg)
         scale = 0.9 * xScale
         pointSize = 0.9 * xScale
     end
-
     local fieldCenter = field:getCenter()
     -- translate into the middle of the window and remember, the window size is not scaled so must
     -- divide by scale
@@ -48,6 +54,7 @@ function love.load(arg)
     love.graphics.setLineWidth(lineWidth)
     love.window.setMode(windowWidth, windowHeight)
     love.window.setTitle(string.format('Course Generator - %s - Field %d', fileName, field:getId()))
+    generate()
 end
 
 local function love2real(x, y)
@@ -70,19 +77,26 @@ local function drawField()
     love.graphics.polygon('line', field:getUnpackedVertices())
 end
 
+local function drawHeadland()
+    love.graphics.setLineWidth(lineWidth)
+    love.graphics.setColor(0, 100, 0)
+    love.graphics.polygon('line', headland:getUnpackedVertices())
+    love.graphics.points(headland:getUnpackedVertices())
+end
+
 function love.draw()
     love.graphics.scale(scale, -scale)
     love.graphics.translate(xOffset, yOffset)
     love.graphics.setPointSize(pointSize)
     drawField(field)
+    drawHeadland(field)
 end
 
 ------------------------------------------------------------------------------------------------------------------------
 --- Input
 ---------------------------------------------------------------------------------------------------------------------------
 function love.textinput(key)
-
-
+    workingWidth:onKey(key, generate)
 end
 
 ------------------------------------------------------------------------------------------------------------------------

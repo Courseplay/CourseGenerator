@@ -43,6 +43,15 @@ function Polyline:calculateEdges()
     return edges
 end
 
+function Polyline:getUnpackedVertices()
+    local unpackedVertices = {}
+    for _, v in ipairs(self) do
+        table.insert(unpackedVertices, v.x)
+        table.insert(unpackedVertices, v.y)
+    end
+    return unpackedVertices
+end
+
 --- vertex iterator
 function Polyline:vertices()
     local i = 0
@@ -70,6 +79,26 @@ function Polyline:edges()
     end
 end
 
+function Polyline:getShortestEdge()
+    local shortest = math.huge
+    for _, e in self:edges() do
+        shortest = math.min(shortest, e:getLength())
+    end
+    return shortest
+end
+
+--- If two vertices are closer than minimumLength, replace them with
+function Polyline:ensureMinimumEdgeLength(minimumLength)
+    local i = 1
+    while i < #self do
+        if (self[i + 1] - self[i]):length() < minimumLength then
+            table.remove(self, i + 1)
+        else
+            i = i + 1
+        end
+    end
+end
+
 ---@param offsetVector cg.Vector offset to move the edges, relative to the edge's direction
 ---@return cg.LineSegment[] an array of edges parallel to the existing ones, same length
 --- but offset by offsetVector
@@ -83,6 +112,9 @@ function Polyline:generateOffsetEdges(offsetVector)
     return offsetEdges
 end
 
+--- Make sure the edges are properly connected, their ends touch nicely without gaps and never
+--- extend beyond the vertex
+---@param edges cg.LineSegment[]
 function Polyline:cleanEdges(edges, minEdgeLength, preserveCorners)
     local cleanEdges = {edges[1]}
     for i = 2, #edges do

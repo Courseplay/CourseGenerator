@@ -62,11 +62,7 @@ end
 --- Vertices with coordinates unpacked, to draw with love.graphics.polygon
 function Field:getUnpackedVertices()
 	if not self.unpackedVertices then
-		self.unpackedVertices = {}
-		for _, v in ipairs(self.boundary) do
-			table.insert(self.unpackedVertices, v.x)
-			table.insert(self.unpackedVertices, v.y)
-		end
+		self.unpackedVertices = self.boundary:getUnpackedVertices()
 	end
 	return self.unpackedVertices
 end
