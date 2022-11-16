@@ -18,6 +18,10 @@ function Headland:init(basePolygon, width)
     self.polygon = self:generate(basePolygon, width, 0)
 end
 
+function Headland:getPolygon()
+    return self.polygon
+end
+
 --- Vertices with coordinates unpacked, to draw with love.graphics.polygon
 function Headland:getUnpackedVertices()
     if not self.unpackedVertices then

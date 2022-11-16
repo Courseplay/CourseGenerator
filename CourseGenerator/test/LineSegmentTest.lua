@@ -78,3 +78,29 @@ c = cg.LineSegment.connect(a, b, 10, false)
 lu.assertIsNil(c)
 a:assertAlmostEquals(cg.LineSegment(0, 0, 0.5, 1.5))
 b:assertAlmostEquals(cg.LineSegment(0.5, 1.5, 3, 2))
+
+-- Radius
+
+-- epsilon for assertAlmostEquals
+lu.EPS = 0.01
+
+-- parallel
+lu.assertEquals(cg.LineSegment(0, 0, 5, 0):getRadiusTo(cg.LineSegment(10, 0, 10, 0)), math.huge)
+lu.assertEquals(cg.LineSegment(0, 0, 5, 0):getRadiusTo(cg.LineSegment(0, 2, 5, 2)), math.huge)
+-- invalid cases
+lu.assertAlmostEquals(cg.LineSegment(0, 0, 5, 0):getRadiusTo(cg.LineSegment(10, 0, 15, 1)), 0)
+lu.assertAlmostEquals(cg.LineSegment(10, 0, 15, 1):getRadiusTo(cg.LineSegment(0, 0, 5, 0)), 0)
+lu.assertAlmostEquals(cg.LineSegment(0, 0, 5, 0):getRadiusTo(cg.LineSegment(10, 1, 15, 0)), 0)
+-- almost parallel
+lu.assertAlmostEquals(cg.LineSegment(0, 0, 5, 0):getRadiusTo(cg.LineSegment(10, 0.1, 15, 0.2)), 500.05)
+
+-- small angle
+lu.assertAlmostEquals(cg.LineSegment(0, 0, 5, 0):getRadiusTo(cg.LineSegment(10, 1, 0, 2)), 0.5)
+
+-- 90 degrees
+lu.assertAlmostEquals(cg.LineSegment(0, 0, 5, 0):getRadiusTo(cg.LineSegment(10, 5, 10, 10)), 5)
+lu.assertAlmostEquals(cg.LineSegment(10, 10, 10, 5):getRadiusTo(cg.LineSegment(5, 0, 0, 0)), 5)
+
+-- ~45 degrees
+lu.assertAlmostEquals(cg.LineSegment(0, 0, 5, 0):getRadiusTo(cg.LineSegment(15, 5, 20, 10)), 17.07)
+lu.assertAlmostEquals(cg.LineSegment(0, 0, 5, 0):getRadiusTo(cg.LineSegment(15, -5, 20, -10)), 17.07)

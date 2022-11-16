@@ -9,5 +9,6 @@ dofile('CourseGenerator/Polyline.lua')
 dofile('CourseGenerator/Polygon.lua')
 dofile('CourseGenerator/Field.lua')
 dofile('CourseGenerator/Headland.lua')
+dofile('CourseGenerator/FieldworkCourse.lua')
 
 dofile('AdjustableParameter.lua')

@@ -12,3 +12,5 @@ lu.assertAlmostEquals(x1, 307.15, 0.1)
 lu.assertAlmostEquals(y1, -80.84, 0.1)
 lu.assertAlmostEquals(x2, 452.84, 0.1)
 lu.assertAlmostEquals(y2, 157.33, 0.1)
+
+field:getBoundary():ensureMinimumRadius(5)

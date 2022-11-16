@@ -52,12 +52,25 @@ end
 
 --- Get the heading of the line segment in radians
 function LineSegment:getHeading()
-    return self.slope:getHeading()
+    return self.slope:heading()
 end
 
+---@return number
 function LineSegment:getLength()
     return self.slope:length()
 end
+
+---@return State3D
+function LineSegment:getBaseAsState3D()
+    return State3D(self.base.x, self.base.y, self:getHeading())
+end
+
+---@return State3D
+function LineSegment:getEndAsState3D()
+    local e = self:getEnd()
+    return State3D(e.x, e.y, self:getHeading())
+end
+
 
 --- Move the segment in the direction of the offset vector
 ---@param dx number x offset relative to the segment, 1 is forward one unit, -1 back, etc.
@@ -184,6 +197,33 @@ function LineSegment.connect(first, second, minLength, preserveCorners)
         end
     end
 end
+
+--- Get the theoretical turn radius to get to 'to', where we start at our end point in our direction
+--- and end up at the base of 'other', pointing to other's direction
+--- In other words, get the radius of a circle where self and other are both tangents
+---@param other cg.LineSegment
+---@return number radius to reach other, 0 if can't be found
+function LineSegment:getRadiusTo(other)
+    -- rebase entry point on my end, pointing to the same direction
+    local entry = self:clone()
+    entry:setBase(entry:getEnd())
+    local dA = cg.Math.getDeltaAngle(other:getHeading(), entry:getHeading())
+    local s, t = self:calculateIntersectionParameters(other)
+    -- they are parallel
+    if not s then return math.huge end
+    if t > 0 and s < 0 then
+        -- intersection in front of entry and behind other
+        local dFrom = t * self:getLength()
+        local dTo = -s * other:getLength()
+        local r = math.abs( math.min(dFrom, dTo) / math.tan(dA / 2))
+        return r
+    else
+        -- if t or s 0, the intersection point is on my end or other's base
+        -- all other cases are invalid, as the intersection must be in front of me and behind other.
+        return 0
+    end
+end
+
 
 ---@class cg.LineSegment
 cg.LineSegment = LineSegment

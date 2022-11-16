@@ -1,5 +1,19 @@
 local Polygon = CpObject(cg.Polyline)
 
+
+Polygon.__index = function(t, k)
+    if type(k) == "number" then
+        if k > 0 and k <= #self then
+            return self[k]
+        else
+            return nil
+        end
+    else
+        return Polyline[ k ]
+    end
+end
+
+
 --- edge iterator, will wrap through the end to close the polygon
 ---@return number, cg.LineSegment
 function Polygon:edges()

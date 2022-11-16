@@ -79,12 +79,43 @@ function Polyline:edges()
     end
 end
 
+function Polyline:vertexPairs(n, overlap)
+    local i = 0
+    return function()
+        i = i + 1
+        if i > #self then
+            return nil, nil
+        else
+            return i, self[i], self[i + 1]
+        end
+    end
+end
+
+function Polyline:vertexTriplets(n, overlap)
+    local i = 0
+    return function()
+        i = i + 1
+        if i > #self then
+            return nil, nil
+        else
+            return i, self[i], self[i + 1], self[i + 2]
+        end
+    end
+end
+
+
 function Polyline:getShortestEdge()
     local shortest = math.huge
     for _, e in self:edges() do
         shortest = math.min(shortest, e:getLength())
     end
     return shortest
+end
+
+function Polyline:calculateProperties()
+    for i = 1, #self do
+        self[i]:calculateProperties(self[i - 1], self[i + 1])
+    end
 end
 
 --- If two vertices are closer than minimumLength, replace them with
@@ -116,7 +147,7 @@ end
 --- extend beyond the vertex
 ---@param edges cg.LineSegment[]
 function Polyline:cleanEdges(edges, minEdgeLength, preserveCorners)
-    local cleanEdges = {edges[1]}
+    local cleanEdges = { edges[1] }
     for i = 2, #edges do
         local previousEdge = cleanEdges[#cleanEdges]
         local currentEdge = edges[i]
@@ -143,6 +174,32 @@ function Polyline:createOffset(offsetVector, minEdgeLength, preserveCorners)
     end
     offsetPolyline:append(cleanOffsetEdges[#cleanOffsetEdges]:getEnd())
     return offsetPolyline
+end
+
+function Polyline:ensureMinimumRadius(r)
+    local dubins = DubinsSolver()
+    local edges = {}
+    for _, e in self:edges() do
+        table.insert(edges, e)
+    end
+    local i = 2
+    local j = i + 1
+    while i < #edges do
+        print(edges[i - 1]:getRadiusTo(edges[i + 1]))
+        local entry = edges[i]:getBase()
+        local entryHeading = edges[i - 1]:getHeading()
+        local exit = edges[i]:getEnd()
+        local exitHeading = edges[i + 1]:getHeading()
+        local dA = cg.Math.getDeltaAngle(exitHeading, entryHeading)
+        entry = State3D(entry.x, entry.y, entryHeading - dA / 4)
+        exit = State3D(exit.x, exit.y, exitHeading + dA / 4)
+        local rightTurn = dA >= 0
+        local solution, code = dubins:solve(entry, exit, r, true)
+        local l, l1, l2, l3 = solution:getLength(r)
+        --print(i, code, l1, l2, l3 , edges[i], dA, rightTurn, entry, exit)
+        i = i + 1
+        j = j + 1
+    end
 end
 
 function Polyline:__tostring()

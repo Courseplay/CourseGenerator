@@ -1,3 +1,14 @@
+--
+-- Graphical test tool for the Fieldwork Course Generator
+--
+-- Usage:
+--   love.exe . <field definitions file> <field number>
+--
+-- where 'field definitions file' is an XML file that can be created from the
+-- Farming Simulator game console command cpSaveAllFields. The file will contain
+-- the boundaries of all owned fields of the current map, including field islands.
+--
+--
 dofile('include.lua')
 
 local dragging = false
@@ -11,15 +22,23 @@ local showWidth = false
 local currentWaypointIndex = 1
 local offset = 0
 
+-- number of headland passes
+local nHeadlandPasses = AdjustableParameter(3, 'P', 'p', 1, 0, 100)
+-- working width of the equipment
 local workingWidth = AdjustableParameter(6, 'W', 'w', 0.2, 0, 100)
 
+-- the field to generate the course for
 ---@type cg.Field
 local field
+-- the generated fieldwork course
+---@type cg.FieldworkCourse
+local course
 local savedFields
 local headland
 
 local function generate()
-    headland = cg.Headland(field:getBoundary(), workingWidth:get())
+    course = cg.FieldworkCourse(field, workingWidth:get())
+    course:generateHeadlands(nHeadlandPasses:get())
 end
 
 function love.load(arg)
@@ -80,8 +99,10 @@ end
 local function drawHeadland()
     love.graphics.setLineWidth(lineWidth)
     love.graphics.setColor(0, 100, 0)
-    love.graphics.polygon('line', headland:getUnpackedVertices())
-    love.graphics.points(headland:getUnpackedVertices())
+    for _, h in ipairs(course:getHeadlands()) do
+        love.graphics.polygon('line', h:getUnpackedVertices())
+        love.graphics.points(h:getUnpackedVertices())
+    end
 end
 
 function love.draw()
@@ -97,6 +118,7 @@ end
 ---------------------------------------------------------------------------------------------------------------------------
 function love.textinput(key)
     workingWidth:onKey(key, generate)
+    nHeadlandPasses:onKey(key, generate)
 end
 
 ------------------------------------------------------------------------------------------------------------------------
