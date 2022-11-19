@@ -16,6 +16,8 @@ function Headland:init(basePolygon, width)
     end
     self.recursionCount = 0
     self.polygon = self:generate(basePolygon, width, 0)
+    self.polygon:calculateProperties()
+    self.polygon:ensureMinimumRadius(5)
 end
 
 function Headland:getPolygon()

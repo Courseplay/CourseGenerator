@@ -45,3 +45,9 @@ p[1]:assertAlmostEquals(cg.Vector(0, 0))
 p[2]:assertAlmostEquals(cg.Vector(0, 5))
 p[3]:assertAlmostEquals(cg.Vector(5, 5))
 p[4]:assertAlmostEquals(cg.Vector(5, 0))
+
+-- wrap around
+p:calculateProperties()
+p[1]:getEntryEdge():assertAlmostEquals(cg.LineSegment(5, 0, 0, 0))
+p[1]:getExitEdge():assertAlmostEquals(cg.LineSegment(0, 0, 0, 5))
+p[4]:getExitEdge():assertAlmostEquals(cg.LineSegment(5, 0, 0, 0))

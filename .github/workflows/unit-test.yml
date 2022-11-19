@@ -30,6 +30,7 @@ jobs:
           cd CourseGenerator/test
           lua LineSegmentTest.lua
           lua VertexTest.lua
+          lua SliderTest.lua
           lua TransformTest.lua
           lua PolylineTest.lua
           lua PolygonTest.lua

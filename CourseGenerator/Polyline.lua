@@ -1,19 +1,23 @@
 local Polyline = CpObject()
 
----@param vertices cg.Vector
+---@param vertices table[] array of tables with x, y (Vector, Vertex, State3D or just plain {x, y}
 function Polyline:init(vertices)
     if vertices then
         for i, v in ipairs(vertices) do
-            self[i] = v:clone()
+            self[i] = cg.Vertex(v.x, v.y, i)
         end
     end
+    self:calculateProperties()
 end
 
----@param vertex cg.Vector
-function Polyline:append(vertex)
-    table.insert(self, vertex)
+---@param v table table with x, y (Vector, Vertex, State3D or just plain {x, y}
+function Polyline:append(v)
+    table.insert(self, cg.Vertex(v.x, v.y, #self + 1))
 end
 
+function Polyline:at(n)
+    return self[n]
+end
 --- Get the center of the polyline (centroid, average of all vertices)
 function Polyline:getCenter()
     local center = cg.Vector(0, 0)
@@ -103,7 +107,6 @@ function Polyline:vertexTriplets(n, overlap)
     end
 end
 
-
 function Polyline:getShortestEdge()
     local shortest = math.huge
     for _, e in self:edges() do
@@ -112,9 +115,12 @@ function Polyline:getShortestEdge()
     return shortest
 end
 
-function Polyline:calculateProperties()
-    for i = 1, #self do
-        self[i]:calculateProperties(self[i - 1], self[i + 1])
+function Polyline:calculateProperties(from, to)
+    self.deltaAngle = 0
+    for i = from or 1, to or #self do
+        self[i].ix = i
+        self[i]:calculateProperties(self:at(i - 1), self:at(i + 1))
+        self.deltaAngle = self.deltaAngle + cg.Math.getDeltaAngle(self[i]:getExitHeading(), self[i]:getEntryHeading())
     end
 end
 
@@ -176,30 +182,89 @@ function Polyline:createOffset(offsetVector, minEdgeLength, preserveCorners)
     return offsetPolyline
 end
 
+function Polyline:getRadiusAt(i)
+    local entry = self:at(i):getEntryEdge()
+    if not entry then
+        -- if there is no entry edge, create one from the exit
+        entry = self:at(i):getExitEdge():clone()
+        -- and move it back behind the vertex, so its end is now at the vertex
+        entry:offset(-entry:getLength(), 0)
+    end
+    local exit = self:at(i + 1):getExitEdge()
+    if not exit then
+        -- if there is no exit edge, create one from the entry
+        exit = self:at(i):getEntryEdge():clone()
+        -- and move it forward beyond the vertex, so its start is now at the vertex
+        exit:offset(exit:getLength(), 0)
+    end
+    local r = entry:getRadiusTo(exit)
+    if r == 0 then
+        exit = self:at(i + 2):getExitEdge()
+        return entry:getRadiusTo(exit)
+    else
+        return r
+    end
+end
+
 function Polyline:ensureMinimumRadius(r)
-    local dubins = DubinsSolver()
-    local edges = {}
-    for _, e in self:edges() do
-        table.insert(edges, e)
+    --- If we find that we can't drive to the next waypoint with our turning radius then we
+    -- check if we can drive to the one after the next or the one before the current. If that
+    -- still does not work then we go further forward and backwards, based on the distance from
+    -- the current wp.
+    local function getNextVertexPairToCheck(fwdIx, lookaheadDistance, backIx, lookBackDistance)
+        local fD = self:at(fwdIx):getExitEdge():getLength()
+        local bD = self:at(backIx):getEntryEdge():getLength()
+        if lookaheadDistance + fD < lookBackDistance + bD then
+            -- extend our window forward
+            return fwdIx + 1, lookaheadDistance + fD, backIx, lookBackDistance
+        else
+            -- extend our window backwards
+            return fwdIx, lookaheadDistance, backIx - 1, lookBackDistance + bD
+        end
     end
-    local i = 2
-    local j = i + 1
-    while i < #edges do
-        print(edges[i - 1]:getRadiusTo(edges[i + 1]))
-        local entry = edges[i]:getBase()
-        local entryHeading = edges[i - 1]:getHeading()
-        local exit = edges[i]:getEnd()
-        local exitHeading = edges[i + 1]:getHeading()
-        local dA = cg.Math.getDeltaAngle(exitHeading, entryHeading)
-        entry = State3D(entry.x, entry.y, entryHeading - dA / 4)
-        exit = State3D(exit.x, exit.y, exitHeading + dA / 4)
-        local rightTurn = dA >= 0
-        local solution, code = dubins:solve(entry, exit, r, true)
-        local l, l1, l2, l3 = solution:getLength(r)
-        --print(i, code, l1, l2, l3 , edges[i], dA, rightTurn, entry, exit)
-        i = i + 1
-        j = j + 1
+
+    local function replaceWithArc(fromIx, toIx)
+        local dubinsSolver = DubinsSolver()
+        local from = self:at(fromIx):getEntryEdge():getEndAsState3D()
+        local to = self:at(toIx):getExitEdge():getBaseAsState3D()
+        local solution = dubinsSolver:solve(from, to, r, true)
+        local arcPoints = solution:getWaypoints(from, r)
+        local newIx
+        for i = 1, #arcPoints do
+            newIx = fromIx + i - 1
+            local newVertex = cg.Vertex(arcPoints[i].x, arcPoints[i].y, newIx)
+            newVertex.color = {100, 0, 0}
+            if newIx <= toIx then
+                self[newIx] = newVertex
+            else
+                table.insert(self, newIx, newVertex)
+            end
+        end
+        return newIx
     end
+
+    self:calculateProperties()
+    local needsArc = false
+    local currentIx = 1
+    local nextIx = currentIx + 1
+    while currentIx < #self do
+        local lookaheadDistance, lookBackDistance = 0, 0
+        local rMin = self:at(currentIx):getRadius()
+        while math.abs(rMin) < r do
+            needsArc = true
+            nextIx, lookaheadDistance, currentIx, lookBackDistance = getNextVertexPairToCheck(nextIx, lookaheadDistance,
+                    currentIx, lookBackDistance)
+            rMin = self:getRadiusAt(currentIx)
+        end
+        if needsArc then
+            nextIx = replaceWithArc(currentIx, nextIx + 1)
+            self:calculateProperties(currentIx, nextIx)
+            needsArc = false
+        end
+        currentIx = nextIx
+        nextIx = currentIx + 1
+    end
+    self:calculateProperties()
 end
 
 function Polyline:__tostring()

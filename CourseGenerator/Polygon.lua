@@ -1,18 +1,18 @@
 local Polygon = CpObject(cg.Polyline)
 
-
-Polygon.__index = function(t, k)
-    if type(k) == "number" then
-        if k > 0 and k <= #self then
-            return self[k]
-        else
-            return nil
-        end
+--- Returns the vertex at position n. Will wrap around the ends, that is, will return
+--- a valid vertex for -#self < n < 2 * #self.
+function Polygon:at(n)
+    -- whoever came up with the idea of 1 based indexing in lua, was terribly wrong,
+    -- so for now we just wrap around once so we don't need to divide
+    if n > #self then
+        return self[n - #self]
+    elseif n < 1 then
+        return self[n + #self]
     else
-        return Polyline[ k ]
+        return self[n]
     end
 end
-
 
 --- edge iterator, will wrap through the end to close the polygon
 ---@return number, cg.LineSegment
@@ -29,14 +29,10 @@ function Polygon:edges()
 end
 
 function Polygon:isClockwise()
-    local deltaAngle = 0
-    for i = 2, #self - 1 do
-        local from = self[i] - self[i - 1]
-        local to = self[i + 1] - self[i]
-        deltaAngle = deltaAngle + cg.Math.getDeltaAngle(to:heading(), from:heading())
+    if not self.deltaAngle then
+        self:calculateProperties()
     end
-    deltaAngle = deltaAngle + cg.Math.getDeltaAngle((self[2] - self[1]):heading(), (self[1] - self[#self]):heading())
-    return deltaAngle > 0
+    return self.deltaAngle > 0
 end
 
 function Polygon:ensureMinimumEdgeLength(minimumLength)

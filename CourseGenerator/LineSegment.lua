@@ -204,10 +204,8 @@ end
 ---@param other cg.LineSegment
 ---@return number radius to reach other, 0 if can't be found
 function LineSegment:getRadiusTo(other)
-    -- rebase entry point on my end, pointing to the same direction
-    local entry = self:clone()
-    entry:setBase(entry:getEnd())
-    local dA = cg.Math.getDeltaAngle(other:getHeading(), entry:getHeading())
+    local dA = cg.Math.getDeltaAngle(other:getHeading(), self:getHeading())
+    --if math.abs( dA ) < 0.05 then return math.huge end
     local s, t = self:calculateIntersectionParameters(other)
     -- they are parallel
     if not s then return math.huge end
@@ -218,9 +216,13 @@ function LineSegment:getRadiusTo(other)
         local r = math.abs( math.min(dFrom, dTo) / math.tan(dA / 2))
         return r
     else
-        -- if t or s 0, the intersection point is on my end or other's base
-        -- all other cases are invalid, as the intersection must be in front of me and behind other.
-        return 0
+        if math.abs(t) < 0.01 or math.abs(s) < 0.01 then
+            -- if t or s 0, the intersection point is on my end or other's base
+            return 0
+        else
+            -- all other cases are invalid, as the intersection must be in front of me and behind other.
+            return 0
+        end
     end
 end
 
