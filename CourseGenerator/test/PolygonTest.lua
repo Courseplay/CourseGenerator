@@ -34,10 +34,7 @@ o[1]:assertAlmostEquals(cg.Vector(-1, -1))
 o[2]:assertAlmostEquals(cg.Vector(-1, 6))
 o[3]:assertAlmostEquals(cg.Vector(6, 6))
 o[4]:assertAlmostEquals(cg.Vector(6, -1))
-
 lu.assertIsTrue(p:isClockwise())
-p = cg.Polygon({cg.Vector(5, 0), cg.Vector(5, 5), cg.Vector(0, 5), cg.Vector(0, 0)})
-lu.assertIsFalse(p:isClockwise())
 
 p = cg.Polygon({cg.Vector(0, 0), cg.Vector(0, 5), cg.Vector(5, 5), cg.Vector(5, 0), cg.Vector(0.3, 0), cg.Vector(0.1, 0)})
 p:ensureMinimumEdgeLength(1)
@@ -47,7 +44,36 @@ p[3]:assertAlmostEquals(cg.Vector(5, 5))
 p[4]:assertAlmostEquals(cg.Vector(5, 0))
 
 -- wrap around
+p = cg.Polygon({cg.Vector(5, 0), cg.Vector(5, 5), cg.Vector(0, 5), cg.Vector(0, 0)})
+lu.assertIsFalse(p:isClockwise())
 p:calculateProperties()
-p[1]:getEntryEdge():assertAlmostEquals(cg.LineSegment(5, 0, 0, 0))
-p[1]:getExitEdge():assertAlmostEquals(cg.LineSegment(0, 0, 0, 5))
-p[4]:getExitEdge():assertAlmostEquals(cg.LineSegment(5, 0, 0, 0))
+p[1]:getEntryEdge():assertAlmostEquals(cg.LineSegment(0, 0, 5, 0))
+p[1]:getExitEdge():assertAlmostEquals(cg.LineSegment(5, 0, 5, 5))
+p[4]:getExitEdge():assertAlmostEquals(cg.LineSegment(0, 0, 5, 0))
+
+-- point in polygon
+p = cg.Polygon({cg.Vector(-10,-10), cg.Vector(10, -10), cg.Vector(10, 10), cg.Vector(-10, 10)})
+lu.assertIsTrue(p:isInside(0, 0))
+lu.assertIsTrue(p:isInside(5, 5))
+lu.assertIsTrue(p:isInside(-5, -5))
+lu.assertIsTrue(p:isInside(-10, -5))
+lu.assertIsTrue(p:isInside(-9.99, -10))
+lu.assertIsFalse(p:isInside(-9.99, 10))
+
+lu.assertIsFalse(p:isInside(-10.01, -5))
+lu.assertIsFalse(p:isInside(10.01, 50))
+
+p = cg.Polygon({cg.Vector(-10, -10), cg.Vector(10, -10), cg.Vector(0, 0), cg.Vector(10, 10), cg.Vector(-10, 10)})
+
+lu.assertIsFalse(p:isInside( 0, 0))
+lu.assertIsFalse(p:isInside( 5, 5))
+lu.assertIsTrue(p:isInside( -5, -5))
+lu.assertIsTrue(p:isInside( -10, -5))
+lu.assertIsFalse(p:isInside( -10, 10))
+
+lu.assertIsFalse(p:isInside( 0.01, 0))
+lu.assertIsFalse(p:isInside( 10, 0))
+lu.assertIsFalse(p:isInside( 5, 2))
+lu.assertIsFalse(p:isInside( 5, -2))
+lu.assertIsFalse(p:isInside( -10.01, -5))
+lu.assertIsFalse(p:isInside( 10.01, 50))

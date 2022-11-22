@@ -6,6 +6,7 @@ dofile('Courseplay_FS22/scripts/pathfinder/State3D.lua')
 dofile('Courseplay_FS22/scripts/pathfinder/Dubins.lua')
 
 dofile('CourseGenerator/CourseGenerator.lua')
+dofile('CourseGenerator/CourseGeneratorClass.lua')
 dofile('CourseGenerator/Math.lua')
 dofile('CourseGenerator/Vector.lua')
 dofile('CourseGenerator/Vertex.lua')
@@ -18,3 +19,4 @@ dofile('CourseGenerator/Headland.lua')
 dofile('CourseGenerator/FieldworkCourse.lua')
 
 dofile('AdjustableParameter.lua')
+dofile('ToggleParameter.lua')

@@ -36,6 +36,10 @@ function Field.loadSavedFields(fileName)
 			fields[ix].islandNodes:append(cg.Vector(tonumber(x ), -tonumber(z)))
 		end
 	end
+	-- initialize all loaded fields
+	for _, f in pairs(fields) do
+		f:getBoundary():calculateProperties()
+	end
 	return fields
 end
 

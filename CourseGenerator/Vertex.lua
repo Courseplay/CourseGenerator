@@ -8,6 +8,12 @@ function Vertex:init(x, y, ix)
     self.ix = ix or 0
 end
 
+function Vertex:set(x, y, ix)
+    self.x = x
+    self.y = y
+    self.ix = ix or 0
+end
+
 function Vertex:clone()
     local v = Vertex(self.x, self.y)
     v.entryHeading = self:getEntryHeading()
@@ -50,6 +56,14 @@ function Vertex:getRadius()
     return self.unitRadius * (self.exitEdge and self.exitEdge:getLength() or math.huge)
 end
 
+--- cross track error for a unit circle. This is how far away a unit circle drawn
+--- between the entry and exit edges would be from the vertex along the line between the
+--- circle's center and the vertex. We use this to decide if we can make this turn
+---@param r number to use, default 1
+---@return number cross track error with radius 1, multiply with
+function Vertex:getXte(r)
+    return self.xte * (r or 1)
+end
 
 ---@return number distance from the first vertex
 function Vertex:getDistance()
@@ -84,9 +98,10 @@ function Vertex:calculateProperties(entry, exit)
     end
     -- This is the radius of the unit circle written between
     -- entryEdge and exitEdge, which are tangents of the circle
-    local dA = cg.Math.getDeltaAngle(self.entryHeading, self.exitHeading)
-    self.unitRadius = 1 / (2 * math.sin(dA / 2))
+    self.dA = cg.Math.getDeltaAngle(self.entryHeading, self.exitHeading)
+    self.unitRadius = 1 / (2 * math.sin(self.dA / 2))
     self.curvature = 1 / self.unitRadius
+    self.xte = math.abs(1 / math.cos(self.dA / 2)) - 1
 end
 
 ---@class cg.Vertex:cg.Vector

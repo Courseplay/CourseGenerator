@@ -1,5 +1,9 @@
 local Polygon = CpObject(cg.Polyline)
 
+function Polygon:debug(...)
+    cg.debug('Polygon: ' .. string.format(...))
+end
+
 --- Returns the vertex at position n. Will wrap around the ends, that is, will return
 --- a valid vertex for -#self < n < 2 * #self.
 function Polygon:at(n)
@@ -12,6 +16,12 @@ function Polygon:at(n)
     else
         return self[n]
     end
+end
+
+--- Upper limit when iterating through the vertices, starting with 1 to fwdIterationLimit() (inclusive)
+--- using i and i + 1 vertex in the loop. This will wrap around the end to make sure the polygon is closed.
+function Polygon:fwdIterationLimit()
+    return #self
 end
 
 --- edge iterator, will wrap through the end to close the polygon
@@ -28,6 +38,35 @@ function Polygon:edges()
     end
 end
 
+--- Is a point at (x, y) inside of the polygon?
+--- We use Dan Sunday's algorithm and his convention that a point
+--- on a left or bottom edge is inside, and a point on a right or top edge is outside
+---@param x number
+---@param y number
+function Polygon:isInside(x, y)
+    -- TODO: this obviously limits the size of polygons and position of the point relative to
+    -- the polygon but for our practical purposes should be fine
+    local ray = cg.LineSegment(x, y, 10000000, y)
+    local nIntersections = 0
+    local windingNumber = 0
+    for i = 1, #self do
+        local current = self:at(i)
+        local next = self:at(i + 1)
+        local is = ray:intersects(current:getExitEdge())
+        if is then
+            if current.y <= y and y < next.y and x < is.x then
+                -- edge upwards
+                windingNumber = windingNumber + 1
+            elseif current.y > y and y >= next.y and x < is.x then
+                -- edge downwards
+                windingNumber = windingNumber - 1
+            end
+            nIntersections = nIntersections + 1
+        end
+    end
+    return windingNumber ~= 0
+end
+
 function Polygon:isClockwise()
     if not self.deltaAngle then
         self:calculateProperties()
@@ -35,12 +74,12 @@ function Polygon:isClockwise()
     return self.deltaAngle > 0
 end
 
-function Polygon:ensureMinimumEdgeLength(minimumLength)
-    cg.Polyline.ensureMinimumEdgeLength(self, minimumLength)
-    if (self[1] - self[#self]):length() < minimumLength then
-        table.remove(self, #self)
-    end
-end
+--function Polygon:ensureMinimumEdgeLength(minimumLength)
+--    cg.Polyline.ensureMinimumEdgeLength(self, minimumLength)
+--    if (self[1] - self[#self]):length() < minimumLength then
+--        table.remove(self, #self)
+--    end
+--end
 
 --- Generate a polygon parallel to this one, offset by the offsetVector.
 ---@param offsetVector cg.Vector offset to move the edges, relative to the edge's direction

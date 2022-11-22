@@ -6,7 +6,9 @@ local Headland = CpObject()
 ---@param basePolygon cg.Polygon
 ---@param width number
 ---@param clockwise boolean
-function Headland:init(basePolygon, width)
+function Headland:init(basePolygon, width, outward, minimumRadius)
+    cg.debug('Headland: start generating, base clockwise %s, width %.1f, outward: %s, minimumRadius %s',
+            basePolygon:isClockwise(), width, outward, minimumRadius)
     if basePolygon:isClockwise() then
         -- to generate headland inside the polygon we need to offset the polygon to the right if
         -- the polygon is clockwise
@@ -14,10 +16,22 @@ function Headland:init(basePolygon, width)
     else
         self.offsetVector = cg.Vector(0, 1)
     end
+    if outward then
+        self.offsetVector = -self.offsetVector
+    end
+    print(self.offsetVector)
     self.recursionCount = 0
+    ---@type cg.Polygon
     self.polygon = self:generate(basePolygon, width, 0)
+    cg.debug('Headland: polygon with %d vertices generated', #self.polygon)
     self.polygon:calculateProperties()
-    self.polygon:ensureMinimumRadius(5)
+    self.polygon:ensureMaximumEdgeLength(cg.cMaxEdgeLength, cg.cMaxDeltaAngleForMaxEdgeLength)
+    if minimumRadius then
+        cg.debug('Headland: applying minimum radius %.1f', minimumRadius)
+        self.polygon:calculateProperties()
+        self.polygon:ensureMinimumRadius(minimumRadius)
+    end
+    self.polygon:calculateProperties()
 end
 
 function Headland:getPolygon()
@@ -46,7 +60,7 @@ function Headland:generate(polygon, targetOffset, currentOffset)
     -- iteration, generating headland tracks close enough to the previous one
     -- so the resulting offset polygon can be kept clean (no intersecting edges)
     -- this can be ensured by choosing an offset small enough
-    local deltaOffset = math.max(polygon:getShortestEdge() / 8, 0.01)
+    local deltaOffset = math.max(polygon:getShortestEdgeLength() / 8, 0.01)
     currentOffset = currentOffset + deltaOffset
     polygon = polygon:createOffset(deltaOffset * self.offsetVector, 1, false)
     polygon:ensureMinimumEdgeLength(0.5)

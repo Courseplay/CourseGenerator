@@ -55,6 +55,14 @@ function LineSegment:getHeading()
     return self.slope:heading()
 end
 
+function LineSegment:setHeading(h)
+    self.slope:setHeading(h)
+end
+
+function LineSegment:setLength(l)
+    self.slope:setLength(l)
+end
+
 ---@return number
 function LineSegment:getLength()
     return self.slope:length()

@@ -10,14 +10,26 @@ function Polyline:init(vertices)
     self:calculateProperties()
 end
 
+function Polyline:debug(...)
+    cg.debug('Polyline: ' .. string.format(...))
+end
+
 ---@param v table table with x, y (Vector, Vertex, State3D or just plain {x, y}
 function Polyline:append(v)
     table.insert(self, cg.Vertex(v.x, v.y, #self + 1))
 end
 
+--- Get the vertex at position n.
 function Polyline:at(n)
     return self[n]
 end
+
+--- Upper limit when iterating through the vertices, starting with 1 to fwdIterationLimit() (inclusive)
+--- using i and i + 1 vertex in the loop. This will not wrap around the end.
+function Polyline:fwdIterationLimit()
+    return #self - 1
+end
+
 --- Get the center of the polyline (centroid, average of all vertices)
 function Polyline:getCenter()
     local center = cg.Vector(0, 0)
@@ -83,31 +95,9 @@ function Polyline:edges()
     end
 end
 
-function Polyline:vertexPairs(n, overlap)
-    local i = 0
-    return function()
-        i = i + 1
-        if i > #self then
-            return nil, nil
-        else
-            return i, self[i], self[i + 1]
-        end
-    end
-end
-
-function Polyline:vertexTriplets(n, overlap)
-    local i = 0
-    return function()
-        i = i + 1
-        if i > #self then
-            return nil, nil
-        else
-            return i, self[i], self[i + 1], self[i + 2]
-        end
-    end
-end
-
-function Polyline:getShortestEdge()
+--- Get the length of the shortest edge (distance between vertices)
+---@return number
+function Polyline:getShortestEdgeLength()
     local shortest = math.huge
     for _, e in self:edges() do
         shortest = math.min(shortest, e:getLength())
@@ -115,21 +105,48 @@ function Polyline:getShortestEdge()
     return shortest
 end
 
+--- Calculate all interesting properties we may need later for more advanced functions
+---@param from number index of vertex to start the calculation, default 1
+---@param to number index of last vertex to use in the calculation, default #self
 function Polyline:calculateProperties(from, to)
     self.deltaAngle = 0
     for i = from or 1, to or #self do
-        self[i].ix = i
-        self[i]:calculateProperties(self:at(i - 1), self:at(i + 1))
-        self.deltaAngle = self.deltaAngle + cg.Math.getDeltaAngle(self[i]:getExitHeading(), self[i]:getEntryHeading())
+        self:at(i).ix = i
+        self:at(i):calculateProperties(self:at(i - 1), self:at(i + 1))
+        self.deltaAngle = self.deltaAngle + cg.Math.getDeltaAngle(self:at(i):getExitHeading(), self:at(i):getEntryHeading())
     end
 end
 
---- If two vertices are closer than minimumLength, replace them with
+--- If two vertices are closer than minimumLength, replace them with one between.
 function Polyline:ensureMinimumEdgeLength(minimumLength)
     local i = 1
     while i < #self do
-        if (self[i + 1] - self[i]):length() < minimumLength then
+        if (self:at(i + 1) - self:at(i)):length() < minimumLength then
             table.remove(self, i + 1)
+        else
+            i = i + 1
+        end
+    end
+end
+
+--- If two vertices are further than maximumLength apart, add a vertex between them. If the
+--- delta angle at the first vertex is less than maxDeltaAngleForOffset, also offset the new vertex
+--- to the left/right from the edge in an effort trying to follow a curve.
+function Polyline:ensureMaximumEdgeLength(maximumLength, maxDeltaAngleForOffset)
+    local i = 1
+    while i <= self:fwdIterationLimit() do
+        local exitEdge = cg.LineSegment.fromVectors(self:at(i), self:at(i + 1))
+        if exitEdge:getLength() > maximumLength then
+            if math.abs(self:at(i).dA) < maxDeltaAngleForOffset then
+                -- for higher angles, like corners, we don't want to round them out here.
+                exitEdge:setHeading(exitEdge:getHeading() - self:at(i).dA / 2)
+            end
+            exitEdge:setLength(exitEdge:getLength() / 2)
+            local v = exitEdge:getEnd()
+            table.insert(self, i + 1, cg.Vertex(v.x, v.y, i + 1))
+            self:calculateProperties(i, i + 2)
+            self:debug('ensureMaximumEdgeLength: added a vertex after %d', i)
+            i = i + 2
         else
             i = i + 1
         end
@@ -182,84 +199,64 @@ function Polyline:createOffset(offsetVector, minEdgeLength, preserveCorners)
     return offsetPolyline
 end
 
-function Polyline:getRadiusAt(i)
-    local entry = self:at(i):getEntryEdge()
-    if not entry then
-        -- if there is no entry edge, create one from the exit
-        entry = self:at(i):getExitEdge():clone()
-        -- and move it back behind the vertex, so its end is now at the vertex
-        entry:offset(-entry:getLength(), 0)
-    end
-    local exit = self:at(i + 1):getExitEdge()
-    if not exit then
-        -- if there is no exit edge, create one from the entry
-        exit = self:at(i):getEntryEdge():clone()
-        -- and move it forward beyond the vertex, so its start is now at the vertex
-        exit:offset(exit:getLength(), 0)
-    end
-    local r = entry:getRadiusTo(exit)
-    if r == 0 then
-        exit = self:at(i + 2):getExitEdge()
-        return entry:getRadiusTo(exit)
-    else
-        return r
-    end
-end
-
 function Polyline:ensureMinimumRadius(r)
-    --- If we find that we can't drive to the next waypoint with our turning radius then we
-    -- check if we can drive to the one after the next or the one before the current. If that
-    -- still does not work then we go further forward and backwards, based on the distance from
-    -- the current wp.
-    local function getNextVertexPairToCheck(fwdIx, lookaheadDistance, backIx, lookBackDistance)
-        local fD = self:at(fwdIx):getExitEdge():getLength()
-        local bD = self:at(backIx):getEntryEdge():getLength()
-        if lookaheadDistance + fD < lookBackDistance + bD then
-            -- extend our window forward
-            return fwdIx + 1, lookaheadDistance + fD, backIx, lookBackDistance
-        else
-            -- extend our window backwards
-            return fwdIx, lookaheadDistance, backIx - 1, lookBackDistance + bD
-        end
-    end
 
-    local function replaceWithArc(fromIx, toIx)
-        local dubinsSolver = DubinsSolver()
-        local from = self:at(fromIx):getEntryEdge():getEndAsState3D()
-        local to = self:at(toIx):getExitEdge():getBaseAsState3D()
-        local solution = dubinsSolver:solve(from, to, r, true)
-        local arcPoints = solution:getWaypoints(from, r)
+    local function replace(fromIx, toIx, vertices)
         local newIx
-        for i = 1, #arcPoints do
+        for i = 1, #vertices do
             newIx = fromIx + i - 1
-            local newVertex = cg.Vertex(arcPoints[i].x, arcPoints[i].y, newIx)
-            newVertex.color = {100, 0, 0}
+            local newVertex = cg.Vertex(vertices[i].x, vertices[i].y, newIx)
+            newVertex.color = {1, 0, 0} -- for debug only
             if newIx <= toIx then
                 self[newIx] = newVertex
             else
+                -- vertices has more entries than fromIx -> toIx, need to insert
                 table.insert(self, newIx, newVertex)
             end
+        end
+        for _ = 1, toIx - newIx do
+            -- remove extra elements if vertices has less than the space fromIx -> toIx
+            table.remove(self, newIx)
         end
         return newIx
     end
 
-    self:calculateProperties()
-    local needsArc = false
     local currentIx = 1
     local nextIx = currentIx + 1
-    while currentIx < #self do
-        local lookaheadDistance, lookBackDistance = 0, 0
-        local rMin = self:at(currentIx):getRadius()
-        while math.abs(rMin) < r do
-            needsArc = true
-            nextIx, lookaheadDistance, currentIx, lookBackDistance = getNextVertexPairToCheck(nextIx, lookaheadDistance,
-                    currentIx, lookBackDistance)
-            rMin = self:getRadiusAt(currentIx)
-        end
-        if needsArc then
-            nextIx = replaceWithArc(currentIx, nextIx + 1)
+    while currentIx <= #self do
+        local xte = self:at(currentIx):getXte(r)
+        if xte > 0.3 then
+            self:debug('ensureMinimumRadius: found a corner at %d', currentIx)
+            -- looks like we can't make this turn without deviating too much from the course,
+            local entry = cg.Slider(self, currentIx, 0)
+            local exit = cg.Slider(self, currentIx, 0)
+            local rMin
+            repeat
+                -- from the corner, start widening the gap until we can fit an
+                -- arc with r between
+                entry:move(-0.2)
+                exit:move(0.2)
+                rMin = entry:getRadiusTo(exit)
+                --print('    -> ', entry.ix, exit.ix, rMin)
+            until rMin >= r
+            -- entry and exit are now far enough, so use the Dubins solver to effortlessly create a nice
+            -- arc between the two
+            local dubinsSolver = DubinsSolver()
+            local from = entry:getBaseAsState3D()
+            local to = exit:getBaseAsState3D()
+            local solution = dubinsSolver:solve(from, to, r, true)
+            local arcPoints = solution:getWaypoints(from, r)
+            -- move the vertices to the exact entry and exit points
+            self:at(entry.ix):set(entry:getBase().x, entry:getBase().y)
+            self:at(exit.ix):set(exit:getBase().x, exit:getBase().y)
+            currentIx = entry.ix
+            nextIx = exit.ix
+            -- replace the sharp section with the arc
+            nextIx = replace(currentIx, nextIx, arcPoints)
+            self:debug('ensureMinimumRadius: replaced corner from %d to %d with %d waypoints, continue at %d',
+                    entry.ix, exit.ix, #arcPoints, nextIx)
+            --print('-> ', entry.ix, exit.ix, r, rMin, #arcPoints)
             self:calculateProperties(currentIx, nextIx)
-            needsArc = false
         end
         currentIx = nextIx
         nextIx = currentIx + 1

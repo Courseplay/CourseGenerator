@@ -15,20 +15,21 @@ local dragging = false
 local pointSize = 1
 local lineWidth = 0.1
 local scale = 1.0
-local xOffset, yOffset = 10000, 10000
 local windowWidth = 1400
 local windowHeight = 800
 
 local graphicsTransform, statusTransform, mouseTransform
 
-local showWidth = false
-local currentWaypointIndex = 1
-local offset = 0
+local fieldBoundaryColor = {0.5, 0.5, 0.5}
+local courseColor = {0, 0.7, 1}
+local waypointColor = {0.7, 0.5, 0.2}
 
 -- number of headland passes
 local nHeadlandPasses = AdjustableParameter(3, 'P', 'p', 1, 0, 100)
 -- working width of the equipment
-local workingWidth = AdjustableParameter(6, 'W', 'w', 0.2, 0, 100)
+local workingWidth = AdjustableParameter(12, 'W', 'w', 0.2, 0, 100)
+local roundCorners = ToggleParameter(false, 'r')
+local maxEdgeLength = ToggleParameter(false, 'e')
 
 -- the selectedField to generate the course for
 ---@type cg.Field
@@ -42,7 +43,13 @@ local headland
 
 local function generate()
     course = cg.FieldworkCourse(selectedField, workingWidth:get())
-    course:generateHeadlands(nHeadlandPasses:get())
+    if roundCorners:get() then
+        course:generateHeadlandsFromInside(nHeadlandPasses:get(), 5, maxEdgeLength:get() and 5 or nil)
+    else
+        course:generateHeadlandsFromOutside(nHeadlandPasses:get(), 5, maxEdgeLength:get() and 5 or nil)
+    end
+    -- make sure all logs are now visible
+    io.stdout:flush()
 end
 
 function love.load(arg)
@@ -97,7 +104,6 @@ local function intToString(d)
     end
 end
 
-
 local function findVertexForPosition(polygon, rx, ry)
     for _, v in polygon:vertices() do
         if math.abs( v.x - rx ) < 1 and math.abs( v.y - ry ) < 1 then
@@ -117,9 +123,21 @@ local function findCurrentVertex(sx, sy)
     end
 end
 
+local function selectFieldUnderCursor()
+    local x, y = love.mouse.getPosition()
+    x, y = screenToWorld(x, y)
+    for _, f in pairs(savedFields) do
+        if f:getBoundary():isInside(x, y) then
+            print('Field %d selected', f:getId())
+            selectedField = f
+            generate()
+        end
+    end
+end
+
 local function drawFields()
     love.graphics.setLineWidth(lineWidth)
-    love.graphics.setColor(100, 100, 100)
+    love.graphics.setColor(fieldBoundaryColor)
     for _, f in pairs(savedFields) do
         love.graphics.polygon('line', f:getUnpackedVertices())
     end
@@ -127,14 +145,14 @@ end
 
 local function drawHeadland()
     love.graphics.setLineWidth(lineWidth)
-    love.graphics.setColor(0, 100, 0)
     for _, h in ipairs(course:getHeadlands()) do
+        love.graphics.setColor(courseColor)
         love.graphics.polygon('line', h:getUnpackedVertices())
         for _, v in h:getPolygon():vertices() do
             if v.color then
-                love.graphics.setColor(unpack(v.color))
+                love.graphics.setColor(v.color)
             else
-                love.graphics.setColor(0, 100, 0)
+                love.graphics.setColor(waypointColor)
             end
             love.graphics.points(v.x, v.y)
         end
@@ -149,7 +167,7 @@ local function drawVertexInfo()
     love.graphics.setColor(0.8, 0.8, 0.8)
     love.graphics.printf(string.format('ix: %s r: %s',
             intToString(currentVertex.ix), floatToString(currentVertex:getRadius())), 10, 10, 130)
-    love.graphics.printf(string.format('c: %.1f', currentVertex.curvature), 10, 24, 130)
+    love.graphics.printf(string.format('c: %.1f xte: %.2f', currentVertex.curvature, currentVertex.xte), 10, 24, 130)
 end
 
 local function drawGraphics()
@@ -160,7 +178,7 @@ local function drawGraphics()
 end
 
 local function drawStatus()
-    love.graphics.setColor(100, 100, 0)
+    love.graphics.setColor(1, 1, 0)
     love.graphics.replaceTransform(statusTransform)
     local mx, my = love.mouse.getPosition()
     local x, y = screenToWorld(mx, my)
@@ -181,6 +199,8 @@ end
 function love.textinput(key)
     workingWidth:onKey(key, generate)
     nHeadlandPasses:onKey(key, generate)
+    roundCorners:onKey(key, generate)
+    maxEdgeLength:onKey(key, generate)
 end
 
 ------------------------------------------------------------------------------------------------------------------------
@@ -200,6 +220,8 @@ end
 function love.mousereleased(x, y, button, istouch)
     if button == 1 then
         dragging = false
+    elseif button == 2 then
+        selectFieldUnderCursor()
     end
 end
 

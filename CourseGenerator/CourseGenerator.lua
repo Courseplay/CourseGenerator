@@ -1,5 +1,15 @@
 ---@class NewCourseGenerator
 NewCourseGenerator = {}
+
+--- Tunable parameters
+-- The maximum length of a polyline/polygon edge. This means no waypoints of the
+-- generated course will be further than this.
+NewCourseGenerator.cMaxEdgeLength = 5
+-- When ensuring maxEdgeLength and adding a new vertex and the direction change at
+-- the previous vertex is less than this, the new vertex will be offset from the original
+-- edge so the result is an arc. Over this angle, we won't offset, so corners are kept sharp.
+NewCourseGenerator.cMaxDeltaAngleForMaxEdgeLength = math.rad(45)
+
 --- Debug print, will either just call print when running standalone
 --  or use the CP debug channel when running in the game.
 function NewCourseGenerator.debug(...)

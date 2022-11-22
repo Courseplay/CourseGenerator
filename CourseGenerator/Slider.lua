@@ -46,7 +46,7 @@ function Slider:move(d)
             offset = 0
             dRemaining = dRemaining - dToEdgeEnd
         else
-            offset = dRemaining
+            offset = offset + dRemaining
             return false
         end
         return true
@@ -64,7 +64,7 @@ function Slider:move(d)
             ix = ix - 1
             offset = entryEdge:getLength()
         else
-            offset = entryEdge:getLength() - dRemaining
+            offset = offset - dRemaining
             return false
         end
         return true
@@ -73,7 +73,7 @@ function Slider:move(d)
     local step = d >= 0 and forward or backward
 
     while dRemaining > 0 and step() do
-        ;
+
     end
     self:set(ix, offset)
 end
