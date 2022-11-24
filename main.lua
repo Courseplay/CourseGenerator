@@ -18,17 +18,18 @@ local scale = 1.0
 local windowWidth = 1400
 local windowHeight = 800
 
-local graphicsTransform, statusTransform, mouseTransform
+local graphicsTransform, statusTransform, mouseTransform, contextTransform
 
 local fieldBoundaryColor = {0.5, 0.5, 0.5}
 local courseColor = {0, 0.7, 1}
 local waypointColor = {0.7, 0.5, 0.2}
 
 -- number of headland passes
-local nHeadlandPasses = AdjustableParameter(3, 'P', 'p', 1, 0, 100)
+local nHeadlandPasses = AdjustableParameter(3, 'headlands', 'P', 'p', 1, 0, 100)
 -- working width of the equipment
-local workingWidth = AdjustableParameter(12, 'W', 'w', 0.2, 0, 100)
-local roundCorners = ToggleParameter(false, 'r')
+local workingWidth = AdjustableParameter(8, 'width', 'W', 'w', 0.2, 0, 100)
+local cornerType = ListParameter(1, 'corner', 'c', 'C', { 'smooth', 'round', 'sharp'})
+local turningRadius = AdjustableParameter(6, 'radius', 'T', 't', 0.2, 0, 20)
 local maxEdgeLength = ToggleParameter(false, 'e')
 
 -- the selectedField to generate the course for
@@ -39,15 +40,15 @@ local selectedField
 local course
 local savedFields
 local currentVertex
-local headland
 
+------------------------------------------------------------------------------------------------------------------------
+--- Generate the fieldwork course
+---------------------------------------------------------------------------------------------------------------------------
 local function generate()
-    course = cg.FieldworkCourse(selectedField, workingWidth:get())
-    if roundCorners:get() then
-        course:generateHeadlandsFromInside(nHeadlandPasses:get(), 5, maxEdgeLength:get() and 5 or nil)
-    else
-        course:generateHeadlandsFromOutside(nHeadlandPasses:get(), 5, maxEdgeLength:get() and 5 or nil)
-    end
+    local context = cg.FieldworkContext(selectedField, workingWidth:get(), turningRadius:get(), nHeadlandPasses:get())
+    context:setCorners(cornerType:get())
+    course = cg.FieldworkCourse(context)
+    course:generateHeadlands()
     -- make sure all logs are now visible
     io.stdout:flush()
 end
@@ -77,6 +78,7 @@ function love.load(arg)
     graphicsTransform = love.math.newTransform(0, 0, 0, scale, -scale, fieldCenter.x - fieldWidth / 2, fieldCenter.y + fieldHeight / 2, 0, 0)    -- translate into the middle of the window and remember, the window size is not scaled so must
     statusTransform = love.math.newTransform(0, 0, 0, 1, 1, -windowWidth + 200, -windowHeight + 30)
     mouseTransform = love.math.newTransform()
+    contextTransform = love.math.newTransform(10, 10, 0, 1, 1, 0, 0)
     love.graphics.setPointSize(pointSize)
     love.graphics.setLineWidth(lineWidth)
     love.window.setMode(windowWidth, windowHeight)
@@ -177,6 +179,13 @@ local function drawGraphics()
     drawHeadland()
 end
 
+local function drawContext()
+    love.graphics.setColor(1, 1, 0)
+    love.graphics.replaceTransform(contextTransform)
+    love.graphics.print(string.format('%s\n%s\n%s', workingWidth, turningRadius, cornerType), 0, 0)
+end
+
+
 local function drawStatus()
     love.graphics.setColor(1, 1, 0)
     love.graphics.replaceTransform(statusTransform)
@@ -191,6 +200,7 @@ end
 function love.draw()
     drawGraphics()
     drawStatus()
+    drawContext()
 end
 
 ------------------------------------------------------------------------------------------------------------------------
@@ -198,8 +208,9 @@ end
 ---------------------------------------------------------------------------------------------------------------------------
 function love.textinput(key)
     workingWidth:onKey(key, generate)
+    turningRadius:onKey(key, generate)
     nHeadlandPasses:onKey(key, generate)
-    roundCorners:onKey(key, generate)
+    cornerType:onKey(key, generate)
     maxEdgeLength:onKey(key, generate)
 end
 

@@ -15,6 +15,12 @@ o[2]:assertAlmostEquals(cg.Vector(1, 4))
 o[3]:assertAlmostEquals(cg.Vector(4, 4))
 o[4]:assertAlmostEquals(cg.Vector(4, 1))
 
+-- wrap around case
+p = cg.Polygon({cg.Vector(0, 0), cg.Vector(0, 5), cg.Vector(5, 5), cg.Vector(5, 0), cg.Vector(4, 0)})
+p:ensureMinimumEdgeLength(2)
+lu.assertEquals(#p, 4)
+p[4]:assertAlmostEquals(cg.Vector(5, 0))
+
 -- outside, cut corner
 p = cg.Polygon({cg.Vector(0, 0), cg.Vector(0, 5), cg.Vector(5, 5), cg.Vector(5, 0)})
 o = p:createOffset(cg.Vector(0, 1), 1, false)

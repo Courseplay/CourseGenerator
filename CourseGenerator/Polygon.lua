@@ -4,6 +4,15 @@ function Polygon:debug(...)
     cg.debug('Polygon: ' .. string.format(...))
 end
 
+function Polygon:clone()
+    local clone = Polygon({})
+    for _, v in ipairs(self) do
+        clone:append(v:clone())
+    end
+    clone:calculateProperties()
+    return clone
+end
+
 --- Returns the vertex at position n. Will wrap around the ends, that is, will return
 --- a valid vertex for -#self < n < 2 * #self.
 function Polygon:at(n)
@@ -74,12 +83,12 @@ function Polygon:isClockwise()
     return self.deltaAngle > 0
 end
 
---function Polygon:ensureMinimumEdgeLength(minimumLength)
---    cg.Polyline.ensureMinimumEdgeLength(self, minimumLength)
---    if (self[1] - self[#self]):length() < minimumLength then
---        table.remove(self, #self)
---    end
---end
+function Polygon:ensureMinimumEdgeLength(minimumLength)
+    cg.Polyline.ensureMinimumEdgeLength(self, minimumLength)
+    if (self[1] - self[#self]):length() < minimumLength then
+        table.remove(self, #self)
+    end
+end
 
 --- Generate a polygon parallel to this one, offset by the offsetVector.
 ---@param offsetVector cg.Vector offset to move the edges, relative to the edge's direction

@@ -5,8 +5,9 @@
 ---@class AdjustableParameter
 AdjustableParameter = CpObject()
 
-function AdjustableParameter:init(value, up, down, step, lowerLimit, upperLimit)
+function AdjustableParameter:init(value, name, up, down, step, lowerLimit, upperLimit)
 	self.value = value
+	self.name = name
 	self.up = up
 	self.down = down
 	self.step = step
@@ -26,4 +27,8 @@ end
 
 function AdjustableParameter:get()
 	return self.value
+end
+
+function AdjustableParameter:__tostring()
+	return string.format('%s (%s/%s): %.1f', self.name, self.down, self.up, self.value)
 end

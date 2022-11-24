@@ -5,10 +5,10 @@ local Headland = CpObject()
 --- of the base polygon.
 ---@param basePolygon cg.Polygon
 ---@param width number
----@param clockwise boolean
-function Headland:init(basePolygon, width, outward, minimumRadius)
-    cg.debug('Headland: start generating, base clockwise %s, width %.1f, outward: %s, minimumRadius %s',
-            basePolygon:isClockwise(), width, outward, minimumRadius)
+---@param outward boolean if true, the generated headland will be outside of the basePolygon, inside otherwise
+function Headland:init(basePolygon, width, outward)
+    cg.debug('Headland: start generating, base clockwise %s, width %.1f, outward: %s',
+            basePolygon:isClockwise(), width, outward)
     if basePolygon:isClockwise() then
         -- to generate headland inside the polygon we need to offset the polygon to the right if
         -- the polygon is clockwise
@@ -19,18 +19,26 @@ function Headland:init(basePolygon, width, outward, minimumRadius)
     if outward then
         self.offsetVector = -self.offsetVector
     end
-    print(self.offsetVector)
     self.recursionCount = 0
     ---@type cg.Polygon
     self.polygon = self:generate(basePolygon, width, 0)
     cg.debug('Headland: polygon with %d vertices generated', #self.polygon)
     self.polygon:calculateProperties()
     self.polygon:ensureMaximumEdgeLength(cg.cMaxEdgeLength, cg.cMaxDeltaAngleForMaxEdgeLength)
-    if minimumRadius then
-        cg.debug('Headland: applying minimum radius %.1f', minimumRadius)
-        self.polygon:calculateProperties()
-        self.polygon:ensureMinimumRadius(minimumRadius)
-    end
+    self.polygon:calculateProperties()
+end
+
+--- Make sure all corners are rounded to have at least minimumRadius radius.
+function Headland:roundCorners(minimumRadius)
+    cg.debug('Headland: applying minimum radius %.1f', minimumRadius)
+    self.polygon:ensureMinimumRadius(minimumRadius, false)
+    self.polygon:calculateProperties()
+end
+
+--- Make sure all corners are rounded to have at least minimumRadius radius.
+function Headland:sharpenCorners(minimumRadius)
+    cg.debug('Headland: sharpen corners under radius %.1f', minimumRadius)
+    self.polygon:ensureMinimumRadius(minimumRadius, true)
     self.polygon:calculateProperties()
 end
 
@@ -63,7 +71,7 @@ function Headland:generate(polygon, targetOffset, currentOffset)
     local deltaOffset = math.max(polygon:getShortestEdgeLength() / 8, 0.01)
     currentOffset = currentOffset + deltaOffset
     polygon = polygon:createOffset(deltaOffset * self.offsetVector, 1, false)
-    polygon:ensureMinimumEdgeLength(0.5)
+    polygon:ensureMinimumEdgeLength(cg.cMinEdgeLength)
     return self:generate(polygon, targetOffset, currentOffset)
 end
 

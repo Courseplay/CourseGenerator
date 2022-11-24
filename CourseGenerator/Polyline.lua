@@ -14,9 +14,22 @@ function Polyline:debug(...)
     cg.debug('Polyline: ' .. string.format(...))
 end
 
+function Polyline:trace(...)
+    cg.trace('Polyline: ' .. string.format(...))
+end
+
 ---@param v table table with x, y (Vector, Vertex, State3D or just plain {x, y}
 function Polyline:append(v)
     table.insert(self, cg.Vertex(v.x, v.y, #self + 1))
+end
+
+function Polyline:clone()
+    local clone = Polyline({})
+    for _, v in ipairs(self) do
+        clone:append(v:clone())
+    end
+    clone:calculateProperties()
+    return clone
 end
 
 --- Get the vertex at position n.
@@ -145,7 +158,7 @@ function Polyline:ensureMaximumEdgeLength(maximumLength, maxDeltaAngleForOffset)
             local v = exitEdge:getEnd()
             table.insert(self, i + 1, cg.Vertex(v.x, v.y, i + 1))
             self:calculateProperties(i, i + 2)
-            self:debug('ensureMaximumEdgeLength: added a vertex after %d', i)
+            self:trace('ensureMaximumEdgeLength: added a vertex after %d', i)
             i = i + 2
         else
             i = i + 1
@@ -199,34 +212,63 @@ function Polyline:createOffset(offsetVector, minEdgeLength, preserveCorners)
     return offsetPolyline
 end
 
-function Polyline:ensureMinimumRadius(r)
+--- Ensure there are no sudden direction changes in the polyline, that is, at each vertex a vehicle
+--- with turning radius r would be able to follow the line with less than cMaxCrossTrackError distance
+--- from the corner vertex.
+--- When such a corner is found, either make it rounder according to r, or make it sharp and mark it
+--- as a turn waypoint.
+---@param r number turning radius
+---@param makeCorners boolean if true, make corners for turn maneuvers instead of rounding them.
+function Polyline:ensureMinimumRadius(r, makeCorners)
 
     local function replace(fromIx, toIx, vertices)
         local newIx
         for i = 1, #vertices do
             newIx = fromIx + i - 1
             local newVertex = cg.Vertex(vertices[i].x, vertices[i].y, newIx)
-            newVertex.color = {1, 0, 0} -- for debug only
+            newVertex.color = vertices[i].color -- for debug only
             if newIx <= toIx then
+                self:trace('Replacing %s with %s at %d', self[newIx], newVertex, newIx)
                 self[newIx] = newVertex
             else
+                self:trace('Adding %s at %d', newVertex, newIx)
                 -- vertices has more entries than fromIx -> toIx, need to insert
                 table.insert(self, newIx, newVertex)
             end
         end
         for _ = 1, toIx - newIx do
             -- remove extra elements if vertices has less than the space fromIx -> toIx
-            table.remove(self, newIx)
+            self:trace('Removing %s at %d', self[newIx + 1], newIx + 1)
+            table.remove(self, newIx + 1)
         end
-        return newIx
+        return newIx + 1
+    end
+
+    ---@param entry cg.Slider
+    ---@param exit cg.Slider
+    local function makeArc(entry, exit)
+        local dubinsSolver = DubinsSolver()
+        local from = entry:getBaseAsState3D()
+        local to = exit:getBaseAsState3D()
+        local solution = dubinsSolver:solve(from, to, r, true)
+        return solution:getWaypoints(from, r)
+    end
+
+    ---@param entry cg.Slider
+    ---@param exit cg.Slider
+    local function makeCorner(entry, exit)
+        entry:extendTo(exit)
+        local corner = entry:getEnd()
+        corner.color = {0, 1, 0}
+        return {corner}
     end
 
     local currentIx = 1
     local nextIx = currentIx + 1
     while currentIx <= #self do
         local xte = self:at(currentIx):getXte(r)
-        if xte > 0.3 then
-            self:debug('ensureMinimumRadius: found a corner at %d', currentIx)
+        if xte > cg.cMaxCrossTrackError then
+            self:debug('ensureMinimumRadius: found a corner at %d, r: %.1f', currentIx, r)
             -- looks like we can't make this turn without deviating too much from the course,
             local entry = cg.Slider(self, currentIx, 0)
             local exit = cg.Slider(self, currentIx, 0)
@@ -241,25 +283,34 @@ function Polyline:ensureMinimumRadius(r)
             until rMin >= r
             -- entry and exit are now far enough, so use the Dubins solver to effortlessly create a nice
             -- arc between the two
-            local dubinsSolver = DubinsSolver()
-            local from = entry:getBaseAsState3D()
-            local to = exit:getBaseAsState3D()
-            local solution = dubinsSolver:solve(from, to, r, true)
-            local arcPoints = solution:getWaypoints(from, r)
-            -- move the vertices to the exact entry and exit points
-            self:at(entry.ix):set(entry:getBase().x, entry:getBase().y)
-            self:at(exit.ix):set(exit:getBase().x, exit:getBase().y)
-            currentIx = entry.ix
-            nextIx = exit.ix
-            -- replace the sharp section with the arc
-            nextIx = replace(currentIx, nextIx, arcPoints)
-            self:debug('ensureMinimumRadius: replaced corner from %d to %d with %d waypoints, continue at %d',
-                    entry.ix, exit.ix, #arcPoints, nextIx)
-            --print('-> ', entry.ix, exit.ix, r, rMin, #arcPoints)
-            self:calculateProperties(currentIx, nextIx)
+
+            local adjustedCornerVertices
+            if makeCorners then
+                adjustedCornerVertices = makeCorner(entry, exit)
+            else
+                adjustedCornerVertices = makeArc(entry, exit)
+            end
+            if adjustedCornerVertices and #adjustedCornerVertices > 1 then
+                -- move the vertices to the exact entry and exit points
+                self:at(entry.ix):set(entry:getBase().x, entry:getBase().y)
+                self:at(exit.ix):set(exit:getBase().x, exit:getBase().y)
+                currentIx = entry.ix
+                nextIx = exit.ix
+                -- replace the sharp section with the arc
+                nextIx = replace(currentIx, nextIx, adjustedCornerVertices)
+                self:debug('ensureMinimumRadius: replaced corner from %d to %d with %d waypoint(s), continue at %d (of %d)',
+                        entry.ix, exit.ix, #adjustedCornerVertices, nextIx, #self)
+                self:calculateProperties(currentIx, nextIx)
+            else
+                self:debug('ensureMinimumRadius: could not calculate adjusted corner vertices')
+            end
         end
         currentIx = nextIx
         nextIx = currentIx + 1
+    end
+    self:ensureMinimumEdgeLength(cg.cMinEdgeLength)
+    if makeCorners then
+        self:ensureMaximumEdgeLength(cg.cMaxEdgeLength, cg.cMaxDeltaAngleForMaxEdgeLength)
     end
     self:calculateProperties()
 end
