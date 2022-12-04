@@ -7,15 +7,8 @@ function Polyline:init(vertices)
             self[i] = cg.Vertex(v.x, v.y, i)
         end
     end
+    self.logger = cg.Logger('Polyline', cg.Logger.level.trace)
     self:calculateProperties()
-end
-
-function Polyline:debug(...)
-    cg.debug('Polyline: ' .. string.format(...))
-end
-
-function Polyline:trace(...)
-    cg.trace('Polyline: ' .. string.format(...))
 end
 
 ---@param v table table with x, y (Vector, Vertex, State3D or just plain {x, y}
@@ -32,9 +25,20 @@ function Polyline:clone()
     return clone
 end
 
---- Get the vertex at position n.
+function Polyline:getRawIndex(n)
+    return n
+end
+
+--- Returns the vertex at position n. In the derived polygon, will wrap around the ends, that is, will return
+--- a valid vertex for -#self < n < 2 * #self.
 function Polyline:at(n)
-    return self[n]
+    return self[self:getRawIndex(n)]
+end
+
+--- Sets the vertex at position n. In the derived polygon, will wrap around the ends, that is, will return
+--- a valid vertex for -#self < n < 2 * #self.
+function Polyline:set(n, v)
+    self[self:getRawIndex(n)] = v
 end
 
 --- Upper limit when iterating through the vertices, starting with 1 to fwdIterationLimit() (inclusive)
@@ -118,15 +122,20 @@ function Polyline:getShortestEdgeLength()
     return shortest
 end
 
+function Polyline:reverse()
+    for i = 1, #self / 2 do
+        self[i], self[#self - i + 1] = self[#self - i + 1], self[i]
+    end
+    self:calculateProperties()
+end
+
 --- Calculate all interesting properties we may need later for more advanced functions
 ---@param from number index of vertex to start the calculation, default 1
 ---@param to number index of last vertex to use in the calculation, default #self
 function Polyline:calculateProperties(from, to)
-    self.deltaAngle = 0
     for i = from or 1, to or #self do
         self:at(i).ix = i
         self:at(i):calculateProperties(self:at(i - 1), self:at(i + 1))
-        self.deltaAngle = self.deltaAngle + cg.Math.getDeltaAngle(self:at(i):getExitHeading(), self:at(i):getEntryHeading())
     end
 end
 
@@ -158,7 +167,7 @@ function Polyline:ensureMaximumEdgeLength(maximumLength, maxDeltaAngleForOffset)
             local v = exitEdge:getEnd()
             table.insert(self, i + 1, cg.Vertex(v.x, v.y, i + 1))
             self:calculateProperties(i, i + 2)
-            self:trace('ensureMaximumEdgeLength: added a vertex after %d', i)
+            self.logger:trace('ensureMaximumEdgeLength: added a vertex after %d', i)
             i = i + 2
         else
             i = i + 1
@@ -221,29 +230,6 @@ end
 ---@param makeCorners boolean if true, make corners for turn maneuvers instead of rounding them.
 function Polyline:ensureMinimumRadius(r, makeCorners)
 
-    local function replace(fromIx, toIx, vertices)
-        local newIx
-        for i = 1, #vertices do
-            newIx = fromIx + i - 1
-            local newVertex = cg.Vertex(vertices[i].x, vertices[i].y, newIx)
-            newVertex.color = vertices[i].color -- for debug only
-            if newIx <= toIx then
-                self:trace('Replacing %s with %s at %d', self[newIx], newVertex, newIx)
-                self[newIx] = newVertex
-            else
-                self:trace('Adding %s at %d', newVertex, newIx)
-                -- vertices has more entries than fromIx -> toIx, need to insert
-                table.insert(self, newIx, newVertex)
-            end
-        end
-        for _ = 1, toIx - newIx do
-            -- remove extra elements if vertices has less than the space fromIx -> toIx
-            self:trace('Removing %s at %d', self[newIx + 1], newIx + 1)
-            table.remove(self, newIx + 1)
-        end
-        return newIx + 1
-    end
-
     ---@param entry cg.Slider
     ---@param exit cg.Slider
     local function makeArc(entry, exit)
@@ -259,16 +245,19 @@ function Polyline:ensureMinimumRadius(r, makeCorners)
     local function makeCorner(entry, exit)
         entry:extendTo(exit)
         local corner = entry:getEnd()
-        corner.color = {0, 1, 0}
-        return {corner}
+        corner.color = { 0, 1, 0 }
+        return { corner }
     end
 
-    local currentIx = 1
-    local nextIx = currentIx + 1
-    while currentIx <= #self do
+    local wrappedAround = false
+    local currentIx
+    local nextIx = 1
+    repeat
+        currentIx = nextIx
+        nextIx = currentIx + 1
         local xte = self:at(currentIx):getXte(r)
         if xte > cg.cMaxCrossTrackError then
-            self:debug('ensureMinimumRadius: found a corner at %d, r: %.1f', currentIx, r)
+            self.logger:debug('ensureMinimumRadius: found a corner at %d, r: %.1f', currentIx, r)
             -- looks like we can't make this turn without deviating too much from the course,
             local entry = cg.Slider(self, currentIx, 0)
             local exit = cg.Slider(self, currentIx, 0)
@@ -282,37 +271,85 @@ function Polyline:ensureMinimumRadius(r, makeCorners)
                 --print('    -> ', entry.ix, exit.ix, rMin)
             until rMin >= r
             -- entry and exit are now far enough, so use the Dubins solver to effortlessly create a nice
-            -- arc between the two
-
+            -- arc between the two, or, to make it a sharp corner, find the intersection of entry and exit
             local adjustedCornerVertices
             if makeCorners then
                 adjustedCornerVertices = makeCorner(entry, exit)
             else
                 adjustedCornerVertices = makeArc(entry, exit)
             end
-            if adjustedCornerVertices and #adjustedCornerVertices > 1 then
-                -- move the vertices to the exact entry and exit points
-                self:at(entry.ix):set(entry:getBase().x, entry:getBase().y)
-                self:at(exit.ix):set(exit:getBase().x, exit:getBase().y)
-                currentIx = entry.ix
-                nextIx = exit.ix
-                -- replace the sharp section with the arc
-                nextIx = replace(currentIx, nextIx, adjustedCornerVertices)
-                self:debug('ensureMinimumRadius: replaced corner from %d to %d with %d waypoint(s), continue at %d (of %d)',
-                        entry.ix, exit.ix, #adjustedCornerVertices, nextIx, #self)
-                self:calculateProperties(currentIx, nextIx)
+            if adjustedCornerVertices and #adjustedCornerVertices >= 1 then
+                -- replace the section with an arc or a corner
+                nextIx, wrappedAround = self:replace(entry.ix, exit.ix, adjustedCornerVertices)
+                self.logger:debug('ensureMinimumRadius: replaced corner from %d to %d with %d waypoint(s), continue at %d (of %d), wrapped around %s',
+                        entry.ix, exit.ix, #adjustedCornerVertices, nextIx, #self, wrappedAround)
+                self:calculateProperties(entry.ix, nextIx)
             else
-                self:debug('ensureMinimumRadius: could not calculate adjusted corner vertices')
+                self.logger:debug('ensureMinimumRadius: could not calculate adjusted corner vertices')
             end
         end
-        currentIx = nextIx
-        nextIx = currentIx + 1
-    end
+    until wrappedAround or currentIx >= #self
+
     self:ensureMinimumEdgeLength(cg.cMinEdgeLength)
     if makeCorners then
         self:ensureMaximumEdgeLength(cg.cMaxEdgeLength, cg.cMaxDeltaAngleForMaxEdgeLength)
     end
     self:calculateProperties()
+end
+
+--- Find the first two intersections with another polyline or polygon and replace the section
+--- between those points with the vertices of the other polyline or polygon.
+---@param other Polyline
+---@param startIx number index of the vertex we want to start looking for intersections.
+function Polyline:goAround(other, startIx)
+    local intersections = self:getIntersections(other, 2)
+end
+
+------------------------------------------------------------------------------------------------------------------------
+--- Private functions
+------------------------------------------------------------------------------------------------------------------------
+function Polyline:getIntersections(other, maxIntersections)
+
+end
+
+--- Replace all vertices from fromIx to toIx (including) with the entries in vertices
+---@param fromIx number index of first vertex to replace
+---@param toIx number index of last vertex to replace
+---@param vertices cg.Vector[] new vertices to put between fromIx and toIx
+---@return number, boolean index of the next vertex after the replaced ones (may be more or less than toIx depending on
+--- how many entries vertices had and how many elements were there originally between fromIx and toIx. The boolean
+--- is true when wrapped around the end (for a polygon)
+function Polyline:replace(fromIx, toIx, vertices)
+    -- mark the ones we need to replace/remove. this is to make the rollover case (for polygons) easier
+    for i = fromIx, toIx do
+        self[self:getRawIndex(i)].toBeReplaced = true
+    end
+
+    local sourceIx = 1
+    local destIx = cg.WrapAroundIndex(self, fromIx)
+    while self[destIx:get()] and self[destIx:get()].toBeReplaced do
+        if sourceIx <= #vertices then
+            local newVertex = cg.Vertex(vertices[sourceIx].x, vertices[sourceIx].y, destIx:get())
+            newVertex.color = { 0, 1, 0 } -- for debug only
+            self[destIx:get()] = newVertex
+            self.logger:trace('Replaced %d', destIx:get())
+            destIx = destIx + 1
+        else
+            table.remove(self, destIx:get())
+            self.logger:trace('Removed %d', destIx:get())
+        end
+        sourceIx = sourceIx + 1
+    end
+    while sourceIx <= #vertices do
+        -- we have some vertices left, but there is no room for them
+        local newVertex = cg.Vertex(vertices[sourceIx].x, vertices[sourceIx].y, destIx:get())
+        newVertex.color = { 1, 0, 0 } -- for debug only
+        table.insert(self, destIx:get(), newVertex)
+        self.logger:trace('Adding at %d', destIx:get())
+        sourceIx = sourceIx + 1
+        destIx = destIx + 1
+    end
+    return destIx:get(), destIx:get() < fromIx
 end
 
 function Polyline:__tostring()

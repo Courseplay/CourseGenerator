@@ -5,7 +5,8 @@
 ---@class ToggleParameter
 ToggleParameter = CpObject()
 
-function ToggleParameter:init(value, toggle)
+function ToggleParameter:init(name, value, toggle)
+    self.name = name
     self.value = value
     self.toggle = toggle
 end
@@ -19,4 +20,8 @@ end
 
 function ToggleParameter:get()
     return self.value
+end
+
+function ToggleParameter:__tostring()
+    return string.format('%s (%s): %s', self.name, self.toggle, self.value)
 end

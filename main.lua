@@ -20,17 +20,22 @@ local windowHeight = 800
 
 local graphicsTransform, statusTransform, mouseTransform, contextTransform
 
-local fieldBoundaryColor = {0.5, 0.5, 0.5}
-local courseColor = {0, 0.7, 1}
-local waypointColor = {0.7, 0.5, 0.2}
+local fieldBoundaryColor = { 0.5, 0.5, 0.5 }
+local courseColor = { 0, 0.7, 1 }
+local islandHeadlandColor = { 0, 0.7, 1 }
+local waypointColor = { 0.7, 0.5, 0.2 }
 
--- number of headland passes
-local nHeadlandPasses = AdjustableParameter(3, 'headlands', 'P', 'p', 1, 0, 100)
+local parameters = {}
+-- number of headland passes around the field boundary
+local nHeadlandPasses = AdjustableParameter(1, 'headlands', 'P', 'p', 1, 0, 100); table.insert(parameters, nHeadlandPasses)
+local nHeadlandsWithRoundCorners = AdjustableParameter(0, 'headlands with round corners', 'C', 'c', 1, 0, 100); table.insert(parameters, nHeadlandsWithRoundCorners)
+-- number of headland passes around the field islands
+local nIslandHeadlandPasses = AdjustableParameter(1, 'island headlands', 'I', 'i', 1, 1, 10); table.insert(parameters, nIslandHeadlandPasses)
 -- working width of the equipment
-local workingWidth = AdjustableParameter(8, 'width', 'W', 'w', 0.2, 0, 100)
-local cornerType = ListParameter(1, 'corner', 'c', 'C', { 'smooth', 'round', 'sharp'})
-local turningRadius = AdjustableParameter(6, 'radius', 'T', 't', 0.2, 0, 20)
-local maxEdgeLength = ToggleParameter(false, 'e')
+local workingWidth = AdjustableParameter(8, 'width', 'W', 'w', 0.2, 0, 100); table.insert(parameters, workingWidth)
+local turningRadius = AdjustableParameter(6, 'radius', 'T', 't', 0.2, 0, 20); table.insert(parameters, turningRadius)
+local fieldCornerRadius = AdjustableParameter(6, 'field corner radius', 'F', 'f', 1, 0, 30); table.insert(parameters, fieldCornerRadius)
+local maxEdgeLength = ToggleParameter('limit edge length', false, 'e'); table.insert(parameters, maxEdgeLength)
 
 -- the selectedField to generate the course for
 ---@type cg.Field
@@ -46,9 +51,12 @@ local currentVertex
 ---------------------------------------------------------------------------------------------------------------------------
 local function generate()
     local context = cg.FieldworkContext(selectedField, workingWidth:get(), turningRadius:get(), nHeadlandPasses:get())
-    context:setCorners(cornerType:get())
+    context:setHeadlandsWithRoundCorners(nHeadlandsWithRoundCorners:get())
+    context:setIslandHeadlands(nIslandHeadlandPasses:get())
+    context:setFieldCornerRadius(fieldCornerRadius:get())
     course = cg.FieldworkCourse(context)
     course:generateHeadlands()
+    course:generateHeadlandsAroundIslands()
     -- make sure all logs are now visible
     io.stdout:flush()
 end
@@ -108,7 +116,7 @@ end
 
 local function findVertexForPosition(polygon, rx, ry)
     for _, v in polygon:vertices() do
-        if math.abs( v.x - rx ) < 1 and math.abs( v.y - ry ) < 1 then
+        if math.abs(v.x - rx) < 0.3 and math.abs(v.y - ry) < 0.3 then
             return v
         end
     end
@@ -130,34 +138,45 @@ local function selectFieldUnderCursor()
     x, y = screenToWorld(x, y)
     for _, f in pairs(savedFields) do
         if f:getBoundary():isInside(x, y) then
-            print('Field %d selected', f:getId())
+            print(string.format('Field %d selected', f:getId()))
             selectedField = f
             generate()
         end
     end
 end
 
-local function drawFields()
+local function drawHeadland(h, color)
     love.graphics.setLineWidth(lineWidth)
-    love.graphics.setColor(fieldBoundaryColor)
-    for _, f in pairs(savedFields) do
-        love.graphics.polygon('line', f:getUnpackedVertices())
+    love.graphics.setColor(color)
+    love.graphics.polygon('line', h:getUnpackedVertices())
+    for _, v in h:getPolygon():vertices() do
+        if v.color then
+            love.graphics.setColor(v.color)
+        else
+            love.graphics.setColor(waypointColor)
+        end
+        love.graphics.points(v.x, v.y)
     end
 end
 
-local function drawHeadland()
+local function drawFields()
     love.graphics.setLineWidth(lineWidth)
-    for _, h in ipairs(course:getHeadlands()) do
-        love.graphics.setColor(courseColor)
-        love.graphics.polygon('line', h:getUnpackedVertices())
-        for _, v in h:getPolygon():vertices() do
-            if v.color then
-                love.graphics.setColor(v.color)
-            else
-                love.graphics.setColor(waypointColor)
+    for _, f in pairs(savedFields) do
+        love.graphics.setColor(fieldBoundaryColor)
+        love.graphics.polygon('line', f:getUnpackedVertices())
+        for _, i in ipairs(f:getIslands()) do
+            love.graphics.setColor(fieldBoundaryColor)
+            love.graphics.polygon('fill', i:getBoundary():getUnpackedVertices())
+            for _, h in ipairs(i:getHeadlands()) do
+                drawHeadland(h, islandHeadlandColor)
             end
-            love.graphics.points(v.x, v.y)
         end
+    end
+end
+
+local function drawHeadlands()
+    for _, h in ipairs(course:getHeadlands()) do
+        drawHeadland(h, courseColor)
     end
 end
 
@@ -176,15 +195,18 @@ local function drawGraphics()
     love.graphics.replaceTransform(graphicsTransform)
     love.graphics.setPointSize(pointSize)
     drawFields()
-    drawHeadland()
+    drawHeadlands()
 end
 
 local function drawContext()
     love.graphics.setColor(1, 1, 0)
     love.graphics.replaceTransform(contextTransform)
-    love.graphics.print(string.format('%s\n%s\n%s', workingWidth, turningRadius, cornerType), 0, 0)
+    local context = ''
+    for _, p in ipairs(parameters) do
+        context = context .. tostring(p) .. '\n'
+    end
+    love.graphics.print(context, 0, 0)
 end
-
 
 local function drawStatus()
     love.graphics.setColor(1, 1, 0)
@@ -207,11 +229,9 @@ end
 --- Input
 ---------------------------------------------------------------------------------------------------------------------------
 function love.textinput(key)
-    workingWidth:onKey(key, generate)
-    turningRadius:onKey(key, generate)
-    nHeadlandPasses:onKey(key, generate)
-    cornerType:onKey(key, generate)
-    maxEdgeLength:onKey(key, generate)
+    for _, p in pairs(parameters) do
+        p:onKey(key, generate)
+    end
 end
 
 ------------------------------------------------------------------------------------------------------------------------

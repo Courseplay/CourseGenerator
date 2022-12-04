@@ -28,6 +28,7 @@ jobs:
       - name: Run unit tests
         run: |
           cd CourseGenerator/test
+          lua WrapAroundIndexTest.lua
           lua LineSegmentTest.lua
           lua VertexTest.lua
           lua SliderTest.lua

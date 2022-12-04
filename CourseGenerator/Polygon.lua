@@ -13,17 +13,15 @@ function Polygon:clone()
     return clone
 end
 
---- Returns the vertex at position n. Will wrap around the ends, that is, will return
---- a valid vertex for -#self < n < 2 * #self.
-function Polygon:at(n)
+function Polygon:getRawIndex(n)
     -- whoever came up with the idea of 1 based indexing in lua, was terribly wrong,
-    -- so for now we just wrap around once so we don't need to divide
+    -- so for now we just wrap around once so we don't need a division
     if n > #self then
-        return self[n - #self]
+        return n - #self
     elseif n < 1 then
-        return self[n + #self]
+        return n + #self
     else
-        return self[n]
+        return n
     end
 end
 
@@ -78,9 +76,29 @@ end
 
 function Polygon:isClockwise()
     if not self.deltaAngle then
-        self:calculateProperties()
+        self.deltaAngle = 0
+        for i = 1, #self do
+            self.deltaAngle = self.deltaAngle + cg.Math.getDeltaAngle(self:at(i):getExitHeading(), self:at(i):getEntryHeading())
+        end
     end
     return self.deltaAngle > 0
+end
+
+function Polygon:getArea()
+    if not self.area then
+        self.area = 0
+        for i = 1, #self do
+            self.area = self.area + (self:at(i).x * self:at(i + 1).y - self:at(i).y * self:at(i + 1).x)
+        end
+        self.area = math.abs(self.area / 2)
+    end
+    return self.area
+end
+
+function Polygon:calculateProperties(from, to)
+    cg.Polyline.calculateProperties(self, from, to)
+    -- dirty flag to trigger clockwise/area recalculation
+    self.deltaAngle, self.area = nil, nil
 end
 
 function Polygon:ensureMinimumEdgeLength(minimumLength)

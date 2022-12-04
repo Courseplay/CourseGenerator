@@ -11,12 +11,24 @@ function FieldworkContext:init(field, workingWidth, turningRadius, nHeadlands)
     self.workingWidth = workingWidth
     self.turningRadius = turningRadius
     self.nHeadlands = nHeadlands
+    self.nHeadlandsWithRoundCorners = 0
 end
 
----@param type string smooth, round or sharp
-function FieldworkContext:setCorners(type)
-    self.cornerType = type
+---@param nHeadlandsWithRoundCorners number of headlands that should have their corners rounded to the turning radius.
+function FieldworkContext:setHeadlandsWithRoundCorners(nHeadlandsWithRoundCorners)
+    self.nHeadlandsWithRoundCorners = math.min(self.nHeadlands, nHeadlandsWithRoundCorners)
     return self
+end
+
+---@param nIslandHeadlands number of headlands to generate around field islands
+function FieldworkContext:setIslandHeadlands(nIslandHeadlands)
+    self.nIslandHeadlands = nIslandHeadlands
+    return self
+end
+
+---@param fieldCornerRadius number if a field has a corner under this radius, we'll sharpen it
+function FieldworkContext:setFieldCornerRadius(fieldCornerRadius)
+    self.fieldCornerRadius = fieldCornerRadius
 end
 
 ---@class cg.FieldworkContext

@@ -2,6 +2,8 @@ lu = require("luaunit")
 package.path = package.path .. ";../?.lua;..?.lua;../../Courseplay_FS22/scripts/?.lua;../../Courseplay_FS22/scripts/pathfinder/?.lua"
 require('CourseGenerator')
 require('CpObject')
+require('Logger')
+require('WrapAroundIndex')
 require('Dubins')
 require('AnalyticSolution')
 require('State3D')

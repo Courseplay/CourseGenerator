@@ -4,10 +4,12 @@ local Headland = CpObject()
 --- Create a headland from a base polygon. The headland is a new polygon, offset by width, that is, inside
 --- of the base polygon.
 ---@param basePolygon cg.Polygon
+---@param passNumber number of the headland pass, the outermost is 1
 ---@param width number
 ---@param outward boolean if true, the generated headland will be outside of the basePolygon, inside otherwise
-function Headland:init(basePolygon, width, outward)
-    cg.debug('Headland: start generating, base clockwise %s, width %.1f, outward: %s',
+function Headland:init(basePolygon, passNumber, width, outward)
+    self.logger = cg.Logger('Headland ' .. passNumber or '')
+    self.logger:debug('start generating, base clockwise %s, width %.1f, outward: %s',
             basePolygon:isClockwise(), width, outward)
     if basePolygon:isClockwise() then
         -- to generate headland inside the polygon we need to offset the polygon to the right if
@@ -22,7 +24,7 @@ function Headland:init(basePolygon, width, outward)
     self.recursionCount = 0
     ---@type cg.Polygon
     self.polygon = self:generate(basePolygon, width, 0)
-    cg.debug('Headland: polygon with %d vertices generated', #self.polygon)
+    self.logger:debug('polygon with %d vertices generated', #self.polygon)
     self.polygon:calculateProperties()
     self.polygon:ensureMaximumEdgeLength(cg.cMaxEdgeLength, cg.cMaxDeltaAngleForMaxEdgeLength)
     self.polygon:calculateProperties()
@@ -30,14 +32,14 @@ end
 
 --- Make sure all corners are rounded to have at least minimumRadius radius.
 function Headland:roundCorners(minimumRadius)
-    cg.debug('Headland: applying minimum radius %.1f', minimumRadius)
+    self.logger:debug('applying minimum radius %.1f', minimumRadius)
     self.polygon:ensureMinimumRadius(minimumRadius, false)
     self.polygon:calculateProperties()
 end
 
 --- Make sure all corners are rounded to have at least minimumRadius radius.
 function Headland:sharpenCorners(minimumRadius)
-    cg.debug('Headland: sharpen corners under radius %.1f', minimumRadius)
+    self.logger:debug('sharpen corners under radius %.1f', minimumRadius)
     self.polygon:ensureMinimumRadius(minimumRadius, true)
     self.polygon:calculateProperties()
 end
