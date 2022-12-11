@@ -32,18 +32,34 @@ function Polygon:fwdIterationLimit()
 end
 
 --- edge iterator, will wrap through the end to close the polygon
----@return number, cg.LineSegment
-function Polygon:edges()
-    local i = 1
+---@return number, cg.LineSegment, cg.Vertex
+function Polygon:edges(startIx)
+     local i = startIx and startIx - 1 or 0
     return function()
         i = i + 1
-        if i > #self + 1 then
+        if i > #self then
             return nil, nil
         else
-            return i - 1, cg.LineSegment.fromVectors(self[i - 1], self[i > #self and 1 or i])
+            return i, cg.LineSegment.fromVectors(self[i], self[(i + 1) > #self and 1 or i + 1]), self[i]
         end
     end
 end
+
+--- edge iterator backwards
+---@return number, cg.LineSegment, cg.Vertex
+function Polygon:edgesBackwards(startIx)
+    local i = startIx and (startIx + 1) or (#self + 1)
+    return function()
+        i = i - 1
+        if i <= 2 then
+            return nil, nil
+        else
+            return i, cg.LineSegment.fromVectors(self[i], self[(i - 1) < 1 and #self or (i - 1)]), self[i]
+        end
+    end
+end
+
+
 
 --- Is a point at (x, y) inside of the polygon?
 --- We use Dan Sunday's algorithm and his convention that a point
@@ -98,7 +114,7 @@ end
 function Polygon:calculateProperties(from, to)
     cg.Polyline.calculateProperties(self, from, to)
     -- dirty flag to trigger clockwise/area recalculation
-    self.deltaAngle, self.area = nil, nil
+    self.deltaAngle, self.area, self.length = nil, nil, nil
 end
 
 function Polygon:ensureMinimumEdgeLength(minimumLength)
@@ -129,6 +145,31 @@ function Polygon:createOffset(offsetVector, minEdgeLength, preserveCorners)
     -- contrary to the polyline, no need to append the end of the last edge here as it is the same
     -- as the start of the first edge
     return offsetPolygon
+end
+
+------------------------------------------------------------------------------------------------------------------------
+--- Private functions
+------------------------------------------------------------------------------------------------------------------------
+
+--- Get all vertices between fromIx and toIx (non inclusive), in form of two polylines, one in each direction (cw/ccw)
+--- Remember, these are references of the original vertices, not copies!
+---@param fromIx number index of first vertex in the segment, not including
+---@param toIx number index of last vertex in the segment, not including
+---@return Polyline, Polyline
+function Polygon:getPathBetween(fromIx, toIx)
+    local forward = cg.Polyline()
+    local fwdIx = cg.WrapAroundIndex(self, fromIx)
+    while fwdIx:get() ~= toIx do
+        fwdIx = fwdIx + 1
+        table.insert(forward, self:at(fwdIx:get()))
+    end
+    local backward = cg.Polyline()
+    local bwdIx = cg.WrapAroundIndex(self, fromIx)
+    while bwdIx:get() ~= toIx do
+        table.insert(backward, self:at(bwdIx:get()))
+        bwdIx = bwdIx - 1
+    end
+    return forward, backward
 end
 
 ---@class cg.Polygon:cg.Polyline

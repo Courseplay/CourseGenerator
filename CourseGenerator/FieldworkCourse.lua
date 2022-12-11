@@ -29,6 +29,10 @@ function FieldworkCourse:generateHeadlands()
     elseif self.context.nHeadlands > 0 then
         self:generateHeadlandsFromOutside(self.boundary, self.context.workingWidth / 2, 1)
     end
+    self:generateHeadlandsAroundIslands()
+    for _, h in ipairs(self.headlands) do
+        h:bypassIslands(self.context.field:getIslands())
+    end
 end
 
 ---@param boundary Polygon field boundary or other headland to start the generation from

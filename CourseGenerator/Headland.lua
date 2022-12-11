@@ -77,5 +77,11 @@ function Headland:generate(polygon, targetOffset, currentOffset)
     return self:generate(polygon, targetOffset, currentOffset)
 end
 
+function Headland:bypassIslands(islands)
+    for _, i in pairs(islands) do
+        self.polygon:goAround(i:getHeadlands()[1]:getPolygon())
+    end
+end
+
 ---@class cg.Headland
 cg.Headland = Headland

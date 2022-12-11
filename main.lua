@@ -22,12 +22,12 @@ local graphicsTransform, statusTransform, mouseTransform, contextTransform
 
 local fieldBoundaryColor = { 0.5, 0.5, 0.5 }
 local courseColor = { 0, 0.7, 1 }
-local islandHeadlandColor = { 0, 0.7, 1 }
+local islandHeadlandColor = { 1, 1, 1, 0.2 }
 local waypointColor = { 0.7, 0.5, 0.2 }
 
 local parameters = {}
 -- number of headland passes around the field boundary
-local nHeadlandPasses = AdjustableParameter(1, 'headlands', 'P', 'p', 1, 0, 100); table.insert(parameters, nHeadlandPasses)
+local nHeadlandPasses = AdjustableParameter(3, 'headlands', 'P', 'p', 1, 0, 100); table.insert(parameters, nHeadlandPasses)
 local nHeadlandsWithRoundCorners = AdjustableParameter(0, 'headlands with round corners', 'C', 'c', 1, 0, 100); table.insert(parameters, nHeadlandsWithRoundCorners)
 -- number of headland passes around the field islands
 local nIslandHeadlandPasses = AdjustableParameter(1, 'island headlands', 'I', 'i', 1, 1, 10); table.insert(parameters, nIslandHeadlandPasses)
@@ -159,16 +159,23 @@ local function drawHeadland(h, color)
     end
 end
 
+local function drawIslandHeadland(h, color)
+    love.graphics.setLineWidth(10 * lineWidth)
+    love.graphics.setColor(color)
+    love.graphics.polygon('line', h:getUnpackedVertices())
+end
+
+
 local function drawFields()
-    love.graphics.setLineWidth(lineWidth)
     for _, f in pairs(savedFields) do
+        love.graphics.setLineWidth(lineWidth)
         love.graphics.setColor(fieldBoundaryColor)
         love.graphics.polygon('line', f:getUnpackedVertices())
         for _, i in ipairs(f:getIslands()) do
             love.graphics.setColor(fieldBoundaryColor)
             love.graphics.polygon('fill', i:getBoundary():getUnpackedVertices())
             for _, h in ipairs(i:getHeadlands()) do
-                drawHeadland(h, islandHeadlandColor)
+                drawIslandHeadland(h, islandHeadlandColor)
             end
         end
     end
