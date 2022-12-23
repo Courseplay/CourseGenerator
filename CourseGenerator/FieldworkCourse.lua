@@ -45,8 +45,10 @@ function FieldworkCourse:generateHeadlandsFromOutside(boundary, firstHeadlandWid
             self.context.nHeadlands - startIx, self.context.turningRadius)
     -- outermost headland is offset from the field boundary by half width
     self.headlands[startIx] = cg.Headland(boundary, startIx, firstHeadlandWidth, false, self.context.turningRadius)
+    self.headlands[startIx]:sharpenCorners(self.context.turningRadius)
     for i = startIx + 1, self.context.nHeadlands do
         self.headlands[i] = cg.Headland(self.headlands[i - 1]:getPolygon(), i, self.context.workingWidth, false, self.context.turningRadius)
+        self.headlands[i]:sharpenCorners(self.context.turningRadius)
     end
 end
 

@@ -63,7 +63,7 @@ function Headland:generate(polygon, targetOffset, currentOffset)
     -- limit of the number of recursions based on how far we want to go
     self.recursionCount = self.recursionCount + 1
     if self.recursionCount >  math.max( math.floor( targetOffset * 20 ), 600 ) then
-        CourseGenerator.debug('Headland generation: recursion limit reached (%d)', self.recursionCount)
+        self.logger:error('Headland generation: recursion limit reached (%d)', self.recursionCount)
         return nil
     end
     -- we'll use the grassfire algorithm and approach the target offset by
@@ -79,7 +79,7 @@ end
 
 function Headland:bypassIslands(islands)
     for _, i in pairs(islands) do
-        self.polygon:goAround(i:getHeadlands()[1]:getPolygon())
+        self.polygon:goAround(i:getHeadlands()[1]:getPolygon(), nil, true)
     end
 end
 

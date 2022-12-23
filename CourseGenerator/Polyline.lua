@@ -16,6 +16,13 @@ function Polyline:append(v)
     table.insert(self, cg.Vertex(v.x, v.y, #self + 1))
 end
 
+---@param p cg.Vector[]
+function Polyline:appendMany(p)
+    for _, v in ipairs(p) do
+        self:append(v)
+    end
+end
+
 function Polyline:clone()
     local clone = Polyline({})
     for _, v in ipairs(self) do
@@ -86,14 +93,17 @@ function Polyline:getUnpackedVertices()
 end
 
 --- vertex iterator
-function Polyline:vertices()
-    local i = 0
+---@return number, cg.Vertex, cg.Vertex, cg.Vertex the index, the vertex at index, the previous, and the next vertex.
+--- previous and next may be nil
+function Polyline:vertices(from, to)
+    local i = from and from - 1 or 0
+    local last = to or #self
     return function()
         i = i + 1
-        if i > #self then
+        if i > last then
             return nil, nil
         else
-            return i, self[i]
+            return i, self[i], self[i - 1], self[i + 1]
         end
     end
 end
@@ -263,15 +273,20 @@ function Polyline:ensureMinimumRadius(r, makeCorners)
         local from = entry:getBaseAsState3D()
         local to = exit:getBaseAsState3D()
         local solution = dubinsSolver:solve(from, to, r, true)
-        return solution:getWaypoints(from, r)
+        local arc = {}
+        for _, v in ipairs(solution:getWaypoints(from, r)) do
+            table.insert(arc, cg.Vertex.fromVector(v))
+        end
+        print(arc)
+        return arc
     end
 
     ---@param entry cg.Slider
     ---@param exit cg.Slider
     local function makeCorner(entry, exit)
         entry:extendTo(exit)
-        local corner = entry:getEnd()
-        corner.color = { 0, 1, 0 }
+        local corner = cg.Vertex.fromVector(entry:getEnd())
+        corner.isCorner = true
         return { corner }
     end
 
@@ -326,22 +341,35 @@ end
 --- between those points with the vertices of the other polyline or polygon.
 ---@param other Polyline
 ---@param startIx number index of the vertex we want to start looking for intersections.
-function Polyline:goAround(other, startIx)
+function Polyline:goAround(other, startIx, circle)
     local intersections = self:getIntersections(other, startIx)
     local is1, is2 = intersections[1], intersections[2]
     if is1 and is2 then
         local pathA, pathB = other:getPathBetween(is1.ixB, is2.ixB)
         local path
         if pathA and pathB then
+            local shortPath = pathA:getLength() < pathB:getLength() and pathA or pathB
+            local longPath = pathA:getLength() >= pathB:getLength() and pathA or pathB
             self.logger:debug('path A: %.1f, path B: %.1f', pathA:getLength(), pathB:getLength())
-            path = pathA:getLength() < pathB:getLength() and pathA or pathB
+            if circle then
+                path = shortPath:clone()
+                longPath:reverse()
+                path:appendMany(longPath)
+                path:appendMany(shortPath)
+                self.logger:debug('Circled around, %d waypoints', #path)
+            else
+                path = shortPath
+                self.logger:debug('Took the shorter path, no circle')
+            end
         else
             path = pathA
         end
-        table.insert(path, 1, is1.is)
-        table.insert(path, is2.is)
+        table.insert(path, 1, cg.Vertex.fromVector(is1.is))
+        table.insert(path, cg.Vertex.fromVector(is2.is))
         if path then
-            self:replace(is1.ixA, is2.ixA + 1, path)
+            local lastIx = self:replace(is1.ixA, is2.ixA + 1, path)
+            -- make the transitions a little smoother
+            cg.SplineHelper.smooth(self, 3, is1.ixA, lastIx)
         end
     end
     self:calculateProperties()
@@ -409,7 +437,7 @@ function Polyline:replace(fromIx, toIx, vertices)
     local destIx = cg.WrapAroundIndex(self, fromIx + 1)
     while self[destIx:get()] and self[destIx:get()].toBeReplaced do
         if sourceIx <= #vertices then
-            local newVertex = cg.Vertex(vertices[sourceIx].x, vertices[sourceIx].y, destIx:get())
+            local newVertex = vertices[sourceIx]:clone()
             newVertex.color = { 0, 1, 0 } -- for debug only
             self[destIx:get()] = newVertex
             self.logger:trace('Replaced %d with %s', destIx:get(), newVertex)

@@ -6,6 +6,19 @@ local Vertex = CpObject(cg.Vector)
 function Vertex:init(x, y, ix)
     cg.Vector.init(self, x, y)
     self.ix = ix or 0
+    --- public properties (wish lua was a proper language...)
+    --- This is a corner vertex, and should remain a sharp corner
+    self.isCorner = nil
+    --- This is a vertex leading to a corner (there could be a few)
+    self.isCornerLead = nil
+    --- This is a vertex after a corner (there could be a few)
+    self.isCornerTail = nil
+    --- Delta angle at this vertex, angle between the entry and exit edges
+    self.dA = nil
+end
+
+function Vertex.fromVector(v)
+    return Vertex(v.x, v.y)
 end
 
 function Vertex:set(x, y, ix)
@@ -14,14 +27,13 @@ function Vertex:set(x, y, ix)
     self.ix = ix or 0
 end
 
+--- Clone the vertex, meaning to create a copy with all the non-calculated properties (which make sense
+--- only within the polyline/polygon context)
 function Vertex:clone()
     local v = Vertex(self.x, self.y)
-    v.entryHeading = self:getEntryHeading()
-    v.exitHeading = self:getExitHeading()
-    v.entryEdge = self.entryEdge and self.entryEdge:clone()
-    v.exitEdge = self.exitEdge and self.exitEdge:clone()
-    v.unitRadius = self.unitRadius
-    v.d = self.d
+     v.isCorner     = self.isCorner
+     v.isCornerLead = self.isCornerLead
+     v.isCornerTail = self.isCornerTail
     return v
 end
 

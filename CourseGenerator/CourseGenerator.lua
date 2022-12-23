@@ -16,6 +16,9 @@ NewCourseGenerator.cMaxDeltaAngleForMaxEdgeLength = math.rad(45)
 -- find corners which the vehicle can't make due to its turning radius without being more than
 -- cMaxCrossTrackError meters from the vertex in the corner.
 NewCourseGenerator.cMaxCrossTrackError = 0.3
+-- The delta angle above which smoothing kicks in. No smoothing around vertices with a delta
+-- angle below this
+NewCourseGenerator.cMinSmoothingAngle = math.rad(25)
 
 -- when enabled, will print a lot of information
 NewCourseGenerator.traceEnabled = false

@@ -31,6 +31,44 @@ function Polygon:fwdIterationLimit()
     return #self
 end
 
+--- Vertex iterator. If no end index (to) given, it'll wrap around until it reaches from again. Examples with
+--- a 5 vertex polygon, first and last current vertex returned, depending on from, to:
+--- (nil, nil) -> 1, 2, 3, 4, 5
+--- (  3, nil) -> 3, 4, 5, 1, 2
+--- (  3,   1) -> 3, 4, 5, 1
+--- (  1,   3) -> 1, 2, 3
+---@param from number index of first vertex
+---@param to number index of last vertex
+---@param step number step (1 or -1 only), direction of iteration
+---@return number, cg.Vertex, cg.Vertex, cg.Vertex the index, the vertex at index, the previous, and the next vertex.
+--- previous and next may be nil
+function Polygon:vertices(from, to, step)
+    step = (step == nil or step > 0) and 1 or -1
+    local i, stop
+    if step > 0 then
+        i = cg.WrapAroundIndex(self, (from or 1) - 1)
+        -- if there is a start index and no end given, we stop after we wrapped around, that is,
+        -- we are again at the starting point. If there is no start index (from) given, then we
+        -- start at 1 and stop at 1 after wrapping around the end
+        stop = cg.WrapAroundIndex(self, (to and (to + 1) or (from or 1)))
+    else
+        i = cg.WrapAroundIndex(self, (from or #self) + 1)
+        stop = cg.WrapAroundIndex(self, (to and (to - 1) or (from or #self)))
+    end
+    local firstIteration = true
+    return function()
+        i:inc(step or 1)
+        -- since we may wrap around the end, we must check for equality (not > or <)
+        if i:get() == stop:get() and not firstIteration then
+            return nil, nil, nil, nil
+        else
+            firstIteration = false
+            local ix = i:get()
+            return ix, self:at(ix), self:at(ix - 1), self:at(ix + 1)
+        end
+    end
+end
+
 --- edge iterator, will wrap through the end to close the polygon
 ---@return number, cg.LineSegment, cg.Vertex
 function Polygon:edges(startIx)

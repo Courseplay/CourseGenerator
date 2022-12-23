@@ -24,6 +24,7 @@ local fieldBoundaryColor = { 0.5, 0.5, 0.5 }
 local courseColor = { 0, 0.7, 1 }
 local islandHeadlandColor = { 1, 1, 1, 0.2 }
 local waypointColor = { 0.7, 0.5, 0.2 }
+local cornerColor = { 1, 1, 0.0, 0.8 }
 
 local parameters = {}
 -- number of headland passes around the field boundary
@@ -145,17 +146,24 @@ local function selectFieldUnderCursor()
     end
 end
 
+local function drawVertex(v)
+    if v.color then
+        love.graphics.setColor(v.color)
+    else
+        love.graphics.setColor(waypointColor)
+    end
+    if v.isCorner then
+        love.graphics.setColor(cornerColor)
+    end
+    love.graphics.points(v.x, v.y)
+end
+
 local function drawHeadland(h, color)
     love.graphics.setLineWidth(lineWidth)
     love.graphics.setColor(color)
     love.graphics.polygon('line', h:getUnpackedVertices())
     for _, v in h:getPolygon():vertices() do
-        if v.color then
-            love.graphics.setColor(v.color)
-        else
-            love.graphics.setColor(waypointColor)
-        end
-        love.graphics.points(v.x, v.y)
+        drawVertex(v)
     end
 end
 
@@ -164,7 +172,6 @@ local function drawIslandHeadland(h, color)
     love.graphics.setColor(color)
     love.graphics.polygon('line', h:getUnpackedVertices())
 end
-
 
 local function drawFields()
     for _, f in pairs(savedFields) do
@@ -196,6 +203,7 @@ local function drawVertexInfo()
     love.graphics.printf(string.format('ix: %s r: %s',
             intToString(currentVertex.ix), floatToString(currentVertex:getRadius())), 10, 10, 130)
     love.graphics.printf(string.format('c: %.1f xte: %.2f', currentVertex.curvature, currentVertex.xte), 10, 24, 130)
+    love.graphics.printf(string.format('corner: %s', currentVertex.isCorner), 10, 36, 130)
 end
 
 local function drawGraphics()

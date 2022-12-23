@@ -14,4 +14,8 @@ function Math.getDeltaAngle(a, b)
     return b - a
 end
 
+function Math.clamp(val, min, max)
+    return math.min(math.max(val, min), max)
+end
+
 cg.Math = Math
