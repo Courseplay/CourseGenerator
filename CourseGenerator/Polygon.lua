@@ -1,7 +1,15 @@
 local Polygon = CpObject(cg.Polyline)
 
-function Polygon:debug(...)
-    cg.debug('Polygon: ' .. string.format(...))
+function Polygon:init(vertices)
+    cg.Polyline.init(self, vertices)
+    self.logger = cg.Logger('Polygon', cg.Logger.level.trace)
+end
+
+--- Remove all existing vertices
+function Polygon:_reset()
+    for i = 1, #self do
+        self[i] = nil
+    end
 end
 
 function Polygon:clone()
@@ -72,7 +80,7 @@ end
 --- edge iterator, will wrap through the end to close the polygon
 ---@return number, cg.LineSegment, cg.Vertex
 function Polygon:edges(startIx)
-     local i = startIx and startIx - 1 or 0
+    local i = startIx and startIx - 1 or 0
     return function()
         i = i + 1
         if i > #self then
@@ -162,6 +170,13 @@ function Polygon:ensureMinimumEdgeLength(minimumLength)
     end
 end
 
+--- Make sure the edges are properly connected, their ends touch nicely without gaps and never
+--- extend beyond the vertex
+---@param edges cg.LineSegment[]
+function Polygon:cleanEdges(edges, minEdgeLength, preserveCorners)
+    return self:_cleanEdges(edges, 1, {}, edges[#edges], minEdgeLength, preserveCorners)
+end
+
 --- Generate a polygon parallel to this one, offset by the offsetVector.
 ---@param offsetVector cg.Vector offset to move the edges, relative to the edge's direction
 ---@param minEdgeLength number see LineSegment.connect()
@@ -194,20 +209,52 @@ end
 ---@param fromIx number index of first vertex in the segment, not including
 ---@param toIx number index of last vertex in the segment, not including
 ---@return Polyline, Polyline
-function Polygon:getPathBetween(fromIx, toIx)
-    local forward = cg.Polyline()
+function Polygon:getPathBetween(fromIx, toIx, asPolygon)
+    local forward = asPolygon and cg.Polygon() or cg.Polyline()
     local fwdIx = cg.WrapAroundIndex(self, fromIx)
     while fwdIx:get() ~= toIx do
         fwdIx = fwdIx + 1
         table.insert(forward, self:at(fwdIx:get()))
     end
-    local backward = cg.Polyline()
+    local backward = asPolygon and cg.Polygon() or cg.Polyline()
     local bwdIx = cg.WrapAroundIndex(self, fromIx)
     while bwdIx:get() ~= toIx do
         table.insert(backward, self:at(bwdIx:get()))
         bwdIx = bwdIx - 1
     end
     return forward, backward
+end
+
+--- Remove a loop from a complex polygon, that is, if two edges of the polygon intersect each other,
+--- the intersection point splits the complex polygon into two simple polygons (as long as there is only
+--- one intersection). Complex polygons may be generated when creating the offset polygon and the original
+--- polygon has nooks narrower than the offset (working width/2), at these nooks, the generated offset edges
+--- will lie outside of the original polygon, forming a little loop.
+--- We check the two simple polygons and keep the one which has the same clockwise direction as the original
+--- polygon.
+--- NOTE: this works correctly only if there is exactly one loop (one intersecting edge)
+---@return boolean loop found and removed.
+function Polygon:removeLoops(baseClockwise)
+    self.logger:debug('Removing loops')
+    for i, this, _, _ in self:vertices() do
+        for j = i + 2, i > 1 and #self or (#self - 1) do
+            local is = this:getExitEdge():intersects(self[j]:getExitEdge())
+            if is then
+                local pathA, pathB = self:getPathBetween(i, j, true)
+                local pathAisClockwise = pathA:isClockwise()
+                self.logger:debug('%d -> %d: path A: %.1f, path B: %.1f, pathA cw %s, base cw %s',
+                        i, j, pathA:getLength(), pathB:getLength(), pathAisClockwise, baseClockwise)
+                self:_reset()
+                if pathAisClockwise == baseClockwise then
+                    -- keep path A
+                    self:init(pathA)
+                else
+                    self:init(pathB)
+                end
+                return true
+            end
+        end
+    end
 end
 
 ---@class cg.Polygon:cg.Polyline

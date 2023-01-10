@@ -1,4 +1,3 @@
-
 local Headland = CpObject()
 
 --- Create a headland from a base polygon. The headland is a new polygon, offset by width, that is, inside
@@ -28,6 +27,7 @@ function Headland:init(basePolygon, passNumber, width, outward)
     self.polygon:calculateProperties()
     self.polygon:ensureMaximumEdgeLength(cg.cMaxEdgeLength, cg.cMaxDeltaAngleForMaxEdgeLength)
     self.polygon:calculateProperties()
+    self.polygon:removeLoops(basePolygon:isClockwise())
 end
 
 --- Make sure all corners are rounded to have at least minimumRadius radius.
@@ -58,11 +58,13 @@ end
 
 function Headland:generate(polygon, targetOffset, currentOffset)
     -- done!
-    if currentOffset >= targetOffset then return polygon end
+    if currentOffset >= targetOffset then
+        return polygon
+    end
 
     -- limit of the number of recursions based on how far we want to go
     self.recursionCount = self.recursionCount + 1
-    if self.recursionCount >  math.max( math.floor( targetOffset * 20 ), 600 ) then
+    if self.recursionCount > math.max(math.floor(targetOffset * 20), 600) then
         self.logger:error('Headland generation: recursion limit reached (%d)', self.recursionCount)
         return nil
     end
@@ -77,10 +79,8 @@ function Headland:generate(polygon, targetOffset, currentOffset)
     return self:generate(polygon, targetOffset, currentOffset)
 end
 
-function Headland:bypassIslands(islands)
-    for _, i in pairs(islands) do
-        self.polygon:goAround(i:getHeadlands()[1]:getPolygon(), nil, true)
-    end
+function Headland:bypassIsland(island, circle)
+    return self.polygon:goAround(island:getHeadlands()[1]:getPolygon(), nil, circle)
 end
 
 ---@class cg.Headland

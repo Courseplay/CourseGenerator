@@ -170,7 +170,7 @@ o[2]:assertAlmostEquals(p[3])
 p = cg.Polyline({cg.Vertex(-5, 0), cg.Vertex(0, 0), cg.Vertex(5, 0)})
 o = cg.Polyline({cg.Vertex(3, -1), cg.Vertex(0, 1), cg.Vertex(-2, -1),  cg.Vertex(-5, 1)})
 local iss = p:getIntersections(o)
-local is = iss[1]
+is = iss[1]
 lu.assertEquals(is.ixA, 1)
 lu.assertEquals(is.ixB, 3)
 is.is:assertAlmostEquals(cg.Vector(-3.5, 0))
@@ -204,6 +204,9 @@ lu.assertEquals(is.ixB, 3)
 is.is:assertAlmostEquals(cg.Vector(1.5, 0))
 is.edgeA:assertAlmostEquals(cg.LineSegment(0, 0, 5, 0))
 -- goAround()
+-- disable smoothing so assertions are easier
+local minSmoothingAngle = cg.cMinSmoothingAngle
+cg.cMinSmoothingAngle = math.huge
 p:goAround(o)
 p[1]:assertAlmostEquals(cg.Vector(-5, 0))
 p[2]:assertAlmostEquals(cg.Vector(-3.5, 0))
@@ -220,3 +223,5 @@ p[2]:assertAlmostEquals(cg.Vector(-3.5, 0))
 p[3]:assertAlmostEquals(cg.Vector(-2, -1))
 p[4]:assertAlmostEquals(cg.Vector(-1, 0))
 p[6]:assertAlmostEquals(cg.Vector(5, 0))
+-- restore smoothing angle to re-enable smoothing
+cg.cMinSmoothingAngle = minSmoothingAngle

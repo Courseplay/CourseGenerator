@@ -10,13 +10,14 @@
 --
 --
 dofile('include.lua')
-
+local fileName = ''
 local dragging = false
 local pointSize = 1
 local lineWidth = 0.1
 local scale = 1.0
 local windowWidth = 1400
 local windowHeight = 800
+local xOffset, yOffset = 0, 0
 
 local graphicsTransform, statusTransform, mouseTransform, contextTransform
 
@@ -28,15 +29,24 @@ local cornerColor = { 1, 1, 0.0, 0.8 }
 
 local parameters = {}
 -- number of headland passes around the field boundary
-local nHeadlandPasses = AdjustableParameter(3, 'headlands', 'P', 'p', 1, 0, 100); table.insert(parameters, nHeadlandPasses)
-local nHeadlandsWithRoundCorners = AdjustableParameter(0, 'headlands with round corners', 'C', 'c', 1, 0, 100); table.insert(parameters, nHeadlandsWithRoundCorners)
+local nHeadlandPasses = AdjustableParameter(4, 'headlands', 'P', 'p', 1, 0, 100);
+table.insert(parameters, nHeadlandPasses)
+local nHeadlandsWithRoundCorners = AdjustableParameter(0, 'headlands with round corners', 'C', 'c', 1, 0, 100);
+table.insert(parameters, nHeadlandsWithRoundCorners)
 -- number of headland passes around the field islands
-local nIslandHeadlandPasses = AdjustableParameter(1, 'island headlands', 'I', 'i', 1, 1, 10); table.insert(parameters, nIslandHeadlandPasses)
+local nIslandHeadlandPasses = AdjustableParameter(1, 'island headlands', 'I', 'i', 1, 1, 10);
+table.insert(parameters, nIslandHeadlandPasses)
 -- working width of the equipment
-local workingWidth = AdjustableParameter(8, 'width', 'W', 'w', 0.2, 0, 100); table.insert(parameters, workingWidth)
-local turningRadius = AdjustableParameter(6, 'radius', 'T', 't', 0.2, 0, 20); table.insert(parameters, turningRadius)
-local fieldCornerRadius = AdjustableParameter(6, 'field corner radius', 'F', 'f', 1, 0, 30); table.insert(parameters, fieldCornerRadius)
-local maxEdgeLength = ToggleParameter('limit edge length', false, 'e'); table.insert(parameters, maxEdgeLength)
+local workingWidth = AdjustableParameter(8, 'width', 'W', 'w', 0.2, 0, 100);
+table.insert(parameters, workingWidth)
+local turningRadius = AdjustableParameter(6, 'radius', 'T', 't', 0.2, 0, 20);
+table.insert(parameters, turningRadius)
+local fieldCornerRadius = AdjustableParameter(6, 'field corner radius', 'F', 'f', 1, 0, 30);
+table.insert(parameters, fieldCornerRadius)
+local sharpenCorners = ToggleParameter('sharpen corners', false, 's');
+table.insert(parameters, sharpenCorners)
+local bypassIslands = ToggleParameter('bypass islands', false, 'b');
+table.insert(parameters, bypassIslands)
 
 -- the selectedField to generate the course for
 ---@type cg.Field
@@ -55,6 +65,8 @@ local function generate()
     context:setHeadlandsWithRoundCorners(nHeadlandsWithRoundCorners:get())
     context:setIslandHeadlands(nIslandHeadlandPasses:get())
     context:setFieldCornerRadius(fieldCornerRadius:get())
+    context:setBypassIslands(bypassIslands:get())
+    context:setSharpenCorners(sharpenCorners:get())
     course = cg.FieldworkCourse(context)
     course:generateHeadlands()
     course:generateHeadlandsAroundIslands()
@@ -62,8 +74,18 @@ local function generate()
     io.stdout:flush()
 end
 
+local function updateTransform()
+    graphicsTransform = love.math.newTransform(xOffset, yOffset, 0, 1, 1, 0, 0, 0, 0):scale(scale, -scale)
+end
+
+--- Set offset so with the current scale, the world coordinates x, y are in the middle of the screen
+local function setOffset(x, y)
+    xOffset = - (scale * x - windowWidth / 2)
+    yOffset = (scale * y - windowHeight / 2) + windowHeight
+end
+
 function love.load(arg)
-    local fileName = arg[1]
+    fileName = arg[1]
     cg.debug('Reading %s...', fileName)
     savedFields = cg.Field.loadSavedFields(fileName)
     print("Fields found in file:")
@@ -84,7 +106,10 @@ function love.load(arg)
         pointSize = 0.9 * xScale
     end
     local fieldCenter = selectedField:getCenter()
-    graphicsTransform = love.math.newTransform(0, 0, 0, scale, -scale, fieldCenter.x - fieldWidth / 2, fieldCenter.y + fieldHeight / 2, 0, 0)    -- translate into the middle of the window and remember, the window size is not scaled so must
+    -- world offset
+    --scale = 1
+    setOffset(fieldCenter.x, fieldCenter.y)
+    updateTransform()
     statusTransform = love.math.newTransform(0, 0, 0, 1, 1, -windowWidth + 200, -windowHeight + 30)
     mouseTransform = love.math.newTransform()
     contextTransform = love.math.newTransform(10, 10, 0, 1, 1, 0, 0)
@@ -141,6 +166,7 @@ local function selectFieldUnderCursor()
         if f:getBoundary():isInside(x, y) then
             print(string.format('Field %d selected', f:getId()))
             selectedField = f
+            love.window.setTitle(string.format('Course Generator - %s - SelectedField %d', fileName, selectedField:getId()))
             generate()
         end
     end
@@ -185,6 +211,11 @@ local function drawFields()
                 drawIslandHeadland(h, islandHeadlandColor)
             end
         end
+        local c = f:getCenter()
+        love.graphics.push()
+        love.graphics.scale(1, -1)
+        love.graphics.print(f:getId(), c.x, -c.y)
+        love.graphics.pop()
     end
 end
 
@@ -228,7 +259,7 @@ local function drawStatus()
     love.graphics.replaceTransform(statusTransform)
     local mx, my = love.mouse.getPosition()
     local x, y = screenToWorld(mx, my)
-    love.graphics.print(string.format('%.1f %.1f', x, y), 0, 0)
+    love.graphics.print(string.format('%.1f %.1f (%.1f %.1f / %.1f)', x, y, xOffset, yOffset, scale), 0, 0)
     if currentVertex then
         drawVertexInfo()
     end
@@ -253,7 +284,11 @@ end
 --- Pan/Zoom
 ---------------------------------------------------------------------------------------------------------------------------
 function love.wheelmoved(dx, dy)
-    graphicsTransform = graphicsTransform:scale(1 + dy * 0.03)
+    -- when zooming, keep the window center in place
+    local windowCenterX, windowCenterY = screenToWorld(windowWidth / 2, windowHeight / 2)
+    scale = scale * (1 + dy * 0.03)
+    setOffset(windowCenterX, windowCenterY)
+    updateTransform()
     pointSize = pointSize + pointSize * dy * 0.02
 end
 
@@ -273,7 +308,9 @@ end
 
 function love.mousemoved(x, y, dx, dy)
     if dragging then
-        graphicsTransform:translate(0.5 * dx, -0.5 * dy)
+        xOffset = xOffset + dx
+        yOffset = yOffset + dy
+        updateTransform()
     end
     mouseTransform:setTransformation(x + 20, y + 20)
     currentVertex = findCurrentVertex(x, y)

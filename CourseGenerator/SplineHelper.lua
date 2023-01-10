@@ -8,7 +8,7 @@ local SplineHelper = {}
 function SplineHelper.tuck(p, from, to, s)
     for _, cv, pv, nv in p:vertices(from, to) do
         if pv and cv and nv then
-            if cv.dA and math.abs(cv.dA) > cg.cMinSmoothingAngle then
+            if not cv.isCorner and cv.dA and math.abs(cv.dA) > cg.cMinSmoothingAngle then
                 local m = (pv + nv) / 2
                 local cm = m - cv
                 cv.x, cv.y = cv.x + s * cm.x, cv.y + s * cm.y
@@ -22,7 +22,7 @@ end
 function SplineHelper.refine(p, from, to)
     for i, cv, pv, _ in p:vertices(to, from, -1) do
         if pv and cv then
-            if cv.dA and math.abs(cv.dA) > cg.cMinSmoothingAngle then
+            if not cv.isCorner and cv.dA and math.abs(cv.dA) > cg.cMinSmoothingAngle then
                 local m = (pv + cv) / 2
                 local newVertex = pv:clone()
                 newVertex.x, newVertex.y = m.x, m.y

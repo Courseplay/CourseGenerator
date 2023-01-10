@@ -198,14 +198,15 @@ p[4]:assertAlmostEquals(cg.Vector(5, 0))
 -- outside, cut corner
 p = cg.Polygon({ cg.Vector(0, 0), cg.Vector(0, 5), cg.Vector(5, 5), cg.Vector(5, 0) })
 o = p:createOffset(cg.Vector(0, 1), 1, false)
-o[1]:assertAlmostEquals(cg.Vector(-1, 0))
-o[2]:assertAlmostEquals(cg.Vector(-1, 5))
-o[3]:assertAlmostEquals(cg.Vector(0, 6))
-o[4]:assertAlmostEquals(cg.Vector(5, 6))
-o[5]:assertAlmostEquals(cg.Vector(6, 5))
-o[6]:assertAlmostEquals(cg.Vector(6, 0))
-o[7]:assertAlmostEquals(cg.Vector(5, -1))
-o[8]:assertAlmostEquals(cg.Vector(0, -1))
+print(o)
+o[1]:assertAlmostEquals(cg.Vector(0, -1))
+o[2]:assertAlmostEquals(cg.Vector(-1, 0))
+o[3]:assertAlmostEquals(cg.Vector(-1, 5))
+o[4]:assertAlmostEquals(cg.Vector(0, 6))
+o[5]:assertAlmostEquals(cg.Vector(5, 6))
+o[6]:assertAlmostEquals(cg.Vector(6, 5))
+o[7]:assertAlmostEquals(cg.Vector(6, 0))
+o[8]:assertAlmostEquals(cg.Vector(5, -1))
 
 -- outside, preserve corner
 p = cg.Polygon({ cg.Vector(0, 0), cg.Vector(0, 5), cg.Vector(5, 5), cg.Vector(5, 0) })
@@ -287,6 +288,9 @@ o2[1]:assertAlmostEquals(pCw[4])
 o2[6]:assertAlmostEquals(pCw[1])
 
 -- goAround()
+-- disable smoothing so assertions are easier
+local minSmoothingAngle = cg.cMinSmoothingAngle
+cg.cMinSmoothingAngle = math.huge
 local function assertGoAroundTop(line)
     lu.EPS = 0.01
     line[1]:assertAlmostEquals(cg.Vector(-12, 8))
@@ -380,3 +384,5 @@ assertGoAroundBottom(o)
 o = cg.Polyline({ cg.Vector(-12, -8), cg.Vector(-9, -8), cg.Vector(0, -9), cg.Vector(9, -9), cg.Vector(12, -9) })
 o:goAround(pCcw, nil, true)
 assertGoAroundBottomWithCircle(o)
+-- restore smoothing angle to re-enable smoothing
+cg.cMinSmoothingAngle = minSmoothingAngle

@@ -31,5 +31,14 @@ function FieldworkContext:setFieldCornerRadius(fieldCornerRadius)
     self.fieldCornerRadius = fieldCornerRadius
 end
 
+---@param bypass boolean if true, the course will go around islands
+function FieldworkContext:setBypassIslands(bypass)
+   self.bypassIslands = bypass
+end
+
+---@param sharpen boolean if true, sharpen the corners of the headlands which are not rounded
+function FieldworkContext:setSharpenCorners(sharpen)
+    self.sharpenCorners = sharpen
+end
 ---@class cg.FieldworkContext
 cg.FieldworkContext = FieldworkContext

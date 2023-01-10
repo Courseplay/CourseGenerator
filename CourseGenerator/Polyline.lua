@@ -7,7 +7,7 @@ function Polyline:init(vertices)
             self[i] = cg.Vertex(v.x, v.y, i)
         end
     end
-    self.logger = cg.Logger('Polyline', cg.Logger.level.trace)
+    self.logger = cg.Logger('Polyline', cg.Logger.level.debug)
     self:calculateProperties()
 end
 
@@ -224,13 +224,8 @@ function Polyline:generateOffsetEdges(offsetVector)
     return offsetEdges
 end
 
---- Make sure the edges are properly connected, their ends touch nicely without gaps and never
---- extend beyond the vertex
----@param edges cg.LineSegment[]
-function Polyline:cleanEdges(edges, minEdgeLength, preserveCorners)
-    local cleanEdges = { edges[1] }
-    for i = 2, #edges do
-        local previousEdge = cleanEdges[#cleanEdges]
+function Polyline:_cleanEdges(edges, startIx, cleanEdges, previousEdge, minEdgeLength, preserveCorners)
+    for i = startIx, #edges do
         local currentEdge = edges[i]
         local gapFiller = cg.LineSegment.connect(previousEdge, currentEdge, minEdgeLength, preserveCorners)
         if gapFiller then
@@ -241,6 +236,14 @@ function Polyline:cleanEdges(edges, minEdgeLength, preserveCorners)
     end
     return cleanEdges
 end
+
+--- Make sure the edges are properly connected, their ends touch nicely without gaps and never
+--- extend beyond the vertex
+---@param edges cg.LineSegment[]
+function Polyline:cleanEdges(edges, minEdgeLength, preserveCorners)
+    return self:_cleanEdges(edges, 2, { edges[1] }, edges[1], minEdgeLength, preserveCorners)
+end
+
 
 --- Generate a polyline parallel to this one, offset by the offsetVector
 ---@param offsetVector cg.Vector offset to move the edges, relative to the edge's direction
@@ -277,7 +280,6 @@ function Polyline:ensureMinimumRadius(r, makeCorners)
         for _, v in ipairs(solution:getWaypoints(from, r)) do
             table.insert(arc, cg.Vertex.fromVector(v))
         end
-        print(arc)
         return arc
     end
 
@@ -341,6 +343,7 @@ end
 --- between those points with the vertices of the other polyline or polygon.
 ---@param other Polyline
 ---@param startIx number index of the vertex we want to start looking for intersections.
+---@return boolean true if there were an intersection and we actually went around
 function Polyline:goAround(other, startIx, circle)
     local intersections = self:getIntersections(other, startIx)
     local is1, is2 = intersections[1], intersections[2]
@@ -370,9 +373,11 @@ function Polyline:goAround(other, startIx, circle)
             local lastIx = self:replace(is1.ixA, is2.ixA + 1, path)
             -- make the transitions a little smoother
             cg.SplineHelper.smooth(self, 3, is1.ixA, lastIx)
+            self:calculateProperties()
+            return true
         end
     end
-    self:calculateProperties()
+    return false
 end
 
 ------------------------------------------------------------------------------------------------------------------------

@@ -52,7 +52,6 @@ function Field:getCenter()
 	if not self.center then
 		self.center = self.boundary:getCenter()
 	end
-	cg.debug('Center of field %d is %.1f/%.1f', self.id, self.center.x, self.center.y)
 	return self.center
 end
 

@@ -108,12 +108,14 @@ function Vertex:calculateProperties(entry, exit)
     if not self.exitHeading then
         self.exitHeading = self.entryHeading
     end
-    -- This is the radius of the unit circle written between
-    -- entryEdge and exitEdge, which are tangents of the circle
-    self.dA = cg.Math.getDeltaAngle(self.entryHeading, self.exitHeading)
-    self.unitRadius = 1 / (2 * math.sin(self.dA / 2))
-    self.curvature = 1 / self.unitRadius
-    self.xte = math.abs(1 / math.cos(self.dA / 2)) - 1
+    if self.entryHeading and self.exitHeading then
+        -- This is the radius of the unit circle written between
+        -- entryEdge and exitEdge, which are tangents of the circle
+        self.dA = cg.Math.getDeltaAngle(self.entryHeading, self.exitHeading)
+        self.unitRadius = 1 / (2 * math.sin(self.dA / 2))
+        self.curvature = 1 / self.unitRadius
+        self.xte = math.abs(1 / math.cos(self.dA / 2)) - 1
+    end
 end
 
 ---@class cg.Vertex:cg.Vector

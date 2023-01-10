@@ -29,9 +29,16 @@ function FieldworkCourse:generateHeadlands()
     elseif self.context.nHeadlands > 0 then
         self:generateHeadlandsFromOutside(self.boundary, self.context.workingWidth / 2, 1)
     end
-    self:generateHeadlandsAroundIslands()
-    for _, h in ipairs(self.headlands) do
-        h:bypassIslands(self.context.field:getIslands())
+    if self.context.bypassIslands then
+        self:generateHeadlandsAroundIslands()
+        --- Remember the islands we circled already, as even if multiple tracks cross it, we only want to
+        --- circle once.
+        self.circledIslands = {}
+        for _, h in ipairs(self.headlands) do
+            for _, island in pairs(self.context.field:getIslands()) do
+                self.circledIslands[island] = h:bypassIsland(island, not self.circledIslands[island])
+            end
+        end
     end
 end
 
@@ -45,10 +52,14 @@ function FieldworkCourse:generateHeadlandsFromOutside(boundary, firstHeadlandWid
             self.context.nHeadlands - startIx, self.context.turningRadius)
     -- outermost headland is offset from the field boundary by half width
     self.headlands[startIx] = cg.Headland(boundary, startIx, firstHeadlandWidth, false, self.context.turningRadius)
-    self.headlands[startIx]:sharpenCorners(self.context.turningRadius)
+    if self.context.sharpenCorners then
+        self.headlands[startIx]:sharpenCorners(self.context.turningRadius)
+    end
     for i = startIx + 1, self.context.nHeadlands do
         self.headlands[i] = cg.Headland(self.headlands[i - 1]:getPolygon(), i, self.context.workingWidth, false, self.context.turningRadius)
-        self.headlands[i]:sharpenCorners(self.context.turningRadius)
+        if self.context.sharpenCorners then
+            self.headlands[i]:sharpenCorners(self.context.turningRadius)
+        end
     end
 end
 

@@ -12,6 +12,7 @@ function Island:init(id, perimeterPoints)
     self.id = id
     self.logger = cg.Logger('Island ' .. self.id)
     self.headlands = {}
+    self.circled = false
     self:createFromPerimeterPoints(perimeterPoints)
 end
 
@@ -99,7 +100,6 @@ function Island:generateHeadlands(context)
         self.headlands[i] = cg.Headland(self.headlands[i - 1]:getPolygon(), i - 1, self.context.workingWidth, true, self.context.turningRadius)
     end
 end
-
 
 function Island:getHeadlands()
     return self.headlands
