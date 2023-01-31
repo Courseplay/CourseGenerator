@@ -3,30 +3,27 @@ local FieldworkCourse = CpObject()
 ---@param context cg.FieldworkContext
 function FieldworkCourse:init(context)
     self.logger = cg.Logger('FieldworkCourse')
-    self.context = context
-    ---@type cg.Polygon
-    self.boundary = context.field:getBoundary():clone()
-    if self.context.fieldCornerRadius > 0 then
-        self.logger:debug('sharpening field boundary corners')
-        self.boundary:ensureMinimumRadius(self.context.fieldCornerRadius, true)
-    end
+    self:_setContext(context)
 end
 
 ------------------------------------------------------------------------------------------------------------------------
 --- Headlands
 ------------------------------------------------------------------------------------------------------------------------
-function FieldworkCourse:generateHeadlands()
+--- Generate the headlands based on the current context or the context passed in here
+---@param context cg.FieldworkContext if defined, set it as current context before generating the headlands
+function FieldworkCourse:generateHeadlands(context)
+    if context then self:_setContext(context) end
     self.headlands = {}
     self.logger:debug('generating %d headlands with round corners, then %d with sharp corners',
-            self.context.nHeadlandsWithRoundCorners, self.context.nHeadlands)
-    if self.context.nHeadlandsWithRoundCorners > 0 then
+            self.nHeadlandsWithRoundCorners, self.nHeadlands - self.nHeadlandsWithRoundCorners)
+    if self.nHeadlandsWithRoundCorners > 0 then
         self:generateHeadlandsFromInside()
-        if self.context.nHeadlands > self.context.nHeadlandsWithRoundCorners then
+        if self.nHeadlands > self.nHeadlandsWithRoundCorners and #self.headlands < self.nHeadlands then
             self:generateHeadlandsFromOutside(self.boundary,
-                    (self.context.nHeadlandsWithRoundCorners + 0.5) * self.context.workingWidth,
+                    (self.nHeadlandsWithRoundCorners + 0.5) * self.context.workingWidth,
                     #self.headlands + 1)
         end
-    elseif self.context.nHeadlands > 0 then
+    elseif self.nHeadlands > 0 then
         self:generateHeadlandsFromOutside(self.boundary, self.context.workingWidth / 2, 1)
     end
     if self.context.bypassIslands then
@@ -49,28 +46,47 @@ end
 function FieldworkCourse:generateHeadlandsFromOutside(boundary, firstHeadlandWidth, startIx)
 
     self.logger:debug('generating %d sharp headlands from the outside, min radius %.1f',
-            self.context.nHeadlands - startIx, self.context.turningRadius)
+            self.nHeadlands - startIx + 1, self.context.turningRadius)
     -- outermost headland is offset from the field boundary by half width
     self.headlands[startIx] = cg.Headland(boundary, startIx, firstHeadlandWidth, false, self.context.turningRadius)
+    if not self.headlands[startIx]:isValid() then
+        self:_removeHeadland(startIx)
+        return
+    end
     if self.context.sharpenCorners then
         self.headlands[startIx]:sharpenCorners(self.context.turningRadius)
     end
-    for i = startIx + 1, self.context.nHeadlands do
+    for i = startIx + 1, self.nHeadlands do
         self.headlands[i] = cg.Headland(self.headlands[i - 1]:getPolygon(), i, self.context.workingWidth, false, self.context.turningRadius)
-        if self.context.sharpenCorners then
-            self.headlands[i]:sharpenCorners(self.context.turningRadius)
+        if self.headlands[i]:isValid() then
+            if self.context.sharpenCorners then
+                self.headlands[i]:sharpenCorners(self.context.turningRadius)
+            end
+        else
+            self:_removeHeadland(i)
+            break
         end
     end
 end
 
 function FieldworkCourse:generateHeadlandsFromInside()
     self.logger:debug('generating %d headlands with round corners, min radius %.1f',
-            self.context.nHeadlandsWithRoundCorners, self.context.turningRadius)
-    -- start with the innermost headland
-    self.headlands[self.context.nHeadlandsWithRoundCorners] = cg.Headland(self.boundary, self.context.nHeadlandsWithRoundCorners,
-            (self.context.nHeadlandsWithRoundCorners - 0.5) * self.context.workingWidth, false)
-    self.headlands[self.context.nHeadlandsWithRoundCorners]:roundCorners(self.context.turningRadius)
-    for i = self.context.nHeadlandsWithRoundCorners - 1, 1, -1 do
+            self.nHeadlandsWithRoundCorners, self.context.turningRadius)
+    -- start with the innermost headland, try until it can fit in the field (as the required number of
+    -- headlands may be more than what actually fits into the field)
+    while self.nHeadlandsWithRoundCorners > 0 do
+        self.headlands[self.nHeadlandsWithRoundCorners] = cg.Headland(self.boundary, self.nHeadlandsWithRoundCorners,
+                (self.nHeadlandsWithRoundCorners - 0.5) * self.context.workingWidth, false)
+        if self.headlands[self.nHeadlandsWithRoundCorners]:isValid() then
+            self.headlands[self.nHeadlandsWithRoundCorners]:roundCorners(self.context.turningRadius)
+            break
+        else
+            self:_removeHeadland(self.nHeadlandsWithRoundCorners)
+            self.logger:warning('no room for innermost headland, reducing headlands to %d, rounded %d',
+                    self.nHeadlands, self.nHeadlandsWithRoundCorners)
+        end
+    end
+    for i = self.nHeadlandsWithRoundCorners - 1, 1, -1 do
         self.headlands[i] = cg.Headland(self.headlands[i + 1]:getPolygon(), i, self.context.workingWidth, true)
         self.headlands[i]:roundCorners(self.context.turningRadius)
     end
@@ -87,6 +103,29 @@ function FieldworkCourse:generateHeadlandsAroundIslands()
     for _, island in pairs(self.context.field:getIslands()) do
         island:generateHeadlands(self.context)
     end
+end
+
+------------------------------------------------------------------------------------------------------------------------
+--- Private functions
+------------------------------------------------------------------------------------------------------------------------
+function FieldworkCourse:_setContext(context)
+    self.context = context
+    self.nHeadlands = self.context.nHeadlands
+    self.nHeadlandsWithRoundCorners = self.context.nHeadlandsWithRoundCorners
+    ---@type cg.Polygon
+    self.boundary = context.field:getBoundary():clone()
+    if self.context.fieldCornerRadius > 0 then
+        self.logger:debug('sharpening field boundary corners')
+        self.boundary:ensureMinimumRadius(self.context.fieldCornerRadius, true)
+    end
+end
+
+function FieldworkCourse:_removeHeadland(i)
+    self.headlands[i] = nil
+    self.nHeadlands = i - 1
+    self.nHeadlandsWithRoundCorners = math.min(self.nHeadlands, self.nHeadlandsWithRoundCorners)
+    self.logger:error('could not generate headland %d, course has %d headlands, %d rounded',
+            i, self.nHeadlands, self.nHeadlandsWithRoundCorners)
 end
 
 ---@class cg.FieldworkCourse

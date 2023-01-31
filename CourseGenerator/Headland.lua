@@ -23,11 +23,20 @@ function Headland:init(basePolygon, passNumber, width, outward)
     self.recursionCount = 0
     ---@type cg.Polygon
     self.polygon = self:generate(basePolygon, width, 0)
-    self.logger:debug('polygon with %d vertices generated', #self.polygon)
-    self.polygon:calculateProperties()
-    self.polygon:ensureMaximumEdgeLength(cg.cMaxEdgeLength, cg.cMaxDeltaAngleForMaxEdgeLength)
-    self.polygon:calculateProperties()
-    self.polygon:removeLoops(basePolygon:isClockwise())
+    if self.polygon then
+        self.polygon:calculateProperties()
+        self.polygon:ensureMaximumEdgeLength(cg.cMaxEdgeLength, cg.cMaxDeltaAngleForMaxEdgeLength)
+        self.polygon:calculateProperties()
+        self.polygon:removeLoops(basePolygon:isClockwise())
+        self.logger:debug('polygon with %d vertices generated, area %.1f, cw %s',
+                #self.polygon, self.polygon:getArea(), self.polygon:isClockwise())
+        if self.polygon:isClockwise() ~= basePolygon:isClockwise() then
+            self.polygon = nil
+            self.logger:warning('no room left for this headland')
+        end
+    else
+        self.logger:error('could not generate headland')
+    end
 end
 
 --- Make sure all corners are rounded to have at least minimumRadius radius.
@@ -42,6 +51,10 @@ function Headland:sharpenCorners(minimumRadius)
     self.logger:debug('sharpen corners under radius %.1f', minimumRadius)
     self.polygon:ensureMinimumRadius(minimumRadius, true)
     self.polygon:calculateProperties()
+end
+
+function Headland:isValid()
+    return self.polygon ~= nil
 end
 
 function Headland:getPolygon()
@@ -75,6 +88,9 @@ function Headland:generate(polygon, targetOffset, currentOffset)
     local deltaOffset = math.max(polygon:getShortestEdgeLength() / 8, 0.01)
     currentOffset = currentOffset + deltaOffset
     polygon = polygon:createOffset(deltaOffset * self.offsetVector, 1, false)
+    if polygon == nil then
+        return nil
+    end
     polygon:ensureMinimumEdgeLength(cg.cMinEdgeLength)
     return self:generate(polygon, targetOffset, currentOffset)
 end

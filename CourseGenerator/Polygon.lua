@@ -10,6 +10,7 @@ function Polygon:_reset()
     for i = 1, #self do
         self[i] = nil
     end
+    self.deltaAngle, self.area, self.length = nil, nil, nil
 end
 
 function Polygon:clone()
@@ -19,6 +20,26 @@ function Polygon:clone()
     end
     clone:calculateProperties()
     return clone
+end
+
+--- Rebase the polygon so that vertex at index 'base' becomes the first vertex
+---@param base number the index where the polygon should start
+---@param reverse boolean reverse the order of vertices after rebasing, that is,
+--- convert between clockwise and counterclockwise
+function Polygon:rebase(base, reverse)
+    local temp = {}
+    for i = 0, #self - 1 do
+        table.insert(temp, self:at(i + base))
+    end
+
+    for i = 1, #self do
+        if reverse then
+            self:set(2 - i, temp[i])
+        else
+            self[i] = temp[i]
+        end
+    end
+    self:calculateProperties()
 end
 
 function Polygon:getRawIndex(n)
@@ -105,8 +126,6 @@ function Polygon:edgesBackwards(startIx)
     end
 end
 
-
-
 --- Is a point at (x, y) inside of the polygon?
 --- We use Dan Sunday's algorithm and his convention that a point
 --- on a left or bottom edge is inside, and a point on a right or top edge is outside
@@ -184,6 +203,10 @@ end
 function Polygon:createOffset(offsetVector, minEdgeLength, preserveCorners)
     local offsetEdges = self:generateOffsetEdges(offsetVector)
     local cleanOffsetEdges = self:cleanEdges(offsetEdges, minEdgeLength, preserveCorners)
+    if #offsetEdges < 2 or #cleanOffsetEdges < 2 then
+        self.logger:error('Could not create offset polygon')
+        return nil
+    end
     -- So far, same as the polyline, but now we need to take care of the connection between the
     -- last and the first edge.
     local gapFiller = cg.LineSegment.connect(cleanOffsetEdges[#cleanOffsetEdges], cleanOffsetEdges[1],
@@ -204,7 +227,8 @@ end
 --- Private functions
 ------------------------------------------------------------------------------------------------------------------------
 
---- Get all vertices between fromIx and toIx (non inclusive), in form of two polylines, one in each direction (cw/ccw)
+--- Get all vertices between fromIx and toIx (non inclusive), in form of two polylines/polygons,
+--- one in each direction (cw/ccw)
 --- Remember, these are references of the original vertices, not copies!
 ---@param fromIx number index of first vertex in the segment, not including
 ---@param toIx number index of last vertex in the segment, not including
@@ -241,12 +265,19 @@ function Polygon:removeLoops(baseClockwise)
             local is = this:getExitEdge():intersects(self[j]:getExitEdge())
             if is then
                 local pathA, pathB = self:getPathBetween(i, j, true)
-                local pathAisClockwise = pathA:isClockwise()
-                self.logger:debug('%d -> %d: path A: %.1f, path B: %.1f, pathA cw %s, base cw %s',
-                        i, j, pathA:getLength(), pathB:getLength(), pathAisClockwise, baseClockwise)
+                pathA:calculateProperties()
+                -- since we inserted vertices backwards, to keep the original chirality, we must reverse the order
+                pathB:reverse()
+                pathB:calculateProperties()
                 self:_reset()
-                if pathAisClockwise == baseClockwise then
+                self.logger:debug('%d -> %d: path A: %.1f, path B: %.1f, pathA cw %s, pathB cw %s, base cw %s',
+                        i, j, pathA:getLength(), pathB:getLength(), pathA:isClockwise(), pathB:isClockwise(), baseClockwise)
+                if pathA:isClockwise() == baseClockwise and pathB:isClockwise() ~= baseClockwise then
                     -- keep path A
+                    self:init(pathA)
+                elseif pathA:isClockwise() ~= baseClockwise and pathB:isClockwise() == baseClockwise then
+                    self:init(pathB)
+                elseif pathA:getLength() > pathB:getLength() then
                     self:init(pathA)
                 else
                     self:init(pathB)

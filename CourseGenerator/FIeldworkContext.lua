@@ -12,6 +12,14 @@ function FieldworkContext:init(field, workingWidth, turningRadius, nHeadlands)
     self.turningRadius = turningRadius
     self.nHeadlands = nHeadlands
     self.nHeadlandsWithRoundCorners = 0
+    self.nIslandHeadlands = 1
+    self.fieldCornerRadius = 0
+end
+
+---@param nHeadlands number of headlands total.
+function FieldworkContext:setHeadlands(nHeadlands)
+    self.nHeadlands = math.max(0, nHeadlands)
+    return self
 end
 
 ---@param nHeadlandsWithRoundCorners number of headlands that should have their corners rounded to the turning radius.

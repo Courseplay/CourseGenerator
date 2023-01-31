@@ -386,3 +386,33 @@ o:goAround(pCcw, nil, true)
 assertGoAroundBottomWithCircle(o)
 -- restore smoothing angle to re-enable smoothing
 cg.cMinSmoothingAngle = minSmoothingAngle
+
+-- rebase
+p = cg.Polygon({ cg.Vector(-10, -10), cg.Vector(10, -10), cg.Vector(10, 10), cg.Vector(-10, 10) })
+p:rebase(2)
+lu.assertEquals(p[1], cg.Vector(10, -10))
+lu.assertEquals(p[2], cg.Vector(10, 10))
+lu.assertEquals(p[3], cg.Vector(-10, 10))
+lu.assertEquals(p[4], cg.Vector(-10, -10))
+
+p = cg.Polygon({ cg.Vector(-10, -10), cg.Vector(10, -10), cg.Vector(10, 10), cg.Vector(-10, 10) })
+p:rebase(2, true)
+lu.assertEquals(p[1], cg.Vector(10, -10))
+lu.assertEquals(p[2], cg.Vector(-10, -10))
+lu.assertEquals(p[3], cg.Vector(-10, 10))
+lu.assertEquals(p[4], cg.Vector(10, 10))
+
+
+p = cg.Polygon({ cg.Vector(-10, -10), cg.Vector(10, -10), cg.Vector(10, 10), cg.Vector(-10, 10) })
+p:rebase(4)
+lu.assertEquals(p[1], cg.Vector(-10, 10))
+lu.assertEquals(p[2], cg.Vector(-10, -10))
+lu.assertEquals(p[3], cg.Vector(10, -10))
+lu.assertEquals(p[4], cg.Vector(10, 10))
+
+p = cg.Polygon({ cg.Vector(-10, -10), cg.Vector(10, -10), cg.Vector(10, 10), cg.Vector(-10, 10) })
+p:rebase(4, true)
+lu.assertEquals(p[1], cg.Vector(-10, 10))
+lu.assertEquals(p[2], cg.Vector(10, 10))
+lu.assertEquals(p[3], cg.Vector(10, -10))
+lu.assertEquals(p[4], cg.Vector(-10, -10))
