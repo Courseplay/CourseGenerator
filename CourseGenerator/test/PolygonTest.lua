@@ -266,7 +266,7 @@ p:reverse()
 lu.assertAlmostEquals(p:getArea(), 400)
 lu.assertIsTrue(p:isClockwise())
 
--- getPathBetween()
+-- _getPathBetween()
 local pCw = cg.Polygon({ cg.Vector(-10, -10), cg.Vector(-10, -7), cg.Vector(-10, 7), cg.Vector(-10, 10),
                          cg.Vector(10, 10), cg.Vector(10, 7), cg.Vector(10, -7), cg.Vector(10, -10) })
 local pCcw = cg.Polygon({ cg.Vector(10, -10), cg.Vector(10, -7), cg.Vector(10, 7), cg.Vector(10, 10),
