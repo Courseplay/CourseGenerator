@@ -19,6 +19,13 @@ NewCourseGenerator.cMaxCrossTrackError = 0.3
 -- The delta angle above which smoothing kicks in. No smoothing around vertices with a delta
 -- angle below this
 NewCourseGenerator.cMinSmoothingAngle = math.rad(25)
+-- Minimum radius in meters where a change to the next headland is allowed. This is to ensure that
+-- we only change lanes on relatively straight sections of the headland (not around corners)
+NewCourseGenerator.headlandChangeMinRadius = 20
+-- No headland change allowed if there is a corner ahead within this distance in meters
+NewCourseGenerator.headlandChangeMinDistanceToCorner = 20
+-- No headland change allowed if there is a corner behind within this distance in meters
+NewCourseGenerator.headlandChangeMinDistanceFromCorner = 10
 
 -- when enabled, will print a lot of information
 NewCourseGenerator.traceEnabled = false

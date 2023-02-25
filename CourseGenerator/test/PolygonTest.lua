@@ -271,7 +271,7 @@ local pCw = cg.Polygon({ cg.Vector(-10, -10), cg.Vector(-10, -7), cg.Vector(-10,
                          cg.Vector(10, 10), cg.Vector(10, 7), cg.Vector(10, -7), cg.Vector(10, -10) })
 local pCcw = cg.Polygon({ cg.Vector(10, -10), cg.Vector(10, -7), cg.Vector(10, 7), cg.Vector(10, 10),
                           cg.Vector(-10, 10), cg.Vector(-10, 7), cg.Vector(-10, -7), cg.Vector(-10, -10) })
-local o1, o2 = pCw:getPathBetween(1, 3)
+local o1, o2 = pCw:_getPathBetween(1, 3)
 lu.assertEquals(#o1, 2)
 o1[1]:assertAlmostEquals(pCw[2])
 o1[2]:assertAlmostEquals(pCw[3])
@@ -279,7 +279,7 @@ lu.assertEquals(#o2, 6)
 o2[1]:assertAlmostEquals(pCw[1])
 o2[6]:assertAlmostEquals(pCw[4])
 
-o2, o1 = pCw:getPathBetween(3, 1)
+o2, o1 = pCw:_getPathBetween(3, 1)
 lu.assertEquals(#o1, 2)
 o1[1]:assertAlmostEquals(pCw[3])
 o1[2]:assertAlmostEquals(pCw[2])
@@ -322,9 +322,9 @@ local function assertGoAroundTopWithCircle(line)
 end
 
 pCw = cg.Polygon({ cg.Vector(-10, -10), cg.Vector(-10, -7), cg.Vector(-10, 7), cg.Vector(-10, 10),
-                         cg.Vector(10, 10), cg.Vector(10, 7), cg.Vector(10, -7), cg.Vector(10, -10) })
+                   cg.Vector(10, 10), cg.Vector(10, 7), cg.Vector(10, -7), cg.Vector(10, -10) })
 pCcw = cg.Polygon({ cg.Vector(10, -10), cg.Vector(10, -7), cg.Vector(10, 7), cg.Vector(10, 10),
-                          cg.Vector(-10, 10), cg.Vector(-10, 7), cg.Vector(-10, -7), cg.Vector(-10, -10) })
+                    cg.Vector(-10, 10), cg.Vector(-10, 7), cg.Vector(-10, -7), cg.Vector(-10, -10) })
 o = cg.Polyline({ cg.Vector(-12, 8), cg.Vector(-9, 8), cg.Vector(0, 9), cg.Vector(9, 9), cg.Vector(12, 9) })
 o:goAround(pCw)
 assertGoAroundTop(o)
@@ -416,3 +416,7 @@ lu.assertEquals(p[1], cg.Vector(-10, 10))
 lu.assertEquals(p[2], cg.Vector(10, 10))
 lu.assertEquals(p[3], cg.Vector(10, -10))
 lu.assertEquals(p[4], cg.Vector(-10, -10))
+
+p = cg.Polygon({ cg.Vector(-20, 0), cg.Vector(-15, -3), cg.Vector(-10, -4), cg.Vector(-5, -4),
+                 cg.Vector(0, 0), cg.Vector(5, 0), cg.Vector(10, 0), cg.Vector(15, 0)})
+lu.assertAlmostEquals(p:getSmallestRadiusWithinDistance(4, 15, 20), 3.02)

@@ -31,8 +31,10 @@ local parameters = {}
 -- number of headland passes around the field boundary
 local nHeadlandPasses = AdjustableParameter(4, 'headlands', 'P', 'p', 1, 0, 100);
 table.insert(parameters, nHeadlandPasses)
-local nHeadlandsWithRoundCorners = AdjustableParameter(0, 'headlands with round corners', 'C', 'c', 1, 0, 100);
+local nHeadlandsWithRoundCorners = AdjustableParameter(0, 'headlands with round corners', 'R', 'r', 1, 0, 100);
 table.insert(parameters, nHeadlandsWithRoundCorners)
+local headlandClockwise = ToggleParameter('headlands clockwise', false, 'c');
+table.insert(parameters, headlandClockwise)
 -- number of headland passes around the field islands
 local nIslandHeadlandPasses = AdjustableParameter(1, 'island headlands', 'I', 'i', 1, 1, 10);
 table.insert(parameters, nIslandHeadlandPasses)
@@ -63,6 +65,7 @@ local currentVertex
 local function generate()
     local context = cg.FieldworkContext(selectedField, workingWidth:get(), turningRadius:get(), nHeadlandPasses:get())
     context:setHeadlandsWithRoundCorners(nHeadlandsWithRoundCorners:get())
+    context:setHeadlandClockwise(headlandClockwise:get())
     context:setIslandHeadlands(nIslandHeadlandPasses:get())
     context:setFieldCornerRadius(fieldCornerRadius:get())
     context:setBypassIslands(bypassIslands:get())
@@ -232,7 +235,7 @@ local function drawVertexInfo()
     love.graphics.rectangle('fill', 0, 0, 100, 150)
     love.graphics.setColor(0.8, 0.8, 0.8)
     love.graphics.printf(string.format('ix: %s r: %s',
-            intToString(currentVertex.ix), floatToString(currentVertex:getRadius())), 10, 10, 130)
+            intToString(currentVertex.ix), floatToString(currentVertex:getSignedRadius())), 10, 10, 130)
     love.graphics.printf(string.format('c: %.1f xte: %.2f', currentVertex.curvature, currentVertex.xte), 10, 24, 130)
     love.graphics.printf(string.format('corner: %s', currentVertex.isCorner), 10, 36, 130)
 end

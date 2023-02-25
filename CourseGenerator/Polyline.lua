@@ -348,7 +348,7 @@ function Polyline:goAround(other, startIx, circle)
     local intersections = self:getIntersections(other, startIx)
     local is1, is2 = intersections[1], intersections[2]
     if is1 and is2 then
-        local pathA, pathB = other:getPathBetween(is1.ixB, is2.ixB)
+        local pathA, pathB = other:_getPathBetween(is1.ixB, is2.ixB)
         local path
         if pathA and pathB then
             local shortPath = pathA:getLength() < pathB:getLength() and pathA or pathB
@@ -470,7 +470,7 @@ end
 ---@param fromIx number index of first vertex in the segment, not including
 ---@param toIx number index of last vertex in the segment, not including
 ---@return Polyline
-function Polyline:getPathBetween(fromIx, toIx)
+function Polyline:_getPathBetween(fromIx, toIx)
     local segment = Polyline()
     local first = fromIx < toIx and fromIx + 1 or fromIx
     local last = fromIx < toIx and toIx or toIx + 1

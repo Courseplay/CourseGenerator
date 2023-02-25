@@ -37,6 +37,7 @@ function Vertex:clone()
     return v
 end
 
+---@return cg.LineSegment
 function Vertex:getEntryEdge()
     return self.entryEdge
 end
@@ -45,6 +46,7 @@ function Vertex:getEntryHeading()
     return self.entryHeading
 end
 
+---@return cg.LineSegment
 function Vertex:getExitEdge()
     return self.exitEdge
 end
@@ -64,8 +66,12 @@ end
 --- the exit edge. This is the radius a vehicle would need to drive to reach the next waypoint.
 --- Positive values are left turns, negative values right turns
 ---@return number radius
-function Vertex:getRadius()
+function Vertex:getSignedRadius()
     return self.unitRadius * (self.exitEdge and self.exitEdge:getLength() or math.huge)
+end
+
+function Vertex:getRadius()
+    return math.abs(self:getSignedRadius())
 end
 
 --- cross track error for a unit circle. This is how far away a unit circle drawn

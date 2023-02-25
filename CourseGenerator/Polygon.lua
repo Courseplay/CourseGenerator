@@ -223,6 +223,39 @@ function Polygon:createOffset(offsetVector, minEdgeLength, preserveCorners)
     return offsetPolygon
 end
 
+---@param point Vector
+function Polygon:findClosestVertex(point)
+    local d, closestVertex = math.huge, nil
+    for v in self:vertices() do
+        local dFromV = (point - v):length()
+        if dFromV < d then
+            d = dFromV
+            closestVertex = v
+        end
+    end
+    return closestVertex, d
+end
+
+function Polygon:getSmallestRadiusWithinDistance(ix, dForward, dBackward)
+    local i, dElapsed, minRadius = ix, 0, math.huge
+    while dElapsed < dBackward do
+        dElapsed = dElapsed + self:at(i):getEntryEdge():getLength()
+        local r = self:at(i):getRadius()
+        print(r)
+        minRadius = r < minRadius and r or minRadius
+        i = i - 1
+    end
+    i, dElapsed = ix, 0
+    while dElapsed < dForward do
+        dElapsed = dElapsed + self:at(i):getExitEdge():getLength()
+        local r = self:at(i):getRadius()
+        print(r)
+        minRadius = r < minRadius and r or minRadius
+        i = i + 1
+    end
+    return minRadius
+end
+
 ------------------------------------------------------------------------------------------------------------------------
 --- Private functions
 ------------------------------------------------------------------------------------------------------------------------
@@ -233,7 +266,7 @@ end
 ---@param fromIx number index of first vertex in the segment, not including
 ---@param toIx number index of last vertex in the segment, not including
 ---@return Polyline, Polyline
-function Polygon:getPathBetween(fromIx, toIx, asPolygon)
+function Polygon:_getPathBetween(fromIx, toIx, asPolygon)
     local forward = asPolygon and cg.Polygon() or cg.Polyline()
     local fwdIx = cg.WrapAroundIndex(self, fromIx)
     while fwdIx:get() ~= toIx do
@@ -258,13 +291,13 @@ end
 --- polygon.
 --- NOTE: this works correctly only if there is exactly one loop (one intersecting edge)
 ---@return boolean loop found and removed.
-function Polygon:removeLoops(baseClockwise)
+function Polygon:_removeLoops(baseClockwise)
     self.logger:debug('Removing loops')
     for i, this, _, _ in self:vertices() do
         for j = i + 2, i > 1 and #self or (#self - 1) do
             local is = this:getExitEdge():intersects(self[j]:getExitEdge())
             if is then
-                local pathA, pathB = self:getPathBetween(i, j, true)
+                local pathA, pathB = self:_getPathBetween(i, j, true)
                 pathA:calculateProperties()
                 -- since we inserted vertices backwards, to keep the original chirality, we must reverse the order
                 pathB:reverse()

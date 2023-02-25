@@ -14,6 +14,7 @@ function FieldworkContext:init(field, workingWidth, turningRadius, nHeadlands)
     self.nHeadlandsWithRoundCorners = 0
     self.nIslandHeadlands = 1
     self.fieldCornerRadius = 0
+    self.clockwise = true
 end
 
 ---@param nHeadlands number of headlands total.
@@ -48,5 +49,15 @@ end
 function FieldworkContext:setSharpenCorners(sharpen)
     self.sharpenCorners = sharpen
 end
+
+---@param clockwise boolean generate headlands in the clockwise direction if true, counterclockwise if false
+function FieldworkContext:setHeadlandClockwise(clockwise)
+    self.headlandClockwise = clockwise
+end
+
+function FieldworkContext:setStartLocation(x, y)
+    self.startLocation = cg.Vector(x, y)
+end
+
 ---@class cg.FieldworkContext
 cg.FieldworkContext = FieldworkContext

@@ -27,7 +27,7 @@ function Headland:init(basePolygon, passNumber, width, outward)
         self.polygon:calculateProperties()
         self.polygon:ensureMaximumEdgeLength(cg.cMaxEdgeLength, cg.cMaxDeltaAngleForMaxEdgeLength)
         self.polygon:calculateProperties()
-        self.polygon:removeLoops(basePolygon:isClockwise())
+        self.polygon:_removeLoops(basePolygon:isClockwise())
         self.logger:debug('polygon with %d vertices generated, area %.1f, cw %s',
                 #self.polygon, self.polygon:getArea(), self.polygon:isClockwise())
         if self.polygon:isClockwise() ~= basePolygon:isClockwise() then
@@ -97,6 +97,13 @@ end
 
 function Headland:bypassIsland(island, circle)
     return self.polygon:goAround(island:getHeadlands()[1]:getPolygon(), nil, circle)
+end
+
+--- Generate a path to switch from this headland to the other, starting as close as possible to the
+--- given vertex on this headland
+---@param other cg.Headland
+function Headland:connectTo(other, ix)
+
 end
 
 ---@class cg.Headland

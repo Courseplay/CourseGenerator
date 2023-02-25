@@ -26,6 +26,7 @@ function FieldworkCourse:generateHeadlands(context)
     elseif self.nHeadlands > 0 then
         self:generateHeadlandsFromOutside(self.boundary, self.context.workingWidth / 2, 1)
     end
+    self:connectHeadlands()
     if self.context.bypassIslands then
         self:generateHeadlandsAroundIslands()
         --- Remember the islands we circled already, as even if multiple tracks cross it, we only want to
@@ -92,6 +93,11 @@ function FieldworkCourse:generateHeadlandsFromInside()
     end
 end
 
+function FieldworkCourse:connectHeadlands()
+    local closestVertex = self.headlands[1]:getPolygon():findClosestVertex(self.context.startLocation)
+    self.headlands[1]:connectTo(self.headlands[2], closestVertex.ix)
+end
+
 function FieldworkCourse:getHeadlands()
     return self.headlands
 end
@@ -114,6 +120,11 @@ function FieldworkCourse:_setContext(context)
     self.nHeadlandsWithRoundCorners = self.context.nHeadlandsWithRoundCorners
     ---@type cg.Polygon
     self.boundary = context.field:getBoundary():clone()
+    if self.boundary:isClockwise() ~= self.context.headlandClockwise then
+        -- all headlands are generated in the same direction as the field boundary,
+        -- so if it does not match the required cw/ccw, reverse it
+        self.boundary:reverse()
+    end
     if self.context.fieldCornerRadius > 0 then
         self.logger:debug('sharpening field boundary corners')
         self.boundary:ensureMinimumRadius(self.context.fieldCornerRadius, true)
