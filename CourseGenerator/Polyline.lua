@@ -163,6 +163,20 @@ function Polyline:getLength()
     return self.length
 end
 
+---@return number index of the first vertex which is at least d distance from ix
+---(can be nil if the end of line reached before d)
+function Polyline:moveForward(ix, d)
+    local i, dElapsed = ix, 0
+    while i < #self do
+        if dElapsed >= d then
+            return i
+        end
+        dElapsed = dElapsed + self:at(i):getExitEdge():getLength()
+        i = i + 1
+    end
+    return nil
+end
+
 --- Calculate all interesting properties we may need later for more advanced functions
 ---@param from number index of vertex to start the calculation, default 1
 ---@param to number index of last vertex to use in the calculation, default #self
@@ -272,15 +286,9 @@ function Polyline:ensureMinimumRadius(r, makeCorners)
     ---@param entry cg.Slider
     ---@param exit cg.Slider
     local function makeArc(entry, exit)
-        local dubinsSolver = DubinsSolver()
         local from = entry:getBaseAsState3D()
         local to = exit:getBaseAsState3D()
-        local solution = dubinsSolver:solve(from, to, r, true)
-        local arc = {}
-        for _, v in ipairs(solution:getWaypoints(from, r)) do
-            table.insert(arc, cg.Vertex.fromVector(v))
-        end
-        return arc
+        return cg.AnalyticHelper.getDubinsSolutionAsVertices(from, to, r)
     end
 
     ---@param entry cg.Slider

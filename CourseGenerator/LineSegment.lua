@@ -234,6 +234,11 @@ function LineSegment:getRadiusTo(other)
     end
 end
 
+---@param point cg.Vector
+function LineSegment:getScalarProjection(point)
+    local v = point - self.base
+    return self.slope:scalarProjection(v)
+end
 
 ---@class cg.LineSegment
 cg.LineSegment = LineSegment

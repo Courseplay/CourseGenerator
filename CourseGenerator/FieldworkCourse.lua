@@ -12,7 +12,9 @@ end
 --- Generate the headlands based on the current context or the context passed in here
 ---@param context cg.FieldworkContext if defined, set it as current context before generating the headlands
 function FieldworkCourse:generateHeadlands(context)
-    if context then self:_setContext(context) end
+    if context then
+        self:_setContext(context)
+    end
     self.headlands = {}
     self.logger:debug('generating %d headlands with round corners, then %d with sharp corners',
             self.nHeadlandsWithRoundCorners, self.nHeadlands - self.nHeadlandsWithRoundCorners)
@@ -26,7 +28,6 @@ function FieldworkCourse:generateHeadlands(context)
     elseif self.nHeadlands > 0 then
         self:generateHeadlandsFromOutside(self.boundary, self.context.workingWidth / 2, 1)
     end
-    self:connectHeadlands()
     if self.context.bypassIslands then
         self:generateHeadlandsAroundIslands()
         --- Remember the islands we circled already, as even if multiple tracks cross it, we only want to
@@ -38,6 +39,7 @@ function FieldworkCourse:generateHeadlands(context)
             end
         end
     end
+    self:connectHeadlands()
 end
 
 ---@param boundary Polygon field boundary or other headland to start the generation from
@@ -94,8 +96,14 @@ function FieldworkCourse:generateHeadlandsFromInside()
 end
 
 function FieldworkCourse:connectHeadlands()
-    local closestVertex = self.headlands[1]:getPolygon():findClosestVertex(self.context.startLocation)
-    self.headlands[1]:connectTo(self.headlands[2], closestVertex.ix)
+    local closestVertex = self.context.startLocation and
+            self.headlands[1]:getPolygon():findClosestVertex(self.context.startLocation) or
+            self.headlands[1]:getPolygon():at(1)
+    -- make life easy: make headland polygons always start where the transition to the next headland is.
+    -- In _setContext() we already took care of the direction, so the headland is always worked in the
+    -- increasing indices
+    self.headlands[1].polygon:rebase(closestVertex.ix)
+    self.headlands[1]:connectTo(self.headlands[2], 1, self.context.workingWidth, self.context.turningRadius)
 end
 
 function FieldworkCourse:getHeadlands()

@@ -143,6 +143,11 @@ function Vector:dot(v)
     return self.x * v.x + self.y * v.y
 end
 
+-- return the scalar projection of v on self
+function Vector:scalarProjection(v)
+    return self:dot(v) / self:length()
+end
+
 -- normalize the Vector (give it a magnitude of 1)
 function Vector:norm()
     local m = self:length()

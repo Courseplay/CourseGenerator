@@ -225,3 +225,10 @@ p[4]:assertAlmostEquals(cg.Vector(-1, 0))
 p[6]:assertAlmostEquals(cg.Vector(5, 0))
 -- restore smoothing angle to re-enable smoothing
 cg.cMinSmoothingAngle = minSmoothingAngle
+
+p = cg.Polyline({cg.Vertex(0, 0), cg.Vertex(0, 1), cg.Vertex(0, 2), cg.Vertex(0, 3), cg.Vertex(0, 4), cg.Vertex(0, 5), cg.Vertex(0, 6)})
+lu.assertEquals(p:moveForward(1, 3), 4)
+lu.assertEquals(p:moveForward(1, 3.01), 5)
+lu.assertEquals(p:moveForward(1, 2.99), 4)
+lu.assertEquals(p:moveForward(2, 3), 5)
+lu.assertIsNil(p:moveForward(5, 3))

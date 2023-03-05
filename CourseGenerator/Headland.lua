@@ -8,14 +8,18 @@ local Headland = CpObject()
 ---@param outward boolean if true, the generated headland will be outside of the basePolygon, inside otherwise
 function Headland:init(basePolygon, passNumber, width, outward)
     self.logger = cg.Logger('Headland ' .. passNumber or '')
+    self.clockwise = basePolygon:isClockwise()
     self.logger:debug('start generating, base clockwise %s, width %.1f, outward: %s',
-            basePolygon:isClockwise(), width, outward)
-    if basePolygon:isClockwise() then
+            self.clockwise, width, outward)
+    if self.clockwise then
         -- to generate headland inside the polygon we need to offset the polygon to the right if
         -- the polygon is clockwise
         self.offsetVector = cg.Vector(0, -1)
+        -- Dubins path types to use when changing to the next headland
+        self.transitionPathTypes = { DubinsSolver.PathType.RSL, DubinsSolver.PathType.RSR }
     else
         self.offsetVector = cg.Vector(0, 1)
+        self.transitionPathTypes = { DubinsSolver.PathType.LSR, DubinsSolver.PathType.LSL }
     end
     if outward then
         self.offsetVector = -self.offsetVector
@@ -102,8 +106,69 @@ end
 --- Generate a path to switch from this headland to the other, starting as close as possible to the
 --- given vertex on this headland
 ---@param other cg.Headland
-function Headland:connectTo(other, ix)
+function Headland:connectTo(other, ix, workingWidth, turningRadius)
+    -- determine the theoretical minimum length of the transition (depending on the width and radius)
+    local transitionLength = Headland._getTransitionLength(workingWidth, turningRadius)
+    local transition = self:_continueUntilStraightSection(ix, transitionLength)
+    -- index on the other polygon closest to the location where the transition will start
+    local otherClosest = other:getPolygon():findClosestVertex(self.polygon:at(ix + #transition))
+    -- index on the other polygon where the transition will approximately end
+    local transitionEndIx = other:getPolygon():moveForward(otherClosest.ix, transitionLength + 1)
+    if not transitionEndIx then
+        self.logger:error('Could not connect to next headland, can\'t find transition end')
+        return
+    end
+    local connector, length = cg.AnalyticHelper.getDubinsSolutionAsVertices(
+            self.polygon:at(ix + #transition):getExitEdge():getBaseAsState3D(),
+            other.polygon:at(transitionEndIx):getExitEdge():getBaseAsState3D(),
+            turningRadius, self.transitionPathTypes)
+    print(ix, #transition, otherClosest.ix, transitionEndIx, transitionLength, length, workingWidth + 1.5 * turningRadius)
+    if true or length < workingWidth + 2 * turningRadius then
+        transition:appendMany(connector)
+        self.polygon:appendMany(transition)
+        self.polygon:calculateProperties()
+    else
+        self.logger:error('Could generate path to next headland.')
+    end
+end
 
+---@param ix number the vertex to start the search
+---@param straightSectionLength number how long the straight section should be
+---@return cg.Polyline array of vectors (can be empty) from ix to the start of the straight section
+function Headland:_continueUntilStraightSection(ix, straightSectionLength)
+    local dElapsed = 0
+    local count = 0
+    local waypoints = cg.Polyline()
+    while dElapsed < straightSectionLength do
+        dElapsed = dElapsed + self.polygon:at(ix):getExitEdge():getLength()
+        local r = self.polygon:getSmallestRadiusWithinDistance(ix, straightSectionLength, 0)
+        -- nice straight section, done
+        if r > NewCourseGenerator.headlandChangeMinRadius then
+            self.logger:debug('Added %d waypoint(s) to reach a straight section for the headland change after %.1f m, r = %.1f',
+                    count, dElapsed, r)
+            return waypoints
+        end
+        waypoints:append((self.polygon:at(ix)):clone())
+        ix = ix + 1
+        count = count + 1
+    end
+    -- no straight section found, bail out here
+    self.logger:debug('No straight section found after %1.f m for headland change to next', dElapsed)
+    return waypoints
+end
+
+--- determine the theoretical minimum length of the transition from one headland to another
+---(depending on the width and radius)
+function Headland._getTransitionLength(workingWidth, turningRadius)
+    local transitionLength
+    if turningRadius - workingWidth / 2 < 0.1 then
+        -- can make two half turns within the working width
+        transitionLength = 2 * turningRadius
+    else
+        local alpha = math.abs(math.acos((turningRadius - workingWidth / 2) / turningRadius) / 2)
+        transitionLength = 2 * workingWidth / 2 / math.tan(alpha)
+    end
+    return transitionLength
 end
 
 ---@class cg.Headland

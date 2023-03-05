@@ -18,6 +18,8 @@ local scale = 1.0
 local windowWidth = 1400
 local windowHeight = 800
 local xOffset, yOffset = 0, 0
+-- starting position
+local startX, startY
 
 local graphicsTransform, statusTransform, mouseTransform, contextTransform
 
@@ -70,6 +72,9 @@ local function generate()
     context:setFieldCornerRadius(fieldCornerRadius:get())
     context:setBypassIslands(bypassIslands:get())
     context:setSharpenCorners(sharpenCorners:get())
+    if startX then
+        context:setStartLocation(startX, startY)
+    end
     course = cg.FieldworkCourse(context)
     course:generateHeadlands()
     course:generateHeadlandsAroundIslands()
@@ -164,9 +169,9 @@ end
 
 local function selectFieldUnderCursor()
     local x, y = love.mouse.getPosition()
-    x, y = screenToWorld(x, y)
+    startX, startY = screenToWorld(x, y)
     for _, f in pairs(savedFields) do
-        if f:getBoundary():isInside(x, y) then
+        if f:getBoundary():isInside(startX, startY) then
             print(string.format('Field %d selected', f:getId()))
             selectedField = f
             love.window.setTitle(string.format('Course Generator - %s - SelectedField %d', fileName, selectedField:getId()))
@@ -190,7 +195,8 @@ end
 local function drawHeadland(h, color)
     love.graphics.setLineWidth(lineWidth)
     love.graphics.setColor(color)
-    love.graphics.polygon('line', h:getUnpackedVertices())
+    love.graphics.line(h:getUnpackedVertices())
+    --love.graphics.polygon('line', h:getUnpackedVertices())
     for _, v in h:getPolygon():vertices() do
         drawVertex(v)
     end

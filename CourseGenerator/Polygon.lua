@@ -223,17 +223,35 @@ function Polygon:createOffset(offsetVector, minEdgeLength, preserveCorners)
     return offsetPolygon
 end
 
+---@return number index of the first vertex which is at least d distance from ix
+---(can be nil if the end of line reached before d)
+function Polygon:moveForward(ix, d)
+    local i, n, dElapsed = ix, 1, 0
+    -- wrap around once only
+    while n <= #self do
+        if dElapsed >= d then
+            return self:getRawIndex(i)
+        end
+        dElapsed = dElapsed + self:at(i):getExitEdge():getLength()
+        i = i + 1
+        n = n + 1
+    end
+    return nil
+end
+
 ---@param point Vector
+---@return cg.Vertex
 function Polygon:findClosestVertex(point)
     local d, closestVertex = math.huge, nil
-    for v in self:vertices() do
+    for _, v in self:vertices() do
         local dFromV = (point - v):length()
         if dFromV < d then
             d = dFromV
             closestVertex = v
         end
     end
-    return closestVertex, d
+    local projection = closestVertex and closestVertex:getExitEdge():getScalarProjection(point)
+    return closestVertex, projection
 end
 
 function Polygon:getSmallestRadiusWithinDistance(ix, dForward, dBackward)
@@ -241,7 +259,6 @@ function Polygon:getSmallestRadiusWithinDistance(ix, dForward, dBackward)
     while dElapsed < dBackward do
         dElapsed = dElapsed + self:at(i):getEntryEdge():getLength()
         local r = self:at(i):getRadius()
-        print(r)
         minRadius = r < minRadius and r or minRadius
         i = i - 1
     end
@@ -249,7 +266,6 @@ function Polygon:getSmallestRadiusWithinDistance(ix, dForward, dBackward)
     while dElapsed < dForward do
         dElapsed = dElapsed + self:at(i):getExitEdge():getLength()
         local r = self:at(i):getRadius()
-        print(r)
         minRadius = r < minRadius and r or minRadius
         i = i + 1
     end

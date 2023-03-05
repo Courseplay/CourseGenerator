@@ -22,6 +22,7 @@ dofile('CourseGenerator/FieldworkContext.lua')
 dofile('CourseGenerator/FieldworkCourse.lua')
 dofile('CourseGenerator/Island.lua')
 dofile('CourseGenerator/SplineHelper.lua')
+dofile('CourseGenerator/AnalyticHelper.lua')
 
 dofile('AdjustableParameter.lua')
 dofile('ToggleParameter.lua')
