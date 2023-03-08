@@ -106,46 +106,70 @@ end
 --- Generate a path to switch from this headland to the other, starting as close as possible to the
 --- given vertex on this headland
 ---@param other cg.Headland
+---@return number index of the vertex on other where the transition ends
 function Headland:connectTo(other, ix, workingWidth, turningRadius)
+    local function ignoreIslandBypass(v)
+        return not v:getAttributes():getIslandBypass()
+    end
     -- determine the theoretical minimum length of the transition (depending on the width and radius)
     local transitionLength = Headland._getTransitionLength(workingWidth, turningRadius)
     local transition = self:_continueUntilStraightSection(ix, transitionLength)
     -- index on the other polygon closest to the location where the transition will start
-    local otherClosest = other:getPolygon():findClosestVertex(self.polygon:at(ix + #transition))
+    local otherClosest = other:getPolygon():findClosestVertex(self.polygon:at(ix + #transition), ignoreIslandBypass)
     -- index on the other polygon where the transition will approximately end
-    local transitionEndIx = other:getPolygon():moveForward(otherClosest.ix, transitionLength + 1)
-    if not transitionEndIx then
-        self.logger:error('Could not connect to next headland, can\'t find transition end')
-        return
-    end
-    local connector, length = cg.AnalyticHelper.getDubinsSolutionAsVertices(
-            self.polygon:at(ix + #transition):getExitEdge():getBaseAsState3D(),
-            other.polygon:at(transitionEndIx):getExitEdge():getBaseAsState3D(),
-            turningRadius, self.transitionPathTypes)
-    print(ix, #transition, otherClosest.ix, transitionEndIx, transitionLength, length, workingWidth + 1.5 * turningRadius)
-    if true or length < workingWidth + 2 * turningRadius then
-        transition:appendMany(connector)
-        self.polygon:appendMany(transition)
-        self.polygon:calculateProperties()
+    local transitionEndIx = other:getPolygon():moveForward(otherClosest.ix, transitionLength, ignoreIslandBypass)
+    if transitionEndIx then
+        -- try a few times to generate a Dubins path as depending on the orientation of the waypoints on
+        -- the own headland and the next, we may need more room than the calculated, ideal transition length.
+        -- In that case, the Dubins path generated will end up in a loop, so we use a target further ahead on the next headland.
+        local tries = 5
+        for i = 1, tries do
+            local connector, length = cg.AnalyticHelper.getDubinsSolutionAsVertices(
+                    self.polygon:at(ix + #transition):getExitEdge():getBaseAsState3D(),
+                    other.polygon:at(transitionEndIx):getExitEdge():getBaseAsState3D(),
+                    -- enable any path type on the very last try
+                    turningRadius, i < tries and self.transitionPathTypes or nil)
+            -- maximum length without loops
+            local maxPlausiblePathLength = workingWidth + 4 * turningRadius
+            if length < maxPlausiblePathLength or i == tries then
+                -- the whole transition is the straight section on the current headland and the actual connector between
+                -- the current and the next
+                transition:appendMany(connector)
+                self.polygon:appendMany(transition)
+                self.polygon:_setAttributes(#self.polygon - #transition, #self.polygon,
+                        cg.WaypointAttributes.setHeadlandTransition, true)
+                self.polygon:calculateProperties()
+                self.logger:debug('Transition to next headland added, length %.1f, ix on next %d, try %d.',
+                        length, transitionEndIx, i)
+                return transitionEndIx
+            else
+                self.logger:warning('Generated path to next headland too long (%.1f > %.1f), try %d.',
+                        length, maxPlausiblePathLength, i)
+            end
+            transitionEndIx = transitionEndIx + 1
+        end
+        self.logger:error('Could not connect to next headland after %d tries, giving up', tries)
     else
-        self.logger:error('Could generate path to next headland.')
+        self.logger:warning('Could not connect to next headland, can\'t find transition end')
     end
+    return nil
 end
 
 ---@param ix number the vertex to start the search
----@param straightSectionLength number how long the straight section should be
+---@param straightSectionLength number how long at the minimum the straight section should be
+---@param searchRange number how far should the search for the straight section should go
 ---@return cg.Polyline array of vectors (can be empty) from ix to the start of the straight section
-function Headland:_continueUntilStraightSection(ix, straightSectionLength)
-    local dElapsed = 0
+function Headland:_continueUntilStraightSection(ix, straightSectionLength, searchRange)
+    local dTotal = 0
     local count = 0
     local waypoints = cg.Polyline()
-    while dElapsed < straightSectionLength do
-        dElapsed = dElapsed + self.polygon:at(ix):getExitEdge():getLength()
+    searchRange = searchRange or 100
+    while dTotal < searchRange do
+        dTotal = dTotal + self.polygon:at(ix):getExitEdge():getLength()
         local r = self.polygon:getSmallestRadiusWithinDistance(ix, straightSectionLength, 0)
-        -- nice straight section, done
         if r > NewCourseGenerator.headlandChangeMinRadius then
             self.logger:debug('Added %d waypoint(s) to reach a straight section for the headland change after %.1f m, r = %.1f',
-                    count, dElapsed, r)
+                    count, dTotal, r)
             return waypoints
         end
         waypoints:append((self.polygon:at(ix)):clone())
@@ -153,7 +177,7 @@ function Headland:_continueUntilStraightSection(ix, straightSectionLength)
         count = count + 1
     end
     -- no straight section found, bail out here
-    self.logger:debug('No straight section found after %1.f m for headland change to next', dElapsed)
+    self.logger:debug('No straight section found after %1.f m for headland change to next', dTotal)
     return waypoints
 end
 

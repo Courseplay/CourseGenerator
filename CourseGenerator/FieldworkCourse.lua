@@ -4,6 +4,7 @@ local FieldworkCourse = CpObject()
 function FieldworkCourse:init(context)
     self.logger = cg.Logger('FieldworkCourse')
     self:_setContext(context)
+    self.headland = cg.Polyline()
 end
 
 ------------------------------------------------------------------------------------------------------------------------
@@ -28,18 +29,20 @@ function FieldworkCourse:generateHeadlands(context)
     elseif self.nHeadlands > 0 then
         self:generateHeadlandsFromOutside(self.boundary, self.context.workingWidth / 2, 1)
     end
+    self:connectHeadlands()
     if self.context.bypassIslands then
         self:generateHeadlandsAroundIslands()
         --- Remember the islands we circled already, as even if multiple tracks cross it, we only want to
         --- circle once.
         self.circledIslands = {}
-        for _, h in ipairs(self.headlands) do
-            for _, island in pairs(self.context.field:getIslands()) do
-                self.circledIslands[island] = h:bypassIsland(island, not self.circledIslands[island])
+        for _, island in pairs(self.context.field:getIslands()) do
+            local startIx = 1
+            while startIx ~= nil do
+                self.circledIslands[island], startIx = self.headland:goAround(
+                        island:getHeadlands()[1]:getPolygon(), startIx, not self.circledIslands[island])
             end
         end
     end
-    self:connectHeadlands()
 end
 
 ---@param boundary Polygon field boundary or other headland to start the generation from
@@ -96,14 +99,29 @@ function FieldworkCourse:generateHeadlandsFromInside()
 end
 
 function FieldworkCourse:connectHeadlands()
+    if #self.headlands < 1 then
+        return
+    end
+    self.headland = cg.Polyline()
     local closestVertex = self.context.startLocation and
             self.headlands[1]:getPolygon():findClosestVertex(self.context.startLocation) or
             self.headlands[1]:getPolygon():at(1)
     -- make life easy: make headland polygons always start where the transition to the next headland is.
     -- In _setContext() we already took care of the direction, so the headland is always worked in the
     -- increasing indices
-    self.headlands[1].polygon:rebase(closestVertex.ix)
-    self.headlands[1]:connectTo(self.headlands[2], 1, self.context.workingWidth, self.context.turningRadius)
+    for i = 1, #self.headlands - 1 do
+        self.headlands[i].polygon:rebase(closestVertex.ix)
+        local transitionEndIx = self.headlands[i]:connectTo(self.headlands[i + 1], 1, self.context.workingWidth,
+                self.context.turningRadius)
+        -- rebase to the next vertex so the first waypoint of the next headland is right after the transition
+        self.headlands[i + 1].polygon:rebase(transitionEndIx + 1)
+        self.headland:appendMany(self.headlands[i]:getPolygon())
+    end
+    self.headland:appendMany(self.headlands[#self.headlands]:getPolygon())
+end
+
+function FieldworkCourse:getHeadland()
+    return self.headland
 end
 
 function FieldworkCourse:getHeadlands()

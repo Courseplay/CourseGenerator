@@ -28,6 +28,7 @@ local courseColor = { 0, 0.7, 1 }
 local islandHeadlandColor = { 1, 1, 1, 0.2 }
 local waypointColor = { 0.7, 0.5, 0.2 }
 local cornerColor = { 1, 1, 0.0, 0.8 }
+local islandBypassColor = { 0, 0.2, 1.0 }
 
 local parameters = {}
 -- number of headland passes around the field boundary
@@ -189,6 +190,9 @@ local function drawVertex(v)
     if v.isCorner then
         love.graphics.setColor(cornerColor)
     end
+    if v:getAttributes():getIslandBypass() then
+        love.graphics.setColor(islandBypassColor)
+    end
     love.graphics.points(v.x, v.y)
 end
 
@@ -197,7 +201,7 @@ local function drawHeadland(h, color)
     love.graphics.setColor(color)
     love.graphics.line(h:getUnpackedVertices())
     --love.graphics.polygon('line', h:getUnpackedVertices())
-    for _, v in h:getPolygon():vertices() do
+    for _, v in h:vertices() do
         drawVertex(v)
     end
 end
@@ -229,9 +233,9 @@ local function drawFields()
 end
 
 local function drawHeadlands()
-    for _, h in ipairs(course:getHeadlands()) do
-        drawHeadland(h, courseColor)
-    end
+    --for _, h in ipairs(course:getHeadlands()) do
+        drawHeadland(course:getHeadland(), courseColor)
+    --end
 end
 
 -- Draw a tooltip with the vertex' details

@@ -92,7 +92,7 @@ end
 
 function Island:generateHeadlands(context)
     self.context = context
-    self.logger:debug('generating %d headlands', self.context.nIslandHeadlands, self.context.turningRadius)
+    self.logger:debug('generating %d headland(s)', self.context.nIslandHeadlands, self.context.turningRadius)
     self.headlands = {}
     -- outermost headland is offset from the field boundary by half width
     self.headlands[1] = cg.Headland(self.boundary, 1, self.context.workingWidth / 2, true, self.context.turningRadius)

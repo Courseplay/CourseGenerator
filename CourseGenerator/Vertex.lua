@@ -15,6 +15,7 @@ function Vertex:init(x, y, ix)
     self.isCornerTail = nil
     --- Delta angle at this vertex, angle between the entry and exit edges
     self.dA = nil
+    self.attributes = cg.WaypointAttributes()
 end
 
 function Vertex.fromVector(v)
@@ -31,9 +32,10 @@ end
 --- only within the polyline/polygon context)
 function Vertex:clone()
     local v = Vertex(self.x, self.y)
-     v.isCorner     = self.isCorner
-     v.isCornerLead = self.isCornerLead
-     v.isCornerTail = self.isCornerTail
+    v.isCorner = self.isCorner
+    v.isCornerLead = self.isCornerLead
+    v.isCornerTail = self.isCornerTail
+    v.attributes = self.attributes:clone()
     return v
 end
 
@@ -88,6 +90,11 @@ function Vertex:getDistance()
     return self.d
 end
 
+---@return cg.WaypointAttributes
+function Vertex:getAttributes()
+    return self.attributes
+end
+
 --- Add info related to the neighbouring vertices
 ---@param entry cg.Vertex the previous vertex in the polyline/polygon
 ---@param exit cg.Vertex the next vertex in the polyline/polygon
@@ -122,6 +129,10 @@ function Vertex:calculateProperties(entry, exit)
         self.curvature = 1 / self.unitRadius
         self.xte = math.abs(1 / math.cos(self.dA / 2)) - 1
     end
+end
+
+function Vertex:__tostring()
+    return cg.Vector.__tostring(self) .. ' ' .. self.attributes:__tostring()
 end
 
 ---@class cg.Vertex:cg.Vector

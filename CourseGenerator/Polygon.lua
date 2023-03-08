@@ -223,16 +223,20 @@ function Polygon:createOffset(offsetVector, minEdgeLength, preserveCorners)
     return offsetPolygon
 end
 
+---@param isValidFunc function optional function accepting a cg.Vertex and returning bool to determine if this
+--- vertex should be considered at all
 ---@return number index of the first vertex which is at least d distance from ix
 ---(can be nil if the end of line reached before d)
-function Polygon:moveForward(ix, d)
-    local i, n, dElapsed = ix, 1, 0
+function Polygon:moveForward(ix, d, isValidFunc)
+    local i, n, dElapsed = self:getRawIndex(ix), 1, 0
     -- wrap around once only
     while n <= #self do
-        if dElapsed >= d then
-            return self:getRawIndex(i)
+        if not isValidFunc or isValidFunc(self:at(i)) then
+            if dElapsed >= d then
+                return self:getRawIndex(i)
+            end
+            dElapsed = dElapsed + self:at(i):getExitEdge():getLength()
         end
-        dElapsed = dElapsed + self:at(i):getExitEdge():getLength()
         i = i + 1
         n = n + 1
     end
@@ -240,14 +244,18 @@ function Polygon:moveForward(ix, d)
 end
 
 ---@param point Vector
+---@param isValidFunc function optional function accepting a cg.Vertex and returning bool to determine if this
+--- vertex should be considered at all
 ---@return cg.Vertex
-function Polygon:findClosestVertex(point)
+function Polygon:findClosestVertex(point, isValidFunc)
     local d, closestVertex = math.huge, nil
     for _, v in self:vertices() do
-        local dFromV = (point - v):length()
-        if dFromV < d then
-            d = dFromV
-            closestVertex = v
+        if not isValidFunc or isValidFunc(v) then
+            local dFromV = (point - v):length()
+            if dFromV < d then
+                d = dFromV
+                closestVertex = v
+            end
         end
     end
     local projection = closestVertex and closestVertex:getExitEdge():getScalarProjection(point)

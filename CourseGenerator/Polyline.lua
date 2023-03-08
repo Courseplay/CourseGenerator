@@ -351,10 +351,12 @@ end
 --- between those points with the vertices of the other polyline or polygon.
 ---@param other Polyline
 ---@param startIx number index of the vertex we want to start looking for intersections.
----@return boolean true if there were an intersection and we actually went around
+---@return boolean, number true if there were an intersection and we actually went around, index of last vertex
+--- after the bypass
 function Polyline:goAround(other, startIx, circle)
     local intersections = self:getIntersections(other, startIx)
     local is1, is2 = intersections[1], intersections[2]
+    print(#intersections)
     if is1 and is2 then
         local pathA, pathB = other:_getPathBetween(is1.ixB, is2.ixB)
         local path
@@ -364,8 +366,11 @@ function Polyline:goAround(other, startIx, circle)
             self.logger:debug('path A: %.1f, path B: %.1f', pathA:getLength(), pathB:getLength())
             if circle then
                 path = shortPath:clone()
+                path:_setAttributes(nil, nil, cg.WaypointAttributes.setIslandBypass, true)
                 longPath:reverse()
                 path:appendMany(longPath)
+                -- mark this roundtrip as island bypass
+                path:_setAttributes(#path - #longPath, #path, cg.WaypointAttributes.setIslandBypass, true)
                 path:appendMany(shortPath)
                 self.logger:debug('Circled around, %d waypoints', #path)
             else
@@ -382,7 +387,7 @@ function Polyline:goAround(other, startIx, circle)
             -- make the transitions a little smoother
             cg.SplineHelper.smooth(self, 3, is1.ixA, lastIx)
             self:calculateProperties()
-            return true
+            return true, lastIx
         end
     end
     return false
@@ -463,7 +468,7 @@ function Polyline:replace(fromIx, toIx, vertices)
     end
     while sourceIx <= #vertices do
         -- we have some vertices left, but there is no room for them
-        local newVertex = cg.Vertex(vertices[sourceIx].x, vertices[sourceIx].y, destIx:get())
+        local newVertex = vertices[sourceIx]:clone()
         newVertex.color = { 1, 0, 0 } -- for debug only
         table.insert(self, destIx:get(), newVertex)
         self.logger:trace('Adding %s at %d', newVertex, destIx:get())
@@ -487,6 +492,19 @@ function Polyline:_getPathBetween(fromIx, toIx)
         table.insert(segment, self:at(i))
     end
     return segment
+end
+
+--- Set an attribute for a series of vertices
+---@param first number index of first vertex to set the attribute
+---@param last number index of last vertex
+---@param setter cg.WaypointAttributes function to call on each vertex' attributes
+---@param ... any arguments for setter
+function Polyline:_setAttributes(first, last, setter, ...)
+    first = first or 1
+    last = last or #self
+    for i = first, last do
+        setter(self:at(i):getAttributes(), ...)
+    end
 end
 
 function Polyline:__tostring()
