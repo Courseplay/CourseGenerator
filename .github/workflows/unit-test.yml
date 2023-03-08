@@ -26,7 +26,7 @@ jobs:
       - name: Build Environment
         uses: ilammy/msvc-dev-cmd@v1
       - name: Lua Setup
-        uses: leafo/gh-actions-lua@v10.0.0
+        uses: leafo/gh-actions-lua@v10
       - name: Run unit tests
         run: |
           cd CourseGenerator/test
