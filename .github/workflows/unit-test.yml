@@ -24,7 +24,7 @@ jobs:
           repository: Courseplay/Courseplay_FS22
           path: Courseplay_FS22
       - name: Setup Lua
-        uses: xpol/setup-lua@v0.3
+        uses: leafo/gh-actions-lua@v10
       - name: Run unit tests
         run: |
           cd CourseGenerator/test
@@ -35,6 +35,7 @@ jobs:
           lua TransformTest.lua
           lua PolylineTest.lua
           lua PolygonTest.lua
+          lua HeadlandTest.lua
           lua FieldTest.lua
           lua FieldworkCourseTest.lua
 
