@@ -23,7 +23,9 @@ jobs:
         with:
           repository: Courseplay/Courseplay_FS22
           path: Courseplay_FS22
-      - name: Install Lua/LuaJIT
+      - name: Build Environment
+        uses: ilammy/msvc-dev-cmd@v1
+      - name: Lua Setup
         uses: leafo/gh-actions-lua@v10.0.0
       - name: Run unit tests
         run: |
