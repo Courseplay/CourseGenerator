@@ -27,6 +27,9 @@ jobs:
         uses: ilammy/msvc-dev-cmd@v1
       - name: Lua Setup
         uses: leafo/gh-actions-lua@v10
+        with:
+          # because atan2 is deprecated in 5.4
+          luaVersion: "5.3.5"
       - name: Run unit tests
         run: |
           cd CourseGenerator/test
