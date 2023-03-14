@@ -4,11 +4,9 @@
 local WrapAroundIndex = CpObject()
 ---@param t table
 ---@param ix number value to set the index to
----@param base number which element of t is the first element, default 1
-function WrapAroundIndex:init(t, ix, base)
+function WrapAroundIndex:init(t, ix)
     self.t = t
     self:set(ix)
-    self.base = base or 1
 end
 
 function WrapAroundIndex:set(ix)

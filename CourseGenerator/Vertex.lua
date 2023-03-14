@@ -18,8 +18,8 @@ function Vertex:init(x, y, ix)
     self.attributes = cg.WaypointAttributes()
 end
 
-function Vertex.fromVector(v)
-    return Vertex(v.x, v.y)
+function Vertex.fromVector(v, ix)
+    return Vertex(v.x, v.y, ix)
 end
 
 function Vertex:set(x, y, ix)
@@ -35,6 +35,7 @@ function Vertex:clone()
     v.isCorner = self.isCorner
     v.isCornerLead = self.isCornerLead
     v.isCornerTail = self.isCornerTail
+    v.oldIx = self.oldIx
     v.attributes = self.attributes:clone()
     return v
 end

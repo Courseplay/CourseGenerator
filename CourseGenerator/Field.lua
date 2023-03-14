@@ -31,11 +31,11 @@ function Field.loadSavedFields(fileName)
 		end
 		local num, x, z = string.match( line, '<point(%d+).+pos="([%d%.-]+) [%d%.-]+ ([%d%.-]+)"' )
 		if num then
-			fields[ ix ].boundary:append(cg.Vector(tonumber(x), -tonumber(z)))
+			fields[ ix ].boundary:append(cg.Vertex(tonumber(x), -tonumber(z)))
 		end
 		num, x, z = string.match( line, '<islandNode(%d+).+pos="([%d%.-]+) +([%d%.-]+)"' )
 		if num then
-			fields[ix].islandPoints:append(cg.Vector(tonumber(x ), -tonumber(z)))
+			fields[ix].islandPoints:append(cg.Vertex(tonumber(x ), -tonumber(z)))
 		end
 	end
 	-- initialize all loaded fields

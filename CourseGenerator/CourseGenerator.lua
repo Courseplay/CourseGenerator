@@ -69,6 +69,15 @@ function NewCourseGenerator.disableTrace()
     NewCourseGenerator.traceEnabled = false
 end
 
+--- Add a point to the list of debug points we want to show on the test display
+---@param v cg.Vector
+function NewCourseGenerator.addDebugPoint(v)
+    if not NewCourseGenerator.debugPoints then
+        NewCourseGenerator.debugPoints = {}
+    end
+    table.insert(NewCourseGenerator.debugPoints, v:clone())
+end
+
 --- Return true when running in the game
 -- used by file and log functions to determine how exactly to do things,
 -- for example, io.flush is not available from within the game.

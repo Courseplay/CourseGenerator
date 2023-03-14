@@ -29,12 +29,13 @@ local islandHeadlandColor = { 1, 1, 1, 0.2 }
 local waypointColor = { 0.7, 0.5, 0.2 }
 local cornerColor = { 1, 1, 0.0, 0.8 }
 local islandBypassColor = { 0, 0.2, 1.0 }
+local debugColor = { 0.8, 0, 0 }
 
 local parameters = {}
 -- number of headland passes around the field boundary
-local nHeadlandPasses = AdjustableParameter(4, 'headlands', 'P', 'p', 1, 0, 100);
+local nHeadlandPasses = AdjustableParameter(13, 'headlands', 'P', 'p', 1, 0, 100);
 table.insert(parameters, nHeadlandPasses)
-local nHeadlandsWithRoundCorners = AdjustableParameter(0, 'headlands with round corners', 'R', 'r', 1, 0, 100);
+local nHeadlandsWithRoundCorners = AdjustableParameter(1, 'headlands with round corners', 'R', 'r', 1, 0, 100);
 table.insert(parameters, nHeadlandsWithRoundCorners)
 local headlandClockwise = ToggleParameter('headlands clockwise', false, 'c');
 table.insert(parameters, headlandClockwise)
@@ -42,13 +43,13 @@ table.insert(parameters, headlandClockwise)
 local nIslandHeadlandPasses = AdjustableParameter(1, 'island headlands', 'I', 'i', 1, 1, 10);
 table.insert(parameters, nIslandHeadlandPasses)
 -- working width of the equipment
-local workingWidth = AdjustableParameter(8, 'width', 'W', 'w', 0.2, 0, 100);
+local workingWidth = AdjustableParameter(6.2, 'width', 'W', 'w', 0.2, 0, 100);
 table.insert(parameters, workingWidth)
-local turningRadius = AdjustableParameter(6, 'radius', 'T', 't', 0.2, 0, 20);
+local turningRadius = AdjustableParameter(5.8, 'radius', 'T', 't', 0.2, 0, 20);
 table.insert(parameters, turningRadius)
 local fieldCornerRadius = AdjustableParameter(6, 'field corner radius', 'F', 'f', 1, 0, 30);
 table.insert(parameters, fieldCornerRadius)
-local sharpenCorners = ToggleParameter('sharpen corners', false, 's');
+local sharpenCorners = ToggleParameter('sharpen corners', true, 's');
 table.insert(parameters, sharpenCorners)
 local bypassIslands = ToggleParameter('bypass islands', false, 'b');
 table.insert(parameters, bypassIslands)
@@ -66,6 +67,7 @@ local currentVertex
 --- Generate the fieldwork course
 ---------------------------------------------------------------------------------------------------------------------------
 local function generate()
+    cg.debugPoints = {}
     local context = cg.FieldworkContext(selectedField, workingWidth:get(), turningRadius:get(), nHeadlandPasses:get())
     context:setHeadlandsWithRoundCorners(nHeadlandsWithRoundCorners:get())
     context:setHeadlandClockwise(headlandClockwise:get())
@@ -89,7 +91,7 @@ end
 
 --- Set offset so with the current scale, the world coordinates x, y are in the middle of the screen
 local function setOffset(x, y)
-    xOffset = - (scale * x - windowWidth / 2)
+    xOffset = -(scale * x - windowWidth / 2)
     yOffset = (scale * y - windowHeight / 2) + windowHeight
 end
 
@@ -160,11 +162,9 @@ end
 
 local function findCurrentVertex(sx, sy)
     local x, y = screenToWorld(sx, sy)
-    for _, h in ipairs(course:getHeadlands()) do
-        local v = findVertexForPosition(h:getPolygon(), x, y)
-        if v then
-            return v
-        end
+    local v = findVertexForPosition(course:getHeadland(), x, y)
+    if v then
+        return v
     end
 end
 
@@ -234,7 +234,7 @@ end
 
 local function drawHeadlands()
     --for _, h in ipairs(course:getHeadlands()) do
-        drawHeadland(course:getHeadland(), courseColor)
+    drawHeadland(course:getHeadland(), courseColor)
     --end
 end
 
@@ -243,11 +243,14 @@ local function drawVertexInfo()
     love.graphics.replaceTransform(mouseTransform)
     love.graphics.setColor(0.2, 0.2, 0.2)
     love.graphics.rectangle('fill', 0, 0, 100, 150)
-    love.graphics.setColor(0.8, 0.8, 0.8)
-    love.graphics.printf(string.format('ix: %s r: %s',
-            intToString(currentVertex.ix), floatToString(currentVertex:getSignedRadius())), 10, 10, 130)
-    love.graphics.printf(string.format('c: %.1f xte: %.2f', currentVertex.curvature, currentVertex.xte), 10, 24, 130)
+    love.graphics.setColor(0.9, 0.9, 0.9)
+    love.graphics.printf(string.format('ix: %s old: %s',
+            intToString(currentVertex.ix), intToString(currentVertex.oldIx)), 10, 12, 130)
+    love.graphics.printf(string.format('r: %s xte: %s',
+            floatToString(currentVertex:getSignedRadius()), floatToString(currentVertex.xte)), 10, 24, 130)
     love.graphics.printf(string.format('corner: %s', currentVertex.isCorner), 10, 36, 130)
+    love.graphics.printf(string.format('x: %s y: %s',
+            floatToString(currentVertex.x), floatToString(currentVertex.y)), 10, 48, 130)
 end
 
 local function drawGraphics()
@@ -278,10 +281,22 @@ local function drawStatus()
     end
 end
 
+local function drawDebugPoints()
+    if cg.debugPoints then
+        love.graphics.replaceTransform(graphicsTransform)
+        love.graphics.setColor(debugColor)
+        love.graphics.setPointSize(pointSize / 3)
+        for _, p in ipairs(cg.debugPoints) do
+            love.graphics.points(p.x, p.y)
+        end
+    end
+end
+
 function love.draw()
     drawGraphics()
     drawStatus()
     drawContext()
+    drawDebugPoints()
 end
 
 ------------------------------------------------------------------------------------------------------------------------

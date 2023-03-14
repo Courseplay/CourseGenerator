@@ -34,7 +34,10 @@ function Headland:init(basePolygon, passNumber, width, outward)
         self.polygon:_removeLoops(basePolygon:isClockwise())
         self.logger:debug('polygon with %d vertices generated, area %.1f, cw %s',
                 #self.polygon, self.polygon:getArea(), self.polygon:isClockwise())
-        if self.polygon:isClockwise() ~= basePolygon:isClockwise() then
+        if #self.polygon < 3 then
+            self.logger:warning('invalid headland, polygon too small (%d vertices)', #self.polygon)
+            self.polygon = nil
+        elseif self.polygon:isClockwise() ~= basePolygon:isClockwise() then
             self.polygon = nil
             self.logger:warning('no room left for this headland')
         end

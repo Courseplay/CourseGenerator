@@ -43,6 +43,7 @@ function FieldworkCourse:generateHeadlands(context)
             end
         end
     end
+    self.headland:calculateProperties()
 end
 
 ---@param boundary Polygon field boundary or other headland to start the generation from
@@ -120,10 +121,12 @@ function FieldworkCourse:connectHeadlands()
     self.headland:appendMany(self.headlands[#self.headlands]:getPolygon())
 end
 
+---@return cg.Polyline
 function FieldworkCourse:getHeadland()
     return self.headland
 end
 
+---@return cg.Headland[]
 function FieldworkCourse:getHeadlands()
     return self.headlands
 end

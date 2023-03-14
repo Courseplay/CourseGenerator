@@ -30,6 +30,8 @@ function Polygon:rebase(base, reverse)
     local temp = {}
     for i = 0, #self - 1 do
         table.insert(temp, self:at(i + base))
+        -- preserve old index for debugs
+        temp[#temp].oldIx = temp[#temp].ix
     end
 
     for i = 1, #self do
@@ -88,7 +90,7 @@ function Polygon:vertices(from, to, step)
     return function()
         i:inc(step or 1)
         -- since we may wrap around the end, we must check for equality (not > or <)
-        if i:get() == stop:get() and not firstIteration then
+        if (i:get() == stop:get() and not firstIteration) or #self == 0 then
             return nil, nil, nil, nil
         else
             firstIteration = false

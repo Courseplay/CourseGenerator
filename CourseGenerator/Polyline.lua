@@ -13,10 +13,15 @@ end
 
 ---@param v table table with x, y (Vector, Vertex, State3D or just plain {x, y}
 function Polyline:append(v)
-    table.insert(self, cg.Vertex(v.x, v.y, #self + 1))
+    if v:is_a(cg.Vertex) then
+        table.insert(self, v:clone())
+        v.ix = #self
+    else
+        table.insert(self, cg.Vertex(v.x, v.y, #self + 1))
+    end
 end
 
----@param p cg.Vector[]
+---@param p cg.Vertex[]
 function Polyline:appendMany(p)
     for _, v in ipairs(p) do
         self:append(v)
@@ -181,9 +186,9 @@ end
 ---@param from number index of vertex to start the calculation, default 1
 ---@param to number index of last vertex to use in the calculation, default #self
 function Polyline:calculateProperties(from, to)
-    for i = from or 1, to or #self do
-        self:at(i).ix = i
-        self:at(i):calculateProperties(self:at(i - 1), self:at(i + 1))
+    for i, current, previous, next in self:vertices(from, to) do
+        current.ix = i
+        current:calculateProperties(previous, next)
     end
     -- mark dirty
     self.length = nil
@@ -258,7 +263,6 @@ function Polyline:cleanEdges(edges, minEdgeLength, preserveCorners)
     return self:_cleanEdges(edges, 2, { edges[1] }, edges[1], minEdgeLength, preserveCorners)
 end
 
-
 --- Generate a polyline parallel to this one, offset by the offsetVector
 ---@param offsetVector cg.Vector offset to move the edges, relative to the edge's direction
 ---@param minEdgeLength number see LineSegment.connect()
@@ -313,27 +317,47 @@ function Polyline:ensureMinimumRadius(r, makeCorners)
             local entry = cg.Slider(self, currentIx, 0)
             local exit = cg.Slider(self, currentIx, 0)
             local rMin
+            local step, totalMoved = 0.2, 0
             repeat
                 -- from the corner, start widening the gap until we can fit an
                 -- arc with r between
-                entry:move(-0.2)
-                exit:move(0.2)
+                entry:move(-step)
+                exit:move(step)
+                totalMoved = totalMoved + step
                 rMin = entry:getRadiusTo(exit)
+                cg.addDebugPoint(entry:getBase())
+                cg.addDebugPoint(exit:getBase())
             until rMin >= r
             -- entry and exit are now far enough, so use the Dubins solver to effortlessly create a nice
             -- arc between the two, or, to make it a sharp corner, find the intersection of entry and exit
             local adjustedCornerVertices
             if makeCorners then
-                adjustedCornerVertices = makeCorner(entry, exit)
+                if totalMoved < 2 * r then
+                    adjustedCornerVertices = makeCorner(entry, exit)
+                else
+                    -- there are cases, for instance in narrow nooks which already have turns, where
+                    -- it does not make sense trying to sharpen as we'll end up a very small angle with a
+                    -- corner point very far away.
+                    self.logger:warning(
+                            'ensureMinimumRadius: will not sharpen this corner, had to move too far (%.1f) back',
+                            totalMoved)
+                    self[currentIx].isCorner = true
+                end
             else
                 adjustedCornerVertices = makeArc(entry, exit)
             end
             if adjustedCornerVertices and #adjustedCornerVertices >= 1 then
+                -- remember the size before the replacement
+                local sizeBeforeReplace = #self
                 -- replace the section with an arc or a corner
                 nextIx, wrappedAround = self:replace(entry.ix, exit.ix + 1, adjustedCornerVertices)
                 self.logger:debug('ensureMinimumRadius: replaced corner vertices between %d to %d with %d waypoint(s), continue at %d (of %d), wrapped around %s',
                         entry.ix, exit.ix, #adjustedCornerVertices, nextIx, #self, wrappedAround)
-                self:calculateProperties(entry.ix, nextIx)
+                if #self < sizeBeforeReplace then
+                    self:calculateProperties(entry.ix - (sizeBeforeReplace - #self), nextIx)
+                else
+                    self:calculateProperties(entry.ix, nextIx)
+                end
             else
                 self.logger:debug('ensureMinimumRadius: could not calculate adjusted corner vertices')
             end
@@ -356,7 +380,6 @@ end
 function Polyline:goAround(other, startIx, circle)
     local intersections = self:getIntersections(other, startIx)
     local is1, is2 = intersections[1], intersections[2]
-    print(#intersections)
     if is1 and is2 then
         local pathA, pathB = other:_getPathBetween(is1.ixB, is2.ixB)
         local path
@@ -463,6 +486,8 @@ function Polyline:replace(fromIx, toIx, vertices)
         else
             table.remove(self, destIx:get())
             self.logger:trace('Removed %d', destIx:get())
+            -- just in case we happened to remove the last element of the table, reset destIx to the max index
+            destIx:set(destIx:get())
         end
         sourceIx = sourceIx + 1
     end
