@@ -104,3 +104,11 @@ lu.assertAlmostEquals(cg.LineSegment(10, 10, 10, 5):getRadiusTo(cg.LineSegment(5
 -- ~45 degrees
 lu.assertAlmostEquals(cg.LineSegment(0, 0, 5, 0):getRadiusTo(cg.LineSegment(15, 5, 20, 10)), 17.07)
 lu.assertAlmostEquals(cg.LineSegment(0, 0, 5, 0):getRadiusTo(cg.LineSegment(15, -5, 20, -10)), 17.07)
+
+a = cg.LineSegment(0, 0, 10, 0)
+local p = cg.Vector(5, 5)
+lu.assertEquals(a:getDistanceFrom(p), 5)
+
+a = cg.LineSegment(3, 3, 13, 3)
+p = cg.Vector(8, 8)
+lu.assertEquals(a:getDistanceFrom(p), 5)

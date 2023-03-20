@@ -156,6 +156,7 @@ function Polyline:reverse()
         self[i], self[#self - i + 1] = self[#self - i + 1], self[i]
     end
     self:calculateProperties()
+    return self
 end
 
 function Polyline:getLength()
@@ -414,6 +415,26 @@ function Polyline:goAround(other, startIx, circle)
         end
     end
     return false
+end
+
+---@param lineSegment cg.LineSegment
+---@return cg.Vertex, number, cg.Vertex, number the vertex closest to lineSegment, its distance, the vertex
+--- farthest from the lineSegment, its distance
+function Polyline:findClosestAndFarthestVertexToLineSegment(lineSegment)
+    local dMin, closestVertex = math.huge, nil
+    local dMax, farthestVertex = -math.huge, nil
+    for _, v in self:vertices() do
+        local thisD = lineSegment:getDistanceFrom(v)
+        if thisD < dMin then
+            dMin = thisD
+            closestVertex = v
+        end
+        if thisD > dMax then
+            dMax = thisD
+            farthestVertex = v
+        end
+    end
+    return closestVertex, dMin, farthestVertex, dMax
 end
 
 ------------------------------------------------------------------------------------------------------------------------

@@ -235,6 +235,13 @@ function LineSegment:getRadiusTo(other)
 end
 
 ---@param point cg.Vector
+---@return number distance of point from the line segment (measured perpendicular to the segment, length of the rejection vector)
+function LineSegment:getDistanceFrom(point)
+    local v = point - self.base
+    return self.slope:rejection(v):length()
+end
+
+---@param point cg.Vector
 function LineSegment:getScalarProjection(point)
     local v = point - self.base
     return self.slope:scalarProjection(v)

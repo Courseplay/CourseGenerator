@@ -118,7 +118,7 @@ function Headland:connectTo(other, ix, workingWidth, turningRadius)
     local transitionLength = Headland._getTransitionLength(workingWidth, turningRadius)
     local transition = self:_continueUntilStraightSection(ix, transitionLength)
     -- index on the other polygon closest to the location where the transition will start
-    local otherClosest = other:getPolygon():findClosestVertex(self.polygon:at(ix + #transition), ignoreIslandBypass)
+    local otherClosest = other:getPolygon():findClosestVertexToPoint(self.polygon:at(ix + #transition), ignoreIslandBypass)
     -- index on the other polygon where the transition will approximately end
     local transitionEndIx = other:getPolygon():moveForward(otherClosest.ix, transitionLength, ignoreIslandBypass)
     if transitionEndIx then

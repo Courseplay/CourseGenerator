@@ -105,7 +105,7 @@ function FieldworkCourse:connectHeadlands()
     end
     self.headland = cg.Polyline()
     local closestVertex = self.context.startLocation and
-            self.headlands[1]:getPolygon():findClosestVertex(self.context.startLocation) or
+            self.headlands[1]:getPolygon():findClosestVertexToPoint(self.context.startLocation) or
             self.headlands[1]:getPolygon():at(1)
     -- make life easy: make headland polygons always start where the transition to the next headland is.
     -- In _setContext() we already took care of the direction, so the headland is always worked in the
@@ -126,10 +126,25 @@ function FieldworkCourse:getHeadland()
     return self.headland
 end
 
+---@return cg.Polyline
+function FieldworkCourse:getCenter()
+    return self.center
+end
+
 ---@return cg.Headland[]
 function FieldworkCourse:getHeadlands()
     return self.headlands
 end
+
+------------------------------------------------------------------------------------------------------------------------
+--- Up/down rows
+------------------------------------------------------------------------------------------------------------------------
+function FieldworkCourse:generateUpDownRows()
+    local center = cg.Center(self.context, #self.headlands > 0 and self.headlands[#self.headlands]:getPolygon() or self.boundary)
+    center:generate()
+    self.center = center:getPath()
+end
+
 
 ------------------------------------------------------------------------------------------------------------------------
 --- Islands

@@ -144,8 +144,19 @@ function Vector:dot(v)
 end
 
 -- return the scalar projection of v on self
+---@return number
 function Vector:scalarProjection(v)
     return self:dot(v) / self:length()
+end
+
+---@return Vector
+function Vector:projection(v)
+    return (v:dot(self) / self:dot(self)) * self
+end
+
+---@return Vector
+function Vector:rejection(v)
+    return v - self:projection(v)
 end
 
 -- normalize the Vector (give it a magnitude of 1)

@@ -249,7 +249,7 @@ end
 ---@param isValidFunc function optional function accepting a cg.Vertex and returning bool to determine if this
 --- vertex should be considered at all
 ---@return cg.Vertex
-function Polygon:findClosestVertex(point, isValidFunc)
+function Polygon:findClosestVertexToPoint(point, isValidFunc)
     local d, closestVertex = math.huge, nil
     for _, v in self:vertices() do
         if not isValidFunc or isValidFunc(v) then

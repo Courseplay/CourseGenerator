@@ -79,10 +79,7 @@ function Island:createFromPerimeterPoints(perimeterPoints)
         end
     end
     self.boundary:calculateProperties()
-    --self.boundary:space( math.rad( 20 ), 5 )
-    --self.width = self.boundary.boundingBox.maxX - self.boundary.boundingBox.minX
-    --self.height = self.boundary.boundingBox.maxY - self.boundary.boundingBox.minY
-    --CourseGenerator.debug( "Island #%d with %d vertices created, %.0fx%0.f, area %.0f", self.id, #self.boundary, self.width, self.height, self.boundary.area )
+    self.logger:debug( "created with %d vertices, area %.0f", self.id, #self.boundary, self.boundary:getArea())
 end
 
 ---@return cg.Polygon

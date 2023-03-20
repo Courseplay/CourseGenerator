@@ -86,10 +86,10 @@ function Field:setupIslands()
 		local island = cg.Island(islandId, islandPerimeterPoints)
 		-- ignore too really small islands (under 5 sqm), there are too many issues with the
 		-- headland generation for them
-		--if island.nodes.area > 5 then
+		if island:getBoundary():getArea() > 5 then
 			table.insert(self.islands, island)
 			islandId = islandId + 1
-		--end
+		end
 	end
 end
 

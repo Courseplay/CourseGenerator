@@ -55,8 +55,21 @@ function FieldworkContext:setHeadlandClockwise(clockwise)
     self.headlandClockwise = clockwise
 end
 
+--- The (approximate) location where we want to start working on the headland when progressing inwards.
 function FieldworkContext:setStartLocation(x, y)
     self.startLocation = cg.Vector(x, y)
+end
+
+--- Angle of the up/down rows
+function FieldworkContext:setRowAngle(rowAngle)
+    self.rowAngle = rowAngle
+end
+
+--- Distribute rows evenly, so the distance between them may be less than the working width,
+--- or should the last row absorb all the difference, so only the last row is narrower than
+--- the working width
+function FieldworkContext:setEvenRowDistribution(evenRowDistribution)
+    self.evenRowDistribution = evenRowDistribution
 end
 
 ---@class cg.FieldworkContext

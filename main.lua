@@ -30,10 +30,13 @@ local waypointColor = { 0.7, 0.5, 0.2 }
 local cornerColor = { 1, 1, 0.0, 0.8 }
 local islandBypassColor = { 0, 0.2, 1.0 }
 local debugColor = { 0.8, 0, 0 }
+local highlightedWaypointColorForward = { 0, 0.7, 0, 0.3 }
+local highlightedWaypointColorBackward = { 0.7, 0, 0, 0.3 }
+local centerColor = { 0, 0.7, 1, 0.5 }
 
 local parameters = {}
 -- number of headland passes around the field boundary
-local nHeadlandPasses = AdjustableParameter(13, 'headlands', 'P', 'p', 1, 0, 100);
+local nHeadlandPasses = AdjustableParameter(2, 'headlands', 'P', 'p', 1, 0, 100);
 table.insert(parameters, nHeadlandPasses)
 local nHeadlandsWithRoundCorners = AdjustableParameter(1, 'headlands with round corners', 'R', 'r', 1, 0, 100);
 table.insert(parameters, nHeadlandsWithRoundCorners)
@@ -53,6 +56,10 @@ local sharpenCorners = ToggleParameter('sharpen corners', true, 's');
 table.insert(parameters, sharpenCorners)
 local bypassIslands = ToggleParameter('bypass islands', false, 'b');
 table.insert(parameters, bypassIslands)
+local rowAngleDeg = AdjustableParameter(0, 'row angle', 'A', 'a', 10, -90, 90);
+table.insert(parameters, rowAngleDeg)
+local evenRowDistribution = ToggleParameter('even row width', false, 'e');
+table.insert(parameters, evenRowDistribution)
 
 -- the selectedField to generate the course for
 ---@type cg.Field
@@ -75,12 +82,15 @@ local function generate()
     context:setFieldCornerRadius(fieldCornerRadius:get())
     context:setBypassIslands(bypassIslands:get())
     context:setSharpenCorners(sharpenCorners:get())
+    context:setRowAngle(math.rad(rowAngleDeg:get()))
+    context:setEvenRowDistribution(evenRowDistribution:get())
     if startX then
         context:setStartLocation(startX, startY)
     end
     course = cg.FieldworkCourse(context)
     course:generateHeadlands()
     course:generateHeadlandsAroundIslands()
+    course:generateUpDownRows()
     -- make sure all logs are now visible
     io.stdout:flush()
 end
@@ -197,12 +207,14 @@ local function drawVertex(v)
 end
 
 local function drawHeadland(h, color)
-    love.graphics.setLineWidth(lineWidth)
-    love.graphics.setColor(color)
-    love.graphics.line(h:getUnpackedVertices())
-    --love.graphics.polygon('line', h:getUnpackedVertices())
-    for _, v in h:vertices() do
-        drawVertex(v)
+    if #h > 1 then
+        love.graphics.setLineWidth(lineWidth)
+        love.graphics.setColor(color)
+        love.graphics.line(h:getUnpackedVertices())
+        --love.graphics.polygon('line', h:getUnpackedVertices())
+        for _, v in h:vertices() do
+            drawVertex(v)
+        end
     end
 end
 
@@ -212,6 +224,18 @@ local function drawIslandHeadland(h, color)
     love.graphics.polygon('line', h:getUnpackedVertices())
 end
 
+local function drawCenter()
+    if course:getCenter() then
+        love.graphics.setLineWidth(lineWidth)
+        love.graphics.setColor(centerColor)
+        local c = course:getCenter()
+        for i = 1, #c, 2 do
+            love.graphics.line(c[i].x, c[i].y, c[i + 1].x, c[i + 1].y)
+        end
+    end
+end
+
+
 local function drawFields()
     for _, f in pairs(savedFields) do
         love.graphics.setLineWidth(lineWidth)
@@ -219,9 +243,11 @@ local function drawFields()
         love.graphics.polygon('line', f:getUnpackedVertices())
         for _, i in ipairs(f:getIslands()) do
             love.graphics.setColor(fieldBoundaryColor)
-            love.graphics.polygon('fill', i:getBoundary():getUnpackedVertices())
+            if #i:getBoundary() > 2 then
+                love.graphics.polygon('fill', i:getBoundary():getUnpackedVertices())
+            end
             for _, h in ipairs(i:getHeadlands()) do
-                drawIslandHeadland(h, islandHeadlandColor)
+               drawIslandHeadland(h, islandHeadlandColor)
             end
         end
         local c = f:getCenter()
@@ -239,18 +265,31 @@ local function drawHeadlands()
 end
 
 -- Draw a tooltip with the vertex' details
-local function drawVertexInfo()
+local function drawVertexInfo(v)
     love.graphics.replaceTransform(mouseTransform)
     love.graphics.setColor(0.2, 0.2, 0.2)
     love.graphics.rectangle('fill', 0, 0, 100, 150)
     love.graphics.setColor(0.9, 0.9, 0.9)
     love.graphics.printf(string.format('ix: %s old: %s',
-            intToString(currentVertex.ix), intToString(currentVertex.oldIx)), 10, 12, 130)
+            intToString(v.ix), intToString(v.oldIx)), 10, 12, 130)
     love.graphics.printf(string.format('r: %s xte: %s',
-            floatToString(currentVertex:getSignedRadius()), floatToString(currentVertex.xte)), 10, 24, 130)
-    love.graphics.printf(string.format('corner: %s', currentVertex.isCorner), 10, 36, 130)
+            floatToString(v:getSignedRadius()), floatToString(v.xte)), 10, 24, 130)
+    love.graphics.printf(string.format('corner: %s', v.isCorner), 10, 36, 130)
     love.graphics.printf(string.format('x: %s y: %s',
-            floatToString(currentVertex.x), floatToString(currentVertex.y)), 10, 48, 130)
+            floatToString(v.x), floatToString(v.y)), 10, 48, 130)
+end
+
+-- Highlight a few vertices around the selected one
+local function highlightPathAroundVertex(v)
+    love.graphics.replaceTransform(graphicsTransform)
+    love.graphics.setPointSize(pointSize * 3)
+    for i = v.ix - 20, v.ix + 30 do
+        love.graphics.setColor(i < v.ix and highlightedWaypointColorBackward or highlightedWaypointColorForward)
+        local p = course:getHeadland():at(i)
+        if p then
+            love.graphics.points(p.x, p.y)
+        end
+    end
 end
 
 local function drawGraphics()
@@ -258,6 +297,7 @@ local function drawGraphics()
     love.graphics.setPointSize(pointSize)
     drawFields()
     drawHeadlands()
+    drawCenter()
 end
 
 local function drawContext()
@@ -277,7 +317,8 @@ local function drawStatus()
     local x, y = screenToWorld(mx, my)
     love.graphics.print(string.format('%.1f %.1f (%.1f %.1f / %.1f)', x, y, xOffset, yOffset, scale), 0, 0)
     if currentVertex then
-        drawVertexInfo()
+        drawVertexInfo(currentVertex)
+        highlightPathAroundVertex(currentVertex)
     end
 end
 
