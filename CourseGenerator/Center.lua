@@ -4,10 +4,11 @@ local Center = CpObject()
 
 ---@param context cg.FieldworkContext
 ---@param boundary cg.Polygon
-function Center:init(context, boundary)
+function Center:init(context, boundary, hasHeadland)
     self.logger = cg.Logger('Center')
     self.boundary = boundary
     self.context = context
+    self.hasHeadland = hasHeadland
 end
 
 ---@return cg.Polyline
@@ -27,7 +28,7 @@ end
 function Center:findBestRowAngle()
     local minRows, bestAngle = math.huge, 0
     for a = -90, 90, 1 do
-        local rows = self:generateUpDownRows(math.rad(a))
+        local rows = self:generateUpDownRows(math.rad(a), true)
         if #rows < minRows then
             minRows = #rows
             bestAngle = math.rad(a)
@@ -36,7 +37,7 @@ function Center:findBestRowAngle()
     return bestAngle
 end
 
-function Center:generateUpDownRows(rowAngle)
+function Center:generateUpDownRows(rowAngle, suppressLog)
     -- Set up a baseline. This goes through the lower left or right corner of the bounding box, at the requested
     -- angle, and long enough that when shifted (offset copies are created), will cover the field at any angle.
     local x1, y1, x2, y2 = self.boundary:getBoundingBox()
@@ -58,7 +59,8 @@ function Center:generateUpDownRows(rowAngle)
     row = row:createOffset(cg.Vector(0, dMin), math.huge)
 
     local nRows, firstRowOffset, width, lastRowOffset = self:calculateRowDistribution(
-            self.context.workingWidth, dMax - dMin, true, self.context.evenRowDistribution, true)
+            self.context.workingWidth, dMax - dMin,
+            self.hasHeadland, self.context.evenRowDistribution, true)
 
     local rows = {}
     row = row:createOffset(cg.Vector(0, firstRowOffset), math.huge)
@@ -71,8 +73,12 @@ function Center:generateUpDownRows(rowAngle)
         row = row:createOffset(cg.Vector(0, lastRowOffset), math.huge)
         table.insert(rows, row)
     end
-    self.logger:debug('Created %d rows at %d° to cover an area %.1f wide, width %.1f/%.1f/%.1f m',
-            nRows, math.deg(rowAngle), dMax - dMin, firstRowOffset, width, lastRowOffset)
+    if not suppressLog then
+        self.logger:debug('Created %d rows at %d° to cover an area %.1f wide, width %.1f/%.1f/%.1f m',
+                nRows, math.deg(rowAngle), dMax - dMin, firstRowOffset, width, lastRowOffset)
+        self.logger:debug('    has headland %s, even distribution %s, remainder last %s',
+                self.hasHeadland, self.context.evenRowDistribution, true)
+    end
     return rows
 end
 
@@ -89,7 +95,7 @@ end
 ---      remainder may have obstacles like fences or trees as it is outside of the field.
 ---@return number, number, number, number number of rows, offset of first row from the field edge, offset of
 --- rows from the previous row for the next rows, offset of last row from the next to last row.
-function Center:calculateRowDistribution(workingWidth, fieldWidth, stayOnField, sameWidth, remainderLast)
+function Center:calculateRowDistribution(workingWidth, fieldWidth, hasHeadland, sameWidth, remainderLast)
     local nRows = math.floor(fieldWidth / workingWidth) + 1
     if nRows == 1 then
         if remainderLast then
@@ -106,14 +112,18 @@ function Center:calculateRowDistribution(workingWidth, fieldWidth, stayOnField, 
             -- #2
             width = workingWidth
         end
-        local firstRowOffset = workingWidth / 2
-        local lastRowOffset
-        if stayOnField then
-            -- #1 and #2
-            lastRowOffset = fieldWidth - firstRowOffset - width * (nRows - 2) - workingWidth / 2
-        else
+        local firstRowOffset, lastRowOffset
+        if hasHeadland then
             -- #3
+            firstRowOffset = workingWidth
             lastRowOffset = width
+            -- if we have a headland, we can stay a full working width away from it and still
+            -- cover everything, so we need one row less
+            nRows = nRows - 1
+        else
+            -- #1 and #2
+            firstRowOffset = workingWidth / 2
+            lastRowOffset = fieldWidth - firstRowOffset - width * (nRows - 2) - workingWidth / 2
         end
         if not remainderLast then
             firstRowOffset, lastRowOffset = lastRowOffset, firstRowOffset

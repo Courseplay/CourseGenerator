@@ -31,7 +31,10 @@ function Headland:init(basePolygon, passNumber, width, outward)
         self.polygon:calculateProperties()
         self.polygon:ensureMaximumEdgeLength(cg.cMaxEdgeLength, cg.cMaxDeltaAngleForMaxEdgeLength)
         self.polygon:calculateProperties()
-        self.polygon:_removeLoops(basePolygon:isClockwise())
+        -- TODO: if do this, on a field with a peninsula, headlands are generated only on one side of
+        -- the peninsula, without it, headlands around the peninsula overlap as long as they can
+        -- fit within the field boundaries.
+        --self.polygon:_removeLoops(basePolygon:isClockwise())
         self.logger:debug('polygon with %d vertices generated, area %.1f, cw %s',
                 #self.polygon, self.polygon:getArea(), self.polygon:isClockwise())
         if #self.polygon < 3 then

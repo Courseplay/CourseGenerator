@@ -11,7 +11,7 @@ NewCourseGenerator.cMinEdgeLength = 0.5
 -- When ensuring maxEdgeLength and adding a new vertex and the direction change at
 -- the previous vertex is less than this, the new vertex will be offset from the original
 -- edge so the result is an arc. Over this angle, we won't offset, so corners are kept sharp.
-NewCourseGenerator.cMaxDeltaAngleForMaxEdgeLength = math.rad(45)
+NewCourseGenerator.cMaxDeltaAngleForMaxEdgeLength = math.rad(30)
 -- Maximum cross track error we tolerate when a vehicle follows a path. This is used to
 -- find corners which the vehicle can't make due to its turning radius without being more than
 -- cMaxCrossTrackError meters from the vertex in the corner.

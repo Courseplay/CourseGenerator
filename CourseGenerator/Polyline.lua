@@ -458,9 +458,7 @@ end
 ---@param other cg.Polyline
 ---@param startIx number index to start looking for intersections with other
 ---@param backwards boolean start traversing self at startIx backwards (decreasing indices)
----@return {number, number, Vector, Polyline, Vector[]}[] list of intersections, each entry an array with the index
---- of the intersecting edge of the own polyline, the index of the intersecting edge of the other polyline,
---- the intersection point and the list of vertices leading to the intersection point.
+---@return cg.Intersection[] list of intersections
 function Polyline:getIntersections(other, startIx, backwards)
     local intersections = {}
     local path = Polyline()

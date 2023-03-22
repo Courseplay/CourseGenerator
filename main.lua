@@ -38,7 +38,7 @@ local parameters = {}
 -- number of headland passes around the field boundary
 local nHeadlandPasses = AdjustableParameter(2, 'headlands', 'P', 'p', 1, 0, 100);
 table.insert(parameters, nHeadlandPasses)
-local nHeadlandsWithRoundCorners = AdjustableParameter(1, 'headlands with round corners', 'R', 'r', 1, 0, 100);
+local nHeadlandsWithRoundCorners = AdjustableParameter(0, 'headlands with round corners', 'R', 'r', 1, 0, 100);
 table.insert(parameters, nHeadlandsWithRoundCorners)
 local headlandClockwise = ToggleParameter('headlands clockwise', false, 'c');
 table.insert(parameters, headlandClockwise)
@@ -241,6 +241,9 @@ local function drawFields()
         love.graphics.setLineWidth(lineWidth)
         love.graphics.setColor(fieldBoundaryColor)
         love.graphics.polygon('line', f:getUnpackedVertices())
+        for _, v in ipairs(f:getBoundary()) do
+            love.graphics.points(v.x, v.y)
+        end
         for _, i in ipairs(f:getIslands()) do
             love.graphics.setColor(fieldBoundaryColor)
             if #i:getBoundary() > 2 then

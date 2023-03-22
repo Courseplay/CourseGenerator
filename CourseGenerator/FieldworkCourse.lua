@@ -29,6 +29,7 @@ function FieldworkCourse:generateHeadlands(context)
     elseif self.nHeadlands > 0 then
         self:generateHeadlandsFromOutside(self.boundary, self.context.workingWidth / 2, 1)
     end
+    self:_removeInvalidHeadlands()
     self:connectHeadlands()
     if self.context.bypassIslands then
         self:generateHeadlandsAroundIslands()
@@ -140,7 +141,9 @@ end
 --- Up/down rows
 ------------------------------------------------------------------------------------------------------------------------
 function FieldworkCourse:generateUpDownRows()
-    local center = cg.Center(self.context, #self.headlands > 0 and self.headlands[#self.headlands]:getPolygon() or self.boundary)
+    local center = cg.Center(self.context,
+            #self.headlands > 0 and self.headlands[#self.headlands]:getPolygon() or self.boundary,
+            #self.headlands > 0)
     center:generate()
     self.center = center:getPath()
 end
@@ -181,6 +184,17 @@ function FieldworkCourse:_removeHeadland(i)
     self.nHeadlandsWithRoundCorners = math.min(self.nHeadlands, self.nHeadlandsWithRoundCorners)
     self.logger:error('could not generate headland %d, course has %d headlands, %d rounded',
             i, self.nHeadlands, self.nHeadlandsWithRoundCorners)
+end
+
+--- If a headland intersects the outermost headland then part of the swath will be outside of the field.
+--- These headlands have to be removed
+function FieldworkCourse:_removeInvalidHeadlands()
+    for i = #self.headlands, 2, -1 do
+        local intersections = self.headlands[i]:getPolygon():getIntersections(self.headlands[1]:getPolygon())
+        if #intersections > 0 then
+            self:_removeHeadland(i)
+        end
+    end
 end
 
 ---@class cg.FieldworkCourse
