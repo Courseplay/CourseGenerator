@@ -36,7 +36,7 @@ local centerColor = { 0, 0.7, 1, 0.5 }
 
 local parameters = {}
 -- number of headland passes around the field boundary
-local nHeadlandPasses = AdjustableParameter(2, 'headlands', 'P', 'p', 1, 0, 100);
+local nHeadlandPasses = AdjustableParameter(0, 'headlands', 'P', 'p', 1, 0, 100);
 table.insert(parameters, nHeadlandPasses)
 local nHeadlandsWithRoundCorners = AdjustableParameter(0, 'headlands with round corners', 'R', 'r', 1, 0, 100);
 table.insert(parameters, nHeadlandsWithRoundCorners)
@@ -46,7 +46,7 @@ table.insert(parameters, headlandClockwise)
 local nIslandHeadlandPasses = AdjustableParameter(1, 'island headlands', 'I', 'i', 1, 1, 10);
 table.insert(parameters, nIslandHeadlandPasses)
 -- working width of the equipment
-local workingWidth = AdjustableParameter(6.2, 'width', 'W', 'w', 0.2, 0, 100);
+local workingWidth = AdjustableParameter(15, 'width', 'W', 'w', 0.2, 0, 100);
 table.insert(parameters, workingWidth)
 local turningRadius = AdjustableParameter(5.8, 'radius', 'T', 't', 0.2, 0, 20);
 table.insert(parameters, turningRadius)
@@ -56,7 +56,9 @@ local sharpenCorners = ToggleParameter('sharpen corners', true, 's');
 table.insert(parameters, sharpenCorners)
 local bypassIslands = ToggleParameter('bypass islands', false, 'b');
 table.insert(parameters, bypassIslands)
-local rowAngleDeg = AdjustableParameter(0, 'row angle', 'A', 'a', 10, -90, 90);
+local autoRowAngle = ToggleParameter('auto row angle',false, '6');
+table.insert(parameters, autoRowAngle)
+local rowAngleDeg = AdjustableParameter(-90, 'row angle', 'A', 'a', 10, -90, 90);
 table.insert(parameters, rowAngleDeg)
 local evenRowDistribution = ToggleParameter('even row width', false, 'e');
 table.insert(parameters, evenRowDistribution)
@@ -82,6 +84,7 @@ local function generate()
     context:setFieldCornerRadius(fieldCornerRadius:get())
     context:setBypassIslands(bypassIslands:get())
     context:setSharpenCorners(sharpenCorners:get())
+    context:setAutoRowAngle(autoRowAngle:get())
     context:setRowAngle(math.rad(rowAngleDeg:get()))
     context:setEvenRowDistribution(evenRowDistribution:get())
     if startX then

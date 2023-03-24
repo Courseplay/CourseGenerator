@@ -242,6 +242,13 @@ function LineSegment:getDistanceFrom(point)
 end
 
 ---@param point cg.Vector
+---@return boolean is point on the left side of the line segment (looking towards the end of the line segment)
+function LineSegment:isLeft(point)
+    local v = point - self.base
+    return cg.Math.getDeltaAngle(v:heading(), self.slope:heading()) <= 0
+end
+
+---@param point cg.Vector
 function LineSegment:getScalarProjection(point)
     local v = point - self.base
     return self.slope:scalarProjection(v)

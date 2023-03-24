@@ -60,7 +60,12 @@ function FieldworkContext:setStartLocation(x, y)
     self.startLocation = cg.Vector(x, y)
 end
 
---- Angle of the up/down rows
+--- Should the angle of rows determined automatically?
+function FieldworkContext:setAutoRowAngle(auto)
+    self.autoRowAngle = auto
+end
+
+--- Angle of the up/down rows when not automatically selected
 function FieldworkContext:setRowAngle(rowAngle)
     self.rowAngle = rowAngle
 end

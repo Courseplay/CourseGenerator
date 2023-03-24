@@ -468,7 +468,7 @@ function Polyline:getIntersections(other, startIx, backwards)
             local is = edge:intersects(otherEdge)
             if is then
                 -- do not add an intersection twice if it goes exactly through a vertex
-                if #intersections == 0 or (intersections[#intersections][3] ~= is) then
+                if #intersections == 0 or (intersections[#intersections].is ~= is) then
                     path:append(is)
                     table.insert(intersections, cg.Intersection(i, j, is, edge, path))
                     path = Polyline()
@@ -478,6 +478,24 @@ function Polyline:getIntersections(other, startIx, backwards)
     end
     table.sort(intersections)
     return intersections
+end
+
+--- Is this polyline entering the other polygon at intersection point is?
+---@param other cg.Polygon
+---@param is cg.Intersection
+---@return boolean true if self is entering the other polygon, false when exiting, when moving in
+--- the direction of increasing indexes
+function Polyline:isEntering(other, is)
+    local otherEdge = other:at(is.ixB):getExitEdge()
+    if other:isClockwise() then
+        -- if the start of my intersecting edge is left of the polygon's intersecting edge and
+        -- the polygon is clockwise, I'm entering the polygon here
+        return otherEdge:isLeft(self:at(is.ixA))
+    else
+        -- similarly, to enter a counterclockwise polygon, my intersecting edge start vertex
+        -- must be on the right when entering the polygon
+        return not otherEdge:isLeft(self:at(is.ixA))
+    end
 end
 
 --- Replace all vertices between fromIx and toIx (excluding) with the entries in vertices
