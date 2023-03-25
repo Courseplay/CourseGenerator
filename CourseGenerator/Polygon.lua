@@ -2,7 +2,7 @@ local Polygon = CpObject(cg.Polyline)
 
 function Polygon:init(vertices)
     cg.Polyline.init(self, vertices)
-    self.logger = cg.Logger('Polygon', cg.Logger.level.trace)
+    self.logger = cg.Logger('Polygon', cg.Logger.level.debug)
 end
 
 --- Remove all existing vertices
@@ -328,15 +328,20 @@ function Polygon:_removeLoops(baseClockwise)
                 -- since we inserted vertices backwards, to keep the original chirality, we must reverse the order
                 pathB:reverse()
                 pathB:calculateProperties()
+                local lengthA, lengthB = pathA:getLength(), pathB:getLength()
+                if math.max(lengthA, lengthB) / math.min(lengthA, lengthB) < 10 then
+                    self.logger:debug('    loop too big, not a corner, will not remove')
+                    return false
+                end
                 self:_reset()
-                self.logger:debug('%d -> %d: path A: %.1f, path B: %.1f, pathA cw %s, pathB cw %s, base cw %s',
-                        i, j, pathA:getLength(), pathB:getLength(), pathA:isClockwise(), pathB:isClockwise(), baseClockwise)
+                self.logger:debug('    %d -> %d: path A: %.1f, path B: %.1f, pathA cw %s, pathB cw %s, base cw %s',
+                        i, j, lengthA, lengthB, pathA:isClockwise(), pathB:isClockwise(), baseClockwise)
                 if pathA:isClockwise() == baseClockwise and pathB:isClockwise() ~= baseClockwise then
                     -- keep path A
                     self:init(pathA)
                 elseif pathA:isClockwise() ~= baseClockwise and pathB:isClockwise() == baseClockwise then
                     self:init(pathB)
-                elseif pathA:getLength() > pathB:getLength() then
+                elseif lengthA > lengthB then
                     self:init(pathA)
                 else
                     self:init(pathB)

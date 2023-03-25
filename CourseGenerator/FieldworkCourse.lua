@@ -190,8 +190,7 @@ end
 --- These headlands have to be removed
 function FieldworkCourse:_removeInvalidHeadlands()
     for i = #self.headlands, 2, -1 do
-        local intersections = self.headlands[i]:getPolygon():getIntersections(self.headlands[1]:getPolygon())
-        if #intersections > 0 then
+        if self.headlands[i]:getPolygon():intersects(self.headlands[1]:getPolygon()) then
             self:_removeHeadland(i)
         end
     end

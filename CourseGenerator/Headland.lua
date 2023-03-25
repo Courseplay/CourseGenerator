@@ -34,7 +34,7 @@ function Headland:init(basePolygon, passNumber, width, outward)
         -- TODO: if do this, on a field with a peninsula, headlands are generated only on one side of
         -- the peninsula, without it, headlands around the peninsula overlap as long as they can
         -- fit within the field boundaries.
-        --self.polygon:_removeLoops(basePolygon:isClockwise())
+        self.polygon:_removeLoops(basePolygon:isClockwise())
         self.logger:debug('polygon with %d vertices generated, area %.1f, cw %s',
                 #self.polygon, self.polygon:getArea(), self.polygon:isClockwise())
         if #self.polygon < 3 then
@@ -95,7 +95,7 @@ function Headland:generate(polygon, targetOffset, currentOffset)
     -- iteration, generating headland tracks close enough to the previous one
     -- so the resulting offset polygon can be kept clean (no intersecting edges)
     -- this can be ensured by choosing an offset small enough
-    local deltaOffset = math.max(polygon:getShortestEdgeLength() / 8, 0.01)
+    local deltaOffset = math.max(polygon:getShortestEdgeLength() / 8, 0.1)
     currentOffset = currentOffset + deltaOffset
     polygon = polygon:createOffset(deltaOffset * self.offsetVector, 1, false)
     if polygon == nil then

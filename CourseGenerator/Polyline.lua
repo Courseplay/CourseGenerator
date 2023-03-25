@@ -569,6 +569,26 @@ function Polyline:_setAttributes(first, last, setter, ...)
     end
 end
 
+--- Does this line intersects the other?
+---
+--- This is a faster version of getIntersections() for the case where we only want to
+--- know if they intersect or not.
+---
+---@param other cg.Polyline
+---@return boolean
+function Polyline:intersects(other)
+    for _, edge, _ in self:edges() do
+        for _, otherEdge in other:edges() do
+            local is = edge:intersects(otherEdge)
+            if is then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+
 function Polyline:__tostring()
     local result = ''
     for i, v in ipairs(self) do

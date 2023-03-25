@@ -10,6 +10,7 @@
 --
 --
 dofile('include.lua')
+local profilerEnabled = false
 local fileName = ''
 local dragging = false
 local pointSize = 1
@@ -36,7 +37,7 @@ local centerColor = { 0, 0.7, 1, 0.5 }
 
 local parameters = {}
 -- number of headland passes around the field boundary
-local nHeadlandPasses = AdjustableParameter(0, 'headlands', 'P', 'p', 1, 0, 100);
+local nHeadlandPasses = AdjustableParameter(2, 'headlands', 'P', 'p', 1, 0, 100);
 table.insert(parameters, nHeadlandPasses)
 local nHeadlandsWithRoundCorners = AdjustableParameter(0, 'headlands with round corners', 'R', 'r', 1, 0, 100);
 table.insert(parameters, nHeadlandsWithRoundCorners)
@@ -46,7 +47,7 @@ table.insert(parameters, headlandClockwise)
 local nIslandHeadlandPasses = AdjustableParameter(1, 'island headlands', 'I', 'i', 1, 1, 10);
 table.insert(parameters, nIslandHeadlandPasses)
 -- working width of the equipment
-local workingWidth = AdjustableParameter(15, 'width', 'W', 'w', 0.2, 0, 100);
+local workingWidth = AdjustableParameter(9, 'width', 'W', 'w', 0.2, 0, 100);
 table.insert(parameters, workingWidth)
 local turningRadius = AdjustableParameter(5.8, 'radius', 'T', 't', 0.2, 0, 20);
 table.insert(parameters, turningRadius)
@@ -90,10 +91,18 @@ local function generate()
     if startX then
         context:setStartLocation(startX, startY)
     end
+    if profilerEnabled then
+        love.profiler.start()
+    end
     course = cg.FieldworkCourse(context)
     course:generateHeadlands()
     course:generateHeadlandsAroundIslands()
     course:generateUpDownRows()
+    if profilerEnabled then
+        print(love.profiler.report(40))
+        love.profiler.reset()
+        love.profiler.stop()
+    end
     -- make sure all logs are now visible
     io.stdout:flush()
 end
@@ -109,6 +118,9 @@ local function setOffset(x, y)
 end
 
 function love.load(arg)
+    if profilerEnabled then
+        love.profiler = require('profile')
+    end
     fileName = arg[1]
     cg.debug('Reading %s...', fileName)
     savedFields = cg.Field.loadSavedFields(fileName)

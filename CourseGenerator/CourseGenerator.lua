@@ -4,7 +4,11 @@ NewCourseGenerator = {}
 --- Tunable parameters
 -- The maximum length of a polyline/polygon edge. This means no waypoints of the
 -- generated course will be further than this.
-NewCourseGenerator.cMaxEdgeLength = 5
+-- It is important that this is greater than the field boundary detection algorithm's
+-- vertex spacing, otherwise ensureMaximumEdgeLength() will double the number of vertices
+-- of each headland polygon which results in performance loss, especially because of
+-- _removeInvalidHeadlands which is O(nm) complexity
+NewCourseGenerator.cMaxEdgeLength = 5.5
 -- The minimum length of a polyline/polygon edge. No waypoints will be closer than this.
 -- If a vertex is closer than cMinEdgeLength to the next, it is removed
 NewCourseGenerator.cMinEdgeLength = 0.5

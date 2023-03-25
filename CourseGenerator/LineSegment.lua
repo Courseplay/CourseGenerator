@@ -84,9 +84,12 @@ end
 ---@param dx number x offset relative to the segment, 1 is forward one unit, -1 back, etc.
 ---@param dy number y offset relative to the segment, 1 is left one unit, -1 right, etc.
 function LineSegment:offset(dx, dy)
-    local offset = cg.Vector(dx, dy)
-    offset:setHeading(offset:heading() + self.slope:heading())
-    self.base = self.base + offset
+    --local offset = cg.Vector(dx, dy)
+    --offset:setHeading(offset:heading() + self.slope:heading())
+    local length = math.sqrt(dx^2 + dy^2)
+    local offsetAngle = math.atan2(dy, dx) + self.slope:heading()
+    self.base.x = self.base.x + length * math.cos(offsetAngle)
+    self.base.y = self.base.y + length * math.sin(offsetAngle)
 end
 
 function LineSegment.__eq(a, b)

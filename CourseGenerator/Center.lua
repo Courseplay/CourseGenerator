@@ -161,7 +161,7 @@ end
 function Center:_splitRow(row, boundary)
     local intersections = row:getIntersections(boundary, 1)
     if #intersections < 2 then
-        self.logger:warning('Row has no intersection with boundary')
+        self.logger:warning('Row has only %d intersection with boundary', #intersections)
         return
     end
     -- The assumption here is that the row always begins outside of the boundary
@@ -172,7 +172,7 @@ function Center:_splitRow(row, boundary)
     -- field width (irregularly shaped fields, like ones with a peninsula)
     -- we start outside of the boundary. If we cross it entering, we'll decrement this, if we cross leaving, we'll increment it.
     local outside = 1
-    local lastInsideIx = isInside and 1 or nil
+    local lastInsideIx
     local sections = {}
     for i = 1, #intersections do
         local isEntering = row:isEntering(boundary, intersections[i])
