@@ -3,14 +3,18 @@ local Headland = CpObject()
 --- Create a headland from a base polygon. The headland is a new polygon, offset by width, that is, inside
 --- of the base polygon.
 ---@param basePolygon cg.Polygon
+---@param clockwise boolean the direction of the headland. We want this explicitly stated and not derived from
+--- basePolygon as on fields with odd shapes (complex polygons) headlands may intersect themselves making
+--- a clear definition of clockwise/counterclockwise impossible. This is the required direction for all headlands.
 ---@param passNumber number of the headland pass, the outermost is 1
 ---@param width number
 ---@param outward boolean if true, the generated headland will be outside of the basePolygon, inside otherwise
-function Headland:init(basePolygon, passNumber, width, outward)
+function Headland:init(basePolygon, clockwise, passNumber, width, outward)
     self.logger = cg.Logger('Headland ' .. passNumber or '')
-    self.clockwise = basePolygon:isClockwise()
-    self.logger:debug('start generating, base clockwise %s, width %.1f, outward: %s',
-            self.clockwise, width, outward)
+    self.clockwise = clockwise
+    self.passNumber = passNumber
+    self.logger:debug('start generating, base clockwise %s, desired clockwise %s, width %.1f, outward: %s',
+            basePolygon:isClockwise(), self.clockwise, width, outward)
     if self.clockwise then
         -- to generate headland inside the polygon we need to offset the polygon to the right if
         -- the polygon is clockwise
@@ -31,22 +35,29 @@ function Headland:init(basePolygon, passNumber, width, outward)
         self.polygon:calculateProperties()
         self.polygon:ensureMaximumEdgeLength(cg.cMaxEdgeLength, cg.cMaxDeltaAngleForMaxEdgeLength)
         self.polygon:calculateProperties()
-        -- TODO: if do this, on a field with a peninsula, headlands are generated only on one side of
-        -- the peninsula, without it, headlands around the peninsula overlap as long as they can
-        -- fit within the field boundaries.
-        self.polygon:_removeLoops(basePolygon:isClockwise())
-        self.logger:debug('polygon with %d vertices generated, area %.1f, cw %s',
-                #self.polygon, self.polygon:getArea(), self.polygon:isClockwise())
+        -- TODO: when removing loops, we may end up not covering the entire field on complex polygons
+        -- consider making the headland invalid if it has loops, instead of removing them
+        local removed, startIx = true, 1
+        repeat
+            removed, startIx = self.polygon:_removeLoops(clockwise, startIx)
+        until not removed
+        self.logger:debug('polygon with %d vertices generated, area %.1f, cw %s, desired cw %s',
+                #self.polygon, self.polygon:getArea(), self.polygon:isClockwise(), clockwise)
         if #self.polygon < 3 then
             self.logger:warning('invalid headland, polygon too small (%d vertices)', #self.polygon)
             self.polygon = nil
-        elseif self.polygon:isClockwise() ~= basePolygon:isClockwise() then
+        elseif self.polygon:isClockwise() ~= nil and self.polygon:isClockwise() ~= clockwise and clockwise ~= nil then
             self.polygon = nil
             self.logger:warning('no room left for this headland')
         end
     else
         self.logger:error('could not generate headland')
     end
+end
+
+---@return number which headland is it? 1 is the outermost.
+function Headland:getPassNumber()
+    return self.passNumber
 end
 
 --- Make sure all corners are rounded to have at least minimumRadius radius.

@@ -56,8 +56,9 @@ function FieldworkCourse:generateHeadlandsFromOutside(boundary, firstHeadlandWid
     self.logger:debug('generating %d sharp headlands from the outside, min radius %.1f',
             self.nHeadlands - startIx + 1, self.context.turningRadius)
     -- outermost headland is offset from the field boundary by half width
-    self.headlands[startIx] = cg.Headland(boundary, startIx, firstHeadlandWidth, false, self.context.turningRadius)
-    if not self.headlands[startIx]:isValid() then
+    self.headlands[startIx] = cg.Headland(boundary, self.context.headlandClockwise, startIx, firstHeadlandWidth, false,
+            self.context.turningRadius)
+    if not self:isValidHeadland(self.headlands[startIx]) then
         self:_removeHeadland(startIx)
         return
     end
@@ -65,8 +66,9 @@ function FieldworkCourse:generateHeadlandsFromOutside(boundary, firstHeadlandWid
         self.headlands[startIx]:sharpenCorners(self.context.turningRadius)
     end
     for i = startIx + 1, self.nHeadlands do
-        self.headlands[i] = cg.Headland(self.headlands[i - 1]:getPolygon(), i, self.context.workingWidth, false, self.context.turningRadius)
-        if self.headlands[i]:isValid() then
+        self.headlands[i] = cg.Headland(self.headlands[i - 1]:getPolygon(), self.context.headlandClockwise, i,
+                self.context.workingWidth, false, self.context.turningRadius)
+        if self:isValidHeadland(self.headlands[i]) then
             if self.context.sharpenCorners then
                 self.headlands[i]:sharpenCorners(self.context.turningRadius)
             end
@@ -83,9 +85,9 @@ function FieldworkCourse:generateHeadlandsFromInside()
     -- start with the innermost headland, try until it can fit in the field (as the required number of
     -- headlands may be more than what actually fits into the field)
     while self.nHeadlandsWithRoundCorners > 0 do
-        self.headlands[self.nHeadlandsWithRoundCorners] = cg.Headland(self.boundary, self.nHeadlandsWithRoundCorners,
-                (self.nHeadlandsWithRoundCorners - 0.5) * self.context.workingWidth, false)
-        if self.headlands[self.nHeadlandsWithRoundCorners]:isValid() then
+        self.headlands[self.nHeadlandsWithRoundCorners] = cg.Headland(self.boundary, self.context.headlandClockwise,
+                self.nHeadlandsWithRoundCorners, (self.nHeadlandsWithRoundCorners - 0.5) * self.context.workingWidth, false)
+        if self:isValidHeadland(self.headlands[self.nHeadlandsWithRoundCorners]) then
             self.headlands[self.nHeadlandsWithRoundCorners]:roundCorners(self.context.turningRadius)
             break
         else
@@ -95,7 +97,8 @@ function FieldworkCourse:generateHeadlandsFromInside()
         end
     end
     for i = self.nHeadlandsWithRoundCorners - 1, 1, -1 do
-        self.headlands[i] = cg.Headland(self.headlands[i + 1]:getPolygon(), i, self.context.workingWidth, true)
+        self.headlands[i] = cg.Headland(self.headlands[i + 1]:getPolygon(), self.context.headlandClockwise, i,
+                self.context.workingWidth, true)
         self.headlands[i]:roundCorners(self.context.turningRadius)
     end
 end
@@ -167,9 +170,13 @@ function FieldworkCourse:_setContext(context)
     self.nHeadlandsWithRoundCorners = self.context.nHeadlandsWithRoundCorners
     ---@type cg.Polygon
     self.boundary = context.field:getBoundary():clone()
+    -- some field scans are not perfect and have sudden direction changes which screws up the clockwise calculation
+    self.boundary:removeGlitches()
     if self.boundary:isClockwise() ~= self.context.headlandClockwise then
         -- all headlands are generated in the same direction as the field boundary,
         -- so if it does not match the required cw/ccw, reverse it
+        self.logger:debug('Field boundary clockwise %s, desired %s, reversing boundary',
+                self.boundary:isClockwise(), self.context.headlandClockwise)
         self.boundary:reverse()
     end
     if self.context.fieldCornerRadius > 0 then
@@ -193,6 +200,18 @@ function FieldworkCourse:_removeInvalidHeadlands()
         if self.headlands[i]:getPolygon():intersects(self.headlands[1]:getPolygon()) then
             self:_removeHeadland(i)
         end
+    end
+end
+
+function FieldworkCourse:isValidHeadland(headland)
+    if not headland:isValid() then
+        return false
+    elseif self.headlands[1] and headland ~= self.headlands[1] and
+            headland:getPolygon():intersects(self.headlands[1]:getPolygon()) then
+        self.logger:debug('Headland %d intersects the outermost headland, discarding.', headland:getPassNumber())
+        return false
+    else
+        return true
     end
 end
 

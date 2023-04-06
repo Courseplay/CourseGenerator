@@ -30,14 +30,16 @@ local islandHeadlandColor = { 1, 1, 1, 0.2 }
 local waypointColor = { 0.7, 0.5, 0.2 }
 local cornerColor = { 1, 1, 0.0, 0.8 }
 local islandBypassColor = { 0, 0.2, 1.0 }
-local debugColor = { 0.8, 0, 0 }
+local debugColor = { 0.8, 0, 0, 0.5 }
 local highlightedWaypointColorForward = { 0, 0.7, 0, 0.3 }
 local highlightedWaypointColorBackward = { 0.7, 0, 0, 0.3 }
 local centerColor = { 0, 0.7, 1, 0.5 }
+local islandPointColor = { 0.7, 0, 0.7, 0.4 }
+local islandPerimeterPointColor = { 1, 0.4, 1 }
 
 local parameters = {}
 -- number of headland passes around the field boundary
-local nHeadlandPasses = AdjustableParameter(2, 'headlands', 'P', 'p', 1, 0, 100);
+local nHeadlandPasses = AdjustableParameter(4, 'headlands', 'P', 'p', 1, 0, 100);
 table.insert(parameters, nHeadlandPasses)
 local nHeadlandsWithRoundCorners = AdjustableParameter(0, 'headlands with round corners', 'R', 'r', 1, 0, 100);
 table.insert(parameters, nHeadlandsWithRoundCorners)
@@ -47,7 +49,7 @@ table.insert(parameters, headlandClockwise)
 local nIslandHeadlandPasses = AdjustableParameter(1, 'island headlands', 'I', 'i', 1, 1, 10);
 table.insert(parameters, nIslandHeadlandPasses)
 -- working width of the equipment
-local workingWidth = AdjustableParameter(9, 'width', 'W', 'w', 0.2, 0, 100);
+local workingWidth = AdjustableParameter(8.4, 'width', 'W', 'w', 0.2, 0, 100);
 table.insert(parameters, workingWidth)
 local turningRadius = AdjustableParameter(5.8, 'radius', 'T', 't', 0.2, 0, 20);
 table.insert(parameters, turningRadius)
@@ -262,12 +264,21 @@ local function drawFields()
         for _, i in ipairs(f:getIslands()) do
             love.graphics.setColor(fieldBoundaryColor)
             if #i:getBoundary() > 2 then
-                love.graphics.polygon('fill', i:getBoundary():getUnpackedVertices())
+                love.graphics.polygon('line', i:getBoundary():getUnpackedVertices())
             end
             for _, h in ipairs(i:getHeadlands()) do
                drawIslandHeadland(h, islandHeadlandColor)
             end
+            for _, p in ipairs(f.islandPoints) do
+                love.graphics.setColor(islandPointColor)
+                love.graphics.points(p.x, p.y)
+            end
+            for _, p in ipairs(f.islandPerimeterPoints) do
+                love.graphics.setColor(islandPerimeterPointColor)
+                love.graphics.points(p.x, p.y)
+            end
         end
+        love.graphics.setColor(fieldBoundaryColor)
         local c = f:getCenter()
         love.graphics.push()
         love.graphics.scale(1, -1)
@@ -344,7 +355,7 @@ local function drawDebugPoints()
     if cg.debugPoints then
         love.graphics.replaceTransform(graphicsTransform)
         love.graphics.setColor(debugColor)
-        love.graphics.setPointSize(pointSize / 3)
+        love.graphics.setPointSize(pointSize * 3)
         for _, p in ipairs(cg.debugPoints) do
             love.graphics.points(p.x, p.y)
         end

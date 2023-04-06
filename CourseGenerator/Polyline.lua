@@ -195,6 +195,20 @@ function Polyline:calculateProperties(from, to)
     self.length = nil
 end
 
+--- If there is a sudden direction change almost 180 degrees at a vertex, remove that vertex.
+function Polyline:removeGlitches()
+    local i = 1
+    while i < #self do
+        local dA = self:at(i).dA
+        if dA and dA > math.pi - 0.2 then
+            table.remove(self, i)
+        else
+            i = i + 1
+        end
+    end
+    self:calculateProperties()
+end
+
 --- If two vertices are closer than minimumLength, replace them with one between.
 function Polyline:ensureMinimumEdgeLength(minimumLength)
     local i = 1
@@ -276,6 +290,7 @@ function Polyline:createOffset(offsetVector, minEdgeLength, preserveCorners)
         offsetPolyline:append(e:getBase())
     end
     offsetPolyline:append(cleanOffsetEdges[#cleanOffsetEdges]:getEnd())
+    offsetPolyline:calculateProperties()
     return offsetPolyline
 end
 
@@ -313,12 +328,12 @@ function Polyline:ensureMinimumRadius(r, makeCorners)
         nextIx = currentIx + 1
         local xte = self:at(currentIx):getXte(r)
         if xte > cg.cMaxCrossTrackError then
-            self.logger:debug('ensureMinimumRadius: found a corner at %d, r: %.1f', currentIx, r)
+            self.logger:debug('ensureMinimumRadius: found a corner at %d, r: %.1f, xte: %.1f', currentIx, r, xte)
             -- looks like we can't make this turn without deviating too much from the course,
             local entry = cg.Slider(self, currentIx, 0)
             local exit = cg.Slider(self, currentIx, 0)
             local rMin
-            local step, totalMoved = 0.2, 0
+            local step, totalMoved, maxDistanceToMove = 0.2, 0, 2 * r
             repeat
                 -- from the corner, start widening the gap until we can fit an
                 -- arc with r between
@@ -326,14 +341,13 @@ function Polyline:ensureMinimumRadius(r, makeCorners)
                 exit:move(step)
                 totalMoved = totalMoved + step
                 rMin = entry:getRadiusTo(exit)
-                cg.addDebugPoint(entry:getBase())
-                cg.addDebugPoint(exit:getBase())
-            until rMin >= r
+
+            until rMin >= r or totalMoved > maxDistanceToMove
             -- entry and exit are now far enough, so use the Dubins solver to effortlessly create a nice
             -- arc between the two, or, to make it a sharp corner, find the intersection of entry and exit
             local adjustedCornerVertices
             if makeCorners then
-                if totalMoved < 2 * r then
+                if totalMoved < maxDistanceToMove then
                     adjustedCornerVertices = makeCorner(entry, exit)
                 else
                     -- there are cases, for instance in narrow nooks which already have turns, where
@@ -342,6 +356,8 @@ function Polyline:ensureMinimumRadius(r, makeCorners)
                     self.logger:warning(
                             'ensureMinimumRadius: will not sharpen this corner, had to move too far (%.1f) back',
                             totalMoved)
+                    cg.addDebugPoint(entry:getBase())
+                    cg.addDebugPoint(exit:getBase())
                     self[currentIx].isCorner = true
                 end
             else
@@ -461,17 +477,13 @@ end
 ---@return cg.Intersection[] list of intersections
 function Polyline:getIntersections(other, startIx, backwards)
     local intersections = {}
-    local path = Polyline()
-    for i, edge, vertex in (backwards and self:edgesBackwards(startIx) or self:edges(startIx)) do
-        path:append(vertex)
+    for i, edge, _ in (backwards and self:edgesBackwards(startIx) or self:edges(startIx)) do
         for j, otherEdge in other:edges() do
             local is = edge:intersects(otherEdge)
             if is then
                 -- do not add an intersection twice if it goes exactly through a vertex
                 if #intersections == 0 or (intersections[#intersections].is ~= is) then
-                    path:append(is)
-                    table.insert(intersections, cg.Intersection(i, j, is, edge, path))
-                    path = Polyline()
+                    table.insert(intersections, cg.Intersection(i, j, is, edge))
                 end
             end
         end
@@ -487,15 +499,7 @@ end
 --- the direction of increasing indexes
 function Polyline:isEntering(other, is)
     local otherEdge = other:at(is.ixB):getExitEdge()
-    if other:isClockwise() then
-        -- if the start of my intersecting edge is left of the polygon's intersecting edge and
-        -- the polygon is clockwise, I'm entering the polygon here
-        return otherEdge:isLeft(self:at(is.ixA))
-    else
-        -- similarly, to enter a counterclockwise polygon, my intersecting edge start vertex
-        -- must be on the right when entering the polygon
-        return not otherEdge:isLeft(self:at(is.ixA))
-    end
+    return self:at(is.ixA):getExitEdge():isEntering(other:isClockwise(), otherEdge)
 end
 
 --- Replace all vertices between fromIx and toIx (excluding) with the entries in vertices

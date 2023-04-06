@@ -81,6 +81,9 @@ end
 -- set up all island related data for the field
 function Field:setupIslands()
 	local islandPerimeterPoints = cg.Island.getIslandPerimeterPoints(self.islandPoints)
+	-- remember them for debug
+	self.islandPerimeterPoints = {}
+	for _, p in ipairs(islandPerimeterPoints) do table.insert(self.islandPerimeterPoints, p:clone()) end
 	local islandId = 1
 	while #islandPerimeterPoints > 0 do
 		local island = cg.Island(islandId, islandPerimeterPoints)

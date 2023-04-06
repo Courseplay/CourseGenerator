@@ -23,8 +23,8 @@ local function getNumberOfIslandNeighbors(point, islandPoints, gridSpacing)
     local nNeighbors = 0
     for _, v in ipairs(islandPoints) do
         local d = (point - v):length()
-        -- 1.5 is around sqrt( 2 ), to find diagonal neighbors too
-        if d < 1.5 * gridSpacing then
+        -- 1.5 is around sqrt( 2 ), to find diagonal neighbors too, > 0 to ignore own point
+        if d > 0 and d < 1.5 * gridSpacing then
             nNeighbors = nNeighbors + 1
         end
     end
@@ -92,7 +92,7 @@ function Island:generateHeadlands(context)
     self.logger:debug('generating %d headland(s)', self.context.nIslandHeadlands, self.context.turningRadius)
     self.headlands = {}
     -- outermost headland is offset from the field boundary by half width
-    self.headlands[1] = cg.Headland(self.boundary, 1, self.context.workingWidth / 2, true, self.context.turningRadius)
+    self.headlands[1] = cg.Headland(self.boundary, self.boundary:isClockwise(), 1, self.context.workingWidth / 2, true, self.context.turningRadius)
     for i = 2, self.context.nIslandHeadlands do
         self.headlands[i] = cg.Headland(self.headlands[i - 1]:getPolygon(), i - 1, self.context.workingWidth, true, self.context.turningRadius)
     end

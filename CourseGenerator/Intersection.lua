@@ -36,8 +36,8 @@ function Intersection.__lt(a, b)
 end
 
 function Intersection:__tostring()
-    local str = string.format('ixA: %d, ixB: %d, is: %s, edgeA: %s, #path %d',
-            self.ixA, self.ixB, self.is, self.edgeA, #self.path)
+    local str = string.format('ixA: %d, ixB: %d, is: %s, edgeA: %s',
+            self.ixA, self.ixB, self.is, self.edgeA)
     return str
 end
 

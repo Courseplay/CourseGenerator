@@ -251,6 +251,24 @@ function LineSegment:isLeft(point)
     return cg.Math.getDeltaAngle(v:heading(), self.slope:heading()) <= 0
 end
 
+--- Assuming that this segment intersects the other, and the other is part of a polygon with the given
+--- chirality, is this segment entering the polygon? (its start is outside of the polygon, its end is inside)
+---@param clockwise boolean is the polygon clockwise?
+---@param other cg.LineSegment and edge of the polygon
+---@return boolean if this segment is entering the polygon
+function LineSegment:isEntering(clockwise, other)
+    if clockwise then
+        -- if the start of my intersecting edge is left of the polygon's intersecting edge and
+        -- the polygon is clockwise, I'm entering the polygon here
+        return other:isLeft(self.base)
+    else
+        -- similarly, to enter a counterclockwise polygon, my intersecting edge start vertex
+        -- must be on the right when entering the polygon
+        return not other:isLeft(self.base)
+    end
+end
+
+
 ---@param point cg.Vector
 function LineSegment:getScalarProjection(point)
     local v = point - self.base

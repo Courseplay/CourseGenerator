@@ -78,7 +78,7 @@ function Center:_generateUpDownRows(rowAngle, suppressLog)
     end
     if not suppressLog then
         self.logger:debug('Created %d rows at %d° to cover an area %.1f wide, width %.1f/%.1f/%.1f m',
-                nRows, math.deg(rowAngle), dMax - dMin, firstRowOffset, width, lastRowOffset)
+                nRows, math.deg(rowAngle), dMax - dMin, firstRowOffset, width or 0, lastRowOffset or 0)
         self.logger:debug('    has headland %s, even distribution %s, remainder last %s',
                 self.hasHeadland, self.context.evenRowDistribution, true)
     end
@@ -162,7 +162,7 @@ function Center:_splitRow(row, boundary)
     local intersections = row:getIntersections(boundary, 1)
     if #intersections < 2 then
         self.logger:warning('Row has only %d intersection with boundary', #intersections)
-        return
+        return cg.Polyline()
     end
     -- The assumption here is that the row always begins outside of the boundary
 
