@@ -77,5 +77,21 @@ function FieldworkContext:setEvenRowDistribution(evenRowDistribution)
     self.evenRowDistribution = evenRowDistribution
 end
 
+--- Select the edge of the field boundary which we will use as a baseline for up/down rows,
+--- instead of a straight line at some angle.
+--- The idea is that field boundaries which are only slightly deviate from straight line
+--- cause straight up/down rows to meet the headland in a very flat angle, resulting in
+--- very long turns.
+--- Making the up/down rows parallel with such an edge may yield better results.
+function FieldworkContext:setBaselineEdge(x, y)
+    self.baselineEdge = cg.Vector(x, y)
+end
+
+--- Instead of generating straight up/down rows, use a baseline (set by setBaselineEdge()) and make
+--- all rows follow that baseline.
+function FieldworkContext:useBaselineEdge(use)
+    self.useBaselineEdge = use
+end
+
 ---@class cg.FieldworkContext
 cg.FieldworkContext = FieldworkContext

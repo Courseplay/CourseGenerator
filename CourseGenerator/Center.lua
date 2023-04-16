@@ -17,14 +17,21 @@ function Center:getPath()
 end
 
 function Center:generate()
-    local angle = self.context.autoRowAngle and self:_findBestRowAngle() or self.context.rowAngle
-    local rows = self:_generateUpDownRows(angle)
+    local rows
+    if self.context.useBaselineEdge then
+        rows = self:_generateCurvedUpDownRows()
+    else
+        local angle = self.context.autoRowAngle and self:_findBestRowAngle() or self.context.rowAngle
+        rows = self:_generateStraightUpDownRows(angle)
+    end
     self.path = cg.Polyline()
     for i, row in ipairs(rows) do
         row = self:_splitRow(row, self.boundary)
         self.logger:debug('Row %d has %d section(s)', i, #row)
         for j, section in ipairs(row) do
-            self.logger:debug('  %.1f', section:getLength())
+            self.logger:debug('  %.1f m, %d vertices', section:getLength(), #section)
+            -- TODO: properly connect up down rows
+            if i % 2 == 0 then section:reverse() end
             self.path:appendMany(section)
         end
     end
@@ -33,30 +40,11 @@ end
 ------------------------------------------------------------------------------------------------------------------------
 --- Private functions
 ------------------------------------------------------------------------------------------------------------------------
-function Center:_generateUpDownRows(rowAngle, suppressLog)
-    -- Set up a baseline. This goes through the lower left or right corner of the bounding box, at the requested
-    -- angle, and long enough that when shifted (offset copies are created), will cover the field at any angle.
-    local x1, y1, x2, y2 = self.boundary:getBoundingBox()
-    -- add a little margin so all lines are a little longer than they should be, this way
-    -- we guarantee that the first intersection with the boundary will always be well defined and won't
-    -- fall exactly on the boundary.
-    local margin = 1
-    local w, h = x2 - x1 + margin, y2 - y1 + margin
-    local baselineStart, baselineEnd
-    if rowAngle >= 0 then
-        local lowerLeft = cg.Vector(x1 - margin / 2, y1 - margin / 2)
-        baselineStart = lowerLeft - cg.Vector(h * math.sin(rowAngle), 0):setHeading(-rowAngle)
-        baselineEnd = lowerLeft + cg.Vector(w * math.cos(rowAngle), 0):setHeading(-rowAngle)
-    else
-        local lowerRight = cg.Vector(x2 + margin / 2, y1 - margin / 2)
-        baselineStart = lowerRight - cg.Vector(w * math.cos(rowAngle), 0):setHeading(-rowAngle)
-        baselineEnd = lowerRight + cg.Vector(h * math.sin(rowAngle), 0):setHeading(-rowAngle)
-    end
-    local row = cg.Polyline({ baselineStart, baselineEnd })
-    row:calculateProperties()
-    local _, dMin, _, dMax = self.boundary:findClosestAndFarthestVertexToLineSegment(row[1]:getExitEdge())
+function Center:_generateStraightUpDownRows(rowAngle, suppressLog)
+    local baseline = self:_createStraightBaseline(rowAngle)
+    local _, dMin, _, dMax = self.boundary:findClosestAndFarthestVertexToLineSegment(baseline[1]:getExitEdge())
     -- move the baseline to the edge of the area we want to cover
-    row = row:createOffset(cg.Vector(0, dMin), math.huge)
+    baseline = baseline:createOffset(cg.Vector(0, dMin), math.huge)
 
     local nRows, firstRowOffset, width, lastRowOffset = self:_calculateRowDistribution(
             self.context.workingWidth, dMax - dMin,
@@ -64,7 +52,7 @@ function Center:_generateUpDownRows(rowAngle, suppressLog)
 
     local rows = {}
     -- first row
-    row = row:createOffset(cg.Vector(0, firstRowOffset), math.huge)
+    local row = baseline:createOffset(cg.Vector(0, firstRowOffset), math.huge)
     table.insert(rows, row)
     if nRows > 1 then
         -- more rows
@@ -88,13 +76,35 @@ end
 function Center:_findBestRowAngle()
     local minRows, bestAngle = math.huge, 0
     for a = -90, 90, 1 do
-        local rows = self:_generateUpDownRows(math.rad(a), true)
+        local rows = self:_generateStraightUpDownRows(math.rad(a), true)
         if #rows < minRows then
             minRows = #rows
             bestAngle = math.rad(a)
         end
     end
     return bestAngle
+end
+
+function Center:_createStraightBaseline(rowAngle)
+    -- Set up a baseline. This goes through the lower left or right corner of the bounding box, at the requested
+    -- angle, and long enough that when shifted (offset copies are created), will cover the field at any angle.
+    local x1, y1, x2, y2 = self.boundary:getBoundingBox()
+    -- add a little margin so all lines are a little longer than they should be, this way
+    -- we guarantee that the first intersection with the boundary will always be well defined and won't
+    -- fall exactly on the boundary.
+    local margin = 1
+    local w, h = x2 - x1 + margin, y2 - y1 + margin
+    local baselineStart, baselineEnd
+    if rowAngle >= 0 then
+        local lowerLeft = cg.Vector(x1 - margin / 2, y1 - margin / 2)
+        baselineStart = lowerLeft - cg.Vector(h * math.sin(rowAngle), 0):setHeading(-rowAngle)
+        baselineEnd = lowerLeft + cg.Vector(w * math.cos(rowAngle), 0):setHeading(-rowAngle)
+    else
+        local lowerRight = cg.Vector(x2 + margin / 2, y1 - margin / 2)
+        baselineStart = lowerRight - cg.Vector(w * math.cos(rowAngle), 0):setHeading(-rowAngle)
+        baselineEnd = lowerRight + cg.Vector(h * math.sin(rowAngle), 0):setHeading(-rowAngle)
+    end
+    return cg.Polyline({ baselineStart, baselineEnd })
 end
 
 --- Calculate how many rows we need with a given work width to fully cover a field and how far apart those
@@ -180,12 +190,60 @@ function Center:_splitRow(row, boundary)
         if not isEntering and outside == 1 then
             -- exiting the polygon and we were inside before (outside was 0)
             -- create a section here
-            table.insert(sections, cg.Polyline({intersections[lastInsideIx].is, intersections[i].is}))
+            table.insert(sections, row:cutAtIntersections(intersections[lastInsideIx], intersections[i]))
         elseif isEntering then
             lastInsideIx = i
         end
     end
     return sections
+end
+
+function Center:_generateCurvedUpDownRows()
+    local rows = {}
+    local baseline = self:_createCurvedBaseline()
+    baseline:extend(50)
+    baseline:extend(-50)
+    local row = cg.Offset.generate(baseline, cg.Vector(0, 1), self.context.workingWidth)
+
+    table.insert(rows, row)
+    repeat
+        row = cg.Offset.generate(row, cg.Vector(0, 1), self.context.workingWidth)
+        row:extend(50)
+        row:extend(-50)
+        local intersections = row:getIntersections(self.boundary, 1)
+        table.insert(rows, row)
+    until #rows > 100 or #intersections < 2
+    return rows
+end
+
+--- Create a baseline for the up/down rows, which is not necessarily straight, instead, it follows a section
+--- of the field boundary. This way some odd-shaped fields can be covered with less turns.
+function Center:_createCurvedBaseline()
+    local closest = self.boundary:findClosestVertexToPoint(self.context.baselineEdge or self.boundary:at(1))
+    return self:_findLongestStraightSection(closest.ix, 10)
+end
+
+---@param ix number the vertex of the boundary to start the search
+---@param radiusThreshold number straight section ends when the radius is under this threshold
+---@return cg.Polyline array of vectors (can be empty) from ix to the start of the straight section
+function Center:_findLongestStraightSection(ix, radiusThreshold)
+    local i = ix
+    local section = cg.Polyline()
+    while math.abs(self.boundary:at(i):getRadius()) > radiusThreshold do
+        section:append((self.boundary:at(i)):clone())
+        i = i - 1
+    end
+    section:reverse()
+    i = ix + 1
+    while math.abs(self.boundary:at(i):getRadius()) > radiusThreshold do
+        section:append((self.boundary:at(i)):clone())
+        i = i + 1
+    end
+    section:calculateProperties()
+    -- no straight section found, bail out here
+    self.logger:debug('Longest straight section found %d vertices, %.1f m', #section, section:getLength())
+    cg.addDebugPolyline(section)
+    return section
 end
 
 ---@class cg.Center

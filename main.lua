@@ -20,7 +20,7 @@ local windowWidth = 1400
 local windowHeight = 800
 local xOffset, yOffset = 0, 0
 -- starting position
-local startX, startY
+local startX, startY, baselineX, baselineY
 
 local graphicsTransform, statusTransform, mouseTransform, contextTransform
 
@@ -34,12 +34,13 @@ local debugColor = { 0.8, 0, 0, 0.5 }
 local highlightedWaypointColorForward = { 0, 0.7, 0, 0.3 }
 local highlightedWaypointColorBackward = { 0.7, 0, 0, 0.3 }
 local centerColor = { 0, 0.7, 1, 0.5 }
+local swathColor = { 0, 0.7, 0, 0.25 }
 local islandPointColor = { 0.7, 0, 0.7, 0.4 }
 local islandPerimeterPointColor = { 1, 0.4, 1 }
 
 local parameters = {}
 -- number of headland passes around the field boundary
-local nHeadlandPasses = AdjustableParameter(4, 'headlands', 'P', 'p', 1, 0, 100);
+local nHeadlandPasses = AdjustableParameter(3, 'headlands', 'P', 'p', 1, 0, 100);
 table.insert(parameters, nHeadlandPasses)
 local nHeadlandsWithRoundCorners = AdjustableParameter(0, 'headlands with round corners', 'R', 'r', 1, 0, 100);
 table.insert(parameters, nHeadlandsWithRoundCorners)
@@ -59,12 +60,14 @@ local sharpenCorners = ToggleParameter('sharpen corners', true, 's');
 table.insert(parameters, sharpenCorners)
 local bypassIslands = ToggleParameter('bypass islands', false, 'b');
 table.insert(parameters, bypassIslands)
-local autoRowAngle = ToggleParameter('auto row angle',false, '6');
+local autoRowAngle = ToggleParameter('auto row angle', false, '6');
 table.insert(parameters, autoRowAngle)
 local rowAngleDeg = AdjustableParameter(-90, 'row angle', 'A', 'a', 10, -90, 90);
 table.insert(parameters, rowAngleDeg)
 local evenRowDistribution = ToggleParameter('even row width', false, 'e');
 table.insert(parameters, evenRowDistribution)
+local useBaselineEdge = ToggleParameter('use base line edge', true, 'g');
+table.insert(parameters, useBaselineEdge)
 
 -- the selectedField to generate the course for
 ---@type cg.Field
@@ -79,7 +82,7 @@ local currentVertex
 --- Generate the fieldwork course
 ---------------------------------------------------------------------------------------------------------------------------
 local function generate()
-    cg.debugPoints = {}
+    cg.clearDebugObjects()
     local context = cg.FieldworkContext(selectedField, workingWidth:get(), turningRadius:get(), nHeadlandPasses:get())
     context:setHeadlandsWithRoundCorners(nHeadlandsWithRoundCorners:get())
     context:setHeadlandClockwise(headlandClockwise:get())
@@ -90,8 +93,13 @@ local function generate()
     context:setAutoRowAngle(autoRowAngle:get())
     context:setRowAngle(math.rad(rowAngleDeg:get()))
     context:setEvenRowDistribution(evenRowDistribution:get())
+    context:useBaselineEdge(useBaselineEdge:get())
     if startX then
         context:setStartLocation(startX, startY)
+        context:setBaselineEdge(startX, startY)
+    end
+    if baselineX then
+        context:setBaselineEdge(baselineX, baselineY)
     end
     if profilerEnabled then
         love.profiler.start()
@@ -243,15 +251,15 @@ end
 
 local function drawCenter()
     if course:getCenter() then
-        love.graphics.setLineWidth(lineWidth)
-        love.graphics.setColor(centerColor)
         local c = course:getCenter()
-        for i = 1, #c, 2 do
-            love.graphics.line(c[i].x, c[i].y, c[i + 1].x, c[i + 1].y)
-        end
+        love.graphics.setLineWidth(workingWidth:get())
+        love.graphics.setColor(swathColor)
+        love.graphics.line(c:getUnpackedVertices())
+        love.graphics.setLineWidth(2 * lineWidth)
+        love.graphics.setColor(centerColor)
+        love.graphics.line(c:getUnpackedVertices())
     end
 end
-
 
 local function drawFields()
     for _, f in pairs(savedFields) do
@@ -267,7 +275,7 @@ local function drawFields()
                 love.graphics.polygon('line', i:getBoundary():getUnpackedVertices())
             end
             for _, h in ipairs(i:getHeadlands()) do
-               drawIslandHeadland(h, islandHeadlandColor)
+                drawIslandHeadland(h, islandHeadlandColor)
             end
             for _, p in ipairs(f.islandPoints) do
                 love.graphics.setColor(islandPointColor)
@@ -362,11 +370,28 @@ local function drawDebugPoints()
     end
 end
 
+local function drawDebugPolylines()
+    if cg.debugPolylines then
+        love.graphics.push()
+        love.graphics.replaceTransform(graphicsTransform)
+        love.graphics.setColor(debugColor)
+        love.graphics.setLineWidth(pointSize * 3)
+        for _, p in ipairs(cg.debugPolylines) do
+            if #p > 1 then
+                love.graphics.line(p:getUnpackedVertices())
+            end
+        end
+        love.graphics.pop()
+    end
+end
+
+
 function love.draw()
     drawGraphics()
     drawStatus()
     drawContext()
     drawDebugPoints()
+    drawDebugPolylines()
 end
 
 ------------------------------------------------------------------------------------------------------------------------
@@ -401,6 +426,10 @@ function love.mousereleased(x, y, button, istouch)
         dragging = false
     elseif button == 2 then
         selectFieldUnderCursor()
+    elseif button == 3 then
+        x, y = love.mouse.getPosition()
+        baselineX, baselineY = screenToWorld(x, y)
+        generate()
     end
 end
 

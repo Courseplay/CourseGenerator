@@ -84,8 +84,6 @@ end
 ---@param dx number x offset relative to the segment, 1 is forward one unit, -1 back, etc.
 ---@param dy number y offset relative to the segment, 1 is left one unit, -1 right, etc.
 function LineSegment:offset(dx, dy)
-    --local offset = cg.Vector(dx, dy)
-    --offset:setHeading(offset:heading() + self.slope:heading())
     local length = math.sqrt(dx^2 + dy^2)
     local offsetAngle = math.atan2(dy, dx) + self.slope:heading()
     self.base.x = self.base.x + length * math.cos(offsetAngle)
@@ -139,6 +137,17 @@ function LineSegment:intersects(other)
         return self.base + t * self.slope
     else
         return nil
+    end
+end
+
+--- Extend this segment by length units.
+---@param length number if positive, the segment extended forward (base remains the same), if negative,
+--- the segment is extended backwards (base moved backwards).
+--- In either case, the segment's new length will be the original length + length.
+function LineSegment:extend(length)
+    self.slope:setLength(self.slope:length() + math.abs(length))
+    if length < 0 then
+        self.base = self.base - self.slope
     end
 end
 

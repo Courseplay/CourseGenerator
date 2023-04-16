@@ -5,14 +5,6 @@ function Polygon:init(vertices)
     self.logger = cg.Logger('Polygon', cg.Logger.level.debug)
 end
 
---- Remove all existing vertices
-function Polygon:_reset()
-    for i = 1, #self do
-        self[i] = nil
-    end
-    self.deltaAngle, self.area, self.length = nil, nil, nil
-end
-
 function Polygon:clone()
     local clone = Polygon({})
     for _, v in ipairs(self) do
@@ -288,107 +280,12 @@ function Polygon:getSmallestRadiusWithinDistance(ix, dForward, dBackward)
     return minRadius
 end
 
-------------------------------------------------------------------------------------------------------------------------
---- Private functions
-------------------------------------------------------------------------------------------------------------------------
-
---- Get all vertices between fromIx and toIx (non inclusive), in form of two polylines/polygons,
---- one in each direction (cw/ccw)
----@param fromIx number index of first vertex in the segment, not including
----@param toIx number index of last vertex in the segment, not including
----@return Polyline, Polyline
-function Polygon:_getPathBetween(fromIx, toIx, asPolygon)
-    local forward = asPolygon and cg.Polygon() or cg.Polyline()
-    local fwdIx = cg.WrapAroundIndex(self, fromIx)
-    while fwdIx:get() ~= toIx do
-        fwdIx = fwdIx + 1
-        forward:append(self:at(fwdIx:get()))
-    end
-    local backward = asPolygon and cg.Polygon() or cg.Polyline()
-    local bwdIx = cg.WrapAroundIndex(self, fromIx)
-    while bwdIx:get() ~= toIx do
-        backward:append(self:at(bwdIx:get()))
-        bwdIx = bwdIx - 1
-    end
-    return forward, backward
-end
-
---- Remove a loop from a complex polygon, that is, if two edges of the polygon intersect each other,
---- the intersection point splits the complex polygon into two simple polygons (as long as there is only
---- one intersection). Complex polygons may be generated when creating the offset polygon and the original
---- polygon has nooks narrower than the offset (working width/2), at these nooks, the generated offset edges
---- will lie outside of the original polygon, forming a little loop.
---- We check the two simple polygons and keep the one which has the same clockwise direction as the original
---- polygon.
---- NOTE: this works correctly only if there is exactly one loop (one intersecting edge)
----@return boolean loop found and removed.
-function Polygon:removeLoops(baseClockwise)
-    self.logger:debug('Removing loops')
-    for i, this, _, _ in self:vertices() do
-        for j = i + 2, i > 1 and #self or (#self - 1) do
-            local is = this:getExitEdge():intersects(self[j]:getExitEdge())
-            if is then
-                local pathA, pathB = self:_getPathBetween(i, j, true)
-                pathA:calculateProperties()
-                -- since we inserted vertices backwards, to keep the original chirality, we must reverse the order
-                pathB:reverse()
-                pathB:calculateProperties()
-                local lengthA, lengthB = pathA:getLength(), pathB:getLength()
---[[
-                if math.max(lengthA, lengthB) / math.min(lengthA, lengthB) < 10 then
-                    self.logger:debug('    loop too big, not a corner, will not remove')
-                    return false
-                end
-]]
-                self.logger:debug('    %d -> %d: path A: %.1f, path B: %.1f, pathA cw %s, pathB cw %s, base cw %s',
-                        i, j, lengthA, lengthB, pathA:isClockwise(), pathB:isClockwise(), baseClockwise)
-                local pathToKeep, pathToDrop
-                -- keep the one which has the same chirality as the parent, or the longer one, except they
-                -- have another loop in them
-                if pathA:isClockwise() == baseClockwise and
-                        pathB:isClockwise() ~= nil and pathB:isClockwise() ~= baseClockwise then
-                    self.logger:debug('    keeping pathA')
-                    pathToKeep, pathToDrop = pathA, pathB
-                elseif pathA:isClockwise() ~= baseClockwise and pathA:isClockwise() ~= nil
-                        and pathB:isClockwise() == baseClockwise then
-                    self.logger:debug('    keeping pathB')
-                    pathToKeep, pathToDrop = pathB, pathA
-                end
---[[
-                if pathToDrop:isClockwise() == nil or pathToKeep:isClockwise() == nil then
-                    -- there is another loop in the loop, which would mean that the headland
-                    -- crosses itself twice (for instance at a location where the field narrows)
-                    -- we don't want to remove these
-                    self.logger:debug('    path has another loop, do not remove')
-                    return
-                else
-                if pathToKeep then
-                    self:_reset()
-                    self:init(pathToKeep)
-                    return true
-                end
-]]
-            end
-        end
-    end
-end
-
-function Polygon:_getDeltaAngle()
-    if not self.deltaAngle then
-        self.deltaAngle = 0
-        for i = 1, #self do
-            self.deltaAngle = self.deltaAngle + cg.Math.getDeltaAngle(self:at(i):getExitHeading(), self:at(i):getEntryHeading())
-        end
-    end
-    return self.deltaAngle
-end
-
 --- Try cleaning up unwanted loops in the generated offset polygon.
 --- With concave polygons (you know, the ones you can hide in) the offset polygon may end up
 --- intersecting it self at multiple points. This is a simple
 --- NOTE: this works correctly only if there is exactly one loop (one intersecting edge)
 ---@return boolean loop found and removed.
-function Polygon:_removeLoops(baseClockwise, startIx)
+function Polygon:removeLoops(baseClockwise, startIx)
     self.logger:debug('Removing loops')
     local exitIx, entryIx
     for i, this, _, _ in self:vertices(startIx or 1) do
@@ -425,6 +322,42 @@ function Polygon:_removeLoops(baseClockwise, startIx)
     end
     return false
 end
+
+------------------------------------------------------------------------------------------------------------------------
+--- Private functions
+------------------------------------------------------------------------------------------------------------------------
+
+--- Get all vertices between fromIx and toIx (non inclusive), in form of two polylines/polygons,
+--- one in each direction (cw/ccw)
+---@param fromIx number index of first vertex in the segment, not including
+---@param toIx number index of last vertex in the segment, not including
+---@return Polyline, Polyline
+function Polygon:_getPathBetween(fromIx, toIx, asPolygon)
+    local forward = asPolygon and cg.Polygon() or cg.Polyline()
+    local fwdIx = cg.WrapAroundIndex(self, fromIx)
+    while fwdIx:get() ~= toIx do
+        fwdIx = fwdIx + 1
+        forward:append(self:at(fwdIx:get()))
+    end
+    local backward = asPolygon and cg.Polygon() or cg.Polyline()
+    local bwdIx = cg.WrapAroundIndex(self, fromIx)
+    while bwdIx:get() ~= toIx do
+        backward:append(self:at(bwdIx:get()))
+        bwdIx = bwdIx - 1
+    end
+    return forward, backward
+end
+
+function Polygon:_getDeltaAngle()
+    if not self.deltaAngle then
+        self.deltaAngle = 0
+        for i = 1, #self do
+            self.deltaAngle = self.deltaAngle + cg.Math.getDeltaAngle(self:at(i):getExitHeading(), self:at(i):getEntryHeading())
+        end
+    end
+    return self.deltaAngle
+end
+
 
 ---@class cg.Polygon:cg.Polyline
 cg.Polygon = Polygon

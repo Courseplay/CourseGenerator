@@ -28,9 +28,8 @@ function Headland:init(basePolygon, clockwise, passNumber, width, outward)
     if outward then
         self.offsetVector = -self.offsetVector
     end
-    self.recursionCount = 0
     ---@type cg.Polygon
-    self.polygon = self:generate(basePolygon, width, 0)
+    self.polygon = cg.Offset.generate(basePolygon, self.offsetVector, width)
     if self.polygon then
         self.polygon:calculateProperties()
         self.polygon:ensureMaximumEdgeLength(cg.cMaxEdgeLength, cg.cMaxDeltaAngleForMaxEdgeLength)
@@ -39,7 +38,7 @@ function Headland:init(basePolygon, clockwise, passNumber, width, outward)
         -- consider making the headland invalid if it has loops, instead of removing them
         local removed, startIx = true, 1
         repeat
-            removed, startIx = self.polygon:_removeLoops(clockwise, startIx)
+            removed, startIx = self.polygon:removeLoops(clockwise, startIx)
         until not removed
         self.logger:debug('polygon with %d vertices generated, area %.1f, cw %s, desired cw %s',
                 #self.polygon, self.polygon:getArea(), self.polygon:isClockwise(), clockwise)
@@ -88,32 +87,6 @@ function Headland:getUnpackedVertices()
         self.unpackedVertices = self.polygon:getUnpackedVertices()
     end
     return self.unpackedVertices
-end
-
-function Headland:generate(polygon, targetOffset, currentOffset)
-    -- done!
-    if currentOffset >= targetOffset then
-        return polygon
-    end
-
-    -- limit of the number of recursions based on how far we want to go
-    self.recursionCount = self.recursionCount + 1
-    if self.recursionCount > math.max(math.floor(targetOffset * 20), 600) then
-        self.logger:error('Headland generation: recursion limit reached (%d)', self.recursionCount)
-        return nil
-    end
-    -- we'll use the grassfire algorithm and approach the target offset by
-    -- iteration, generating headland tracks close enough to the previous one
-    -- so the resulting offset polygon can be kept clean (no intersecting edges)
-    -- this can be ensured by choosing an offset small enough
-    local deltaOffset = math.max(polygon:getShortestEdgeLength() / 8, 0.1)
-    currentOffset = currentOffset + deltaOffset
-    polygon = polygon:createOffset(deltaOffset * self.offsetVector, 1, false)
-    if polygon == nil then
-        return nil
-    end
-    polygon:ensureMinimumEdgeLength(cg.cMinEdgeLength)
-    return self:generate(polygon, targetOffset, currentOffset)
 end
 
 function Headland:bypassIsland(island, circle)

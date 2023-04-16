@@ -73,6 +73,11 @@ function NewCourseGenerator.disableTrace()
     NewCourseGenerator.traceEnabled = false
 end
 
+function NewCourseGenerator.clearDebugObjects()
+    NewCourseGenerator.debugPoints = {}
+    NewCourseGenerator.debugPolylines = {}
+end
+
 --- Add a point to the list of debug points we want to show on the test display
 ---@param v cg.Vector
 function NewCourseGenerator.addDebugPoint(v)
@@ -80,6 +85,15 @@ function NewCourseGenerator.addDebugPoint(v)
         NewCourseGenerator.debugPoints = {}
     end
     table.insert(NewCourseGenerator.debugPoints, v:clone())
+end
+
+--- Add a point to the list of debug points we want to show on the test display
+---@param v cg.Vector
+function NewCourseGenerator.addDebugPolyline(p)
+    if not NewCourseGenerator.debugPolylines then
+        NewCourseGenerator.debugPolylines = {}
+    end
+    table.insert(NewCourseGenerator.debugPolylines, p)
 end
 
 --- Return true when running in the game

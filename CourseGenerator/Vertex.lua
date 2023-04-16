@@ -133,7 +133,7 @@ function Vertex:calculateProperties(entry, exit)
 end
 
 function Vertex:__tostring()
-    return cg.Vector.__tostring(self) .. ' ' .. self.attributes:__tostring()
+    return string.format('(%s) %s %s', self.ix, cg.Vector.__tostring(self), self.attributes:__tostring())
 end
 
 ---@class cg.Vertex:cg.Vector

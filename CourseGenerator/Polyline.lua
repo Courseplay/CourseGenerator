@@ -15,7 +15,7 @@ end
 function Polyline:append(v)
     if v:is_a(cg.Vertex) then
         table.insert(self, v:clone())
-        v.ix = #self
+        self[#self].ix = #self
     else
         table.insert(self, cg.Vertex(v.x, v.y, #self + 1))
     end
@@ -181,6 +181,22 @@ function Polyline:moveForward(ix, d)
         i = i + 1
     end
     return nil
+end
+
+---@param length number if positive, the polyline is extended forward (last vertex moved), if negative,
+----- the polyline is extended backwards (first vertex moved).
+function Polyline:extend(length)
+    if length >= 0 then
+        local newEntryEdge = self[#self]:getEntryEdge()
+        newEntryEdge:extend(length)
+        self[#self] = cg.Vertex.fromVector(newEntryEdge:getEnd())
+        self:calculateProperties(#self - 1)
+    else
+        local newExitEdge = self[1]:getExitEdge()
+        newExitEdge:extend(length)
+        self[1] = cg.Vertex.fromVector(newExitEdge:getBase())
+        self:calculateProperties(1, 2)
+    end
 end
 
 --- Calculate all interesting properties we may need later for more advanced functions
@@ -453,22 +469,45 @@ function Polyline:findClosestAndFarthestVertexToLineSegment(lineSegment)
     return closestVertex, dMin, farthestVertex, dMax
 end
 
-------------------------------------------------------------------------------------------------------------------------
---- Private functions
-------------------------------------------------------------------------------------------------------------------------
-function Polyline:getNextIntersection(other, startIx, backwards)
-    local path = Polyline()
-    for i, edge, vertex in (backwards and self:edgesBackwards(startIx) or self:edges(startIx)) do
-        path:append(vertex)
-        for j, otherEdge in other:edges() do
+--- Does this line intersects the other?
+---
+--- This is a faster version of getIntersections() for the case where we only want to
+--- know if they intersect or not.
+---
+---@param other cg.Polyline
+---@return boolean
+function Polyline:intersects(other)
+    for _, edge, _ in self:edges() do
+        for _, otherEdge in other:edges() do
             local is = edge:intersects(otherEdge)
             if is then
-                path:append(is)
-                return i, j, is, path
+                return true
             end
         end
     end
+    return false
 end
+
+--- Cut a polyline at is1 and is2, keeping the section between the two. is1 and is2 becomes the start and
+--- end of the cut polyline.
+---@param is1 cg.Intersection
+---@param is2 cg.Intersection
+function Polyline:cutAtIntersections(is1, is2)
+    local section = cg.Polyline()
+    section:append(is1.is)
+    local src = is1.ixA + 1
+    while src < is2.ixA do
+        section:append(self[src])
+        src = src + 1
+    end
+    section:append(is2.is)
+    section:calculateProperties()
+    return section
+end
+
+------------------------------------------------------------------------------------------------------------------------
+--- Private functions
+------------------------------------------------------------------------------------------------------------------------
 
 --- Get all intersections with other, in the order we would meet them traversing self in the given direction
 ---@param other cg.Polyline
@@ -573,23 +612,13 @@ function Polyline:_setAttributes(first, last, setter, ...)
     end
 end
 
---- Does this line intersects the other?
----
---- This is a faster version of getIntersections() for the case where we only want to
---- know if they intersect or not.
----
----@param other cg.Polyline
----@return boolean
-function Polyline:intersects(other)
-    for _, edge, _ in self:edges() do
-        for _, otherEdge in other:edges() do
-            local is = edge:intersects(otherEdge)
-            if is then
-                return true
-            end
-        end
+--- Remove all existing vertices
+---@param ix number optional start index
+function Polyline:_reset(ix)
+    for i = ix or 1, #self do
+        self[i] = nil
     end
-    return false
+    self.deltaAngle, self.area, self.length = nil, nil, nil
 end
 
 
