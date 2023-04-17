@@ -294,20 +294,15 @@ function Polyline:cleanEdges(edges, minEdgeLength, preserveCorners)
     return self:_cleanEdges(edges, 2, { edges[1] }, edges[1], minEdgeLength, preserveCorners)
 end
 
---- Generate a polyline parallel to this one, offset by the offsetVector
+--- Generate a polyline parallel to this one, offset by the offsetVector. Note that this works only
+--- with either very low offsets or simple polylines with vertices far apart when using bigger offsets.
+--- Use cg.Offset.generate() if you want to avoid creating loops on the offset polyline.
 ---@param offsetVector cg.Vector offset to move the edges, relative to the edge's direction
 ---@param minEdgeLength number see LineSegment.connect()
 ---@param preserveCorners number see LineSegment.connect()
 function Polyline:createOffset(offsetVector, minEdgeLength, preserveCorners)
-    local offsetEdges = self:generateOffsetEdges(offsetVector)
-    local cleanOffsetEdges = self:cleanEdges(offsetEdges, minEdgeLength, preserveCorners)
     local offsetPolyline = cg.Polyline()
-    for _, e in ipairs(cleanOffsetEdges) do
-        offsetPolyline:append(e:getBase())
-    end
-    offsetPolyline:append(cleanOffsetEdges[#cleanOffsetEdges]:getEnd())
-    offsetPolyline:calculateProperties()
-    return offsetPolyline
+    return self:_createOffset(offsetPolyline, offsetVector, minEdgeLength, preserveCorners)
 end
 
 --- Ensure there are no sudden direction changes in the polyline, that is, at each vertex a vehicle
@@ -621,6 +616,19 @@ function Polyline:_reset(ix)
     self.deltaAngle, self.area, self.length = nil, nil, nil
 end
 
+--- Private function to use derived classes, in order to instantiate a result which is an instance of
+--- the derived class.
+---@param result cg.Polyline
+function Polyline:_createOffset(result, offsetVector, minEdgeLength, preserveCorners)
+    local offsetEdges = self:generateOffsetEdges(offsetVector)
+    local cleanOffsetEdges = self:cleanEdges(offsetEdges, minEdgeLength, preserveCorners)
+    for _, e in ipairs(cleanOffsetEdges) do
+        result:append(e:getBase())
+    end
+    result:append(cleanOffsetEdges[#cleanOffsetEdges]:getEnd())
+    result:calculateProperties()
+    return result
+end
 
 function Polyline:__tostring()
     local result = ''

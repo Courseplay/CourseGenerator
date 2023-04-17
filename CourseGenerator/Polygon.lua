@@ -218,7 +218,7 @@ function Polygon:createOffset(offsetVector, minEdgeLength, preserveCorners)
     for _, e in ipairs(cleanOffsetEdges) do
         offsetPolygon:append(e:getBase())
     end
-    -- contrary to the polyline, no need to append the end of the last edge here as it is the same
+    -- unlike to the polyline, no need to append the end of the last edge here as it is the same
     -- as the start of the first edge
     return offsetPolygon
 end
