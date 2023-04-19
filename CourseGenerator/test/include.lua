@@ -1,5 +1,5 @@
 lu = require("luaunit")
-package.path = package.path .. ";../?.lua;..?.lua;../../Courseplay_FS22/scripts/?.lua;../../Courseplay_FS22/scripts/pathfinder/?.lua;../../Courseplay_FS22/scripts/util/?.lua"
+package.path = package.path .. ";../?.lua;../geometry/?.lua;..?.lua;../../Courseplay_FS22/scripts/?.lua;../../Courseplay_FS22/scripts/pathfinder/?.lua;../../Courseplay_FS22/scripts/util/?.lua"
 require('CourseGenerator')
 require('CpObject')
 require('Logger')
