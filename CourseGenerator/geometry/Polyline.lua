@@ -483,23 +483,6 @@ function Polyline:intersects(other)
     return false
 end
 
---- Cut a polyline at is1 and is2, keeping the section between the two. is1 and is2 becomes the start and
---- end of the cut polyline.
----@param is1 cg.Intersection
----@param is2 cg.Intersection
-function Polyline:cutAtIntersections(is1, is2)
-    local section = cg.Polyline()
-    section:append(is1.is)
-    local src = is1.ixA + 1
-    while src < is2.ixA do
-        section:append(self[src])
-        src = src + 1
-    end
-    section:append(is2.is)
-    section:calculateProperties()
-    return section
-end
-
 ------------------------------------------------------------------------------------------------------------------------
 --- Private functions
 ------------------------------------------------------------------------------------------------------------------------

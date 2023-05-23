@@ -10,6 +10,39 @@
 --
 --
 dofile('include.lua')
+
+local parameters = {}
+-- number of headland passes around the field boundary
+local nHeadlandPasses = AdjustableParameter(3, 'headlands', 'P', 'p', 1, 0, 100);
+table.insert(parameters, nHeadlandPasses)
+local nHeadlandsWithRoundCorners = AdjustableParameter(0, 'headlands with round corners', 'R', 'r', 1, 0, 100);
+table.insert(parameters, nHeadlandsWithRoundCorners)
+local headlandClockwise = ToggleParameter('headlands clockwise', false, 'c');
+table.insert(parameters, headlandClockwise)
+-- number of headland passes around the field islands
+local nIslandHeadlandPasses = AdjustableParameter(1, 'island headlands', 'I', 'i', 1, 1, 10);
+table.insert(parameters, nIslandHeadlandPasses)
+-- working width of the equipment
+local workingWidth = AdjustableParameter(8.4, 'width', 'W', 'w', 0.2, 0, 100);
+table.insert(parameters, workingWidth)
+local turningRadius = AdjustableParameter(5.8, 'radius', 'T', 't', 0.2, 0, 20);
+table.insert(parameters, turningRadius)
+local fieldCornerRadius = AdjustableParameter(6, 'field corner radius', 'F', 'f', 1, 0, 30);
+table.insert(parameters, fieldCornerRadius)
+local sharpenCorners = ToggleParameter('sharpen corners', true, 's');
+table.insert(parameters, sharpenCorners)
+local bypassIslands = ToggleParameter('bypass islands', false, 'b');
+table.insert(parameters, bypassIslands)
+local autoRowAngle = ToggleParameter('auto row angle', true, '6');
+table.insert(parameters, autoRowAngle)
+local rowAngleDeg = AdjustableParameter(-90, 'row angle', 'A', 'a', 10, -90, 90);
+table.insert(parameters, rowAngleDeg)
+local evenRowDistribution = ToggleParameter('even row width', false, 'e');
+table.insert(parameters, evenRowDistribution)
+local useBaselineEdge = ToggleParameter('use base line edge', true, 'g');
+table.insert(parameters, useBaselineEdge)
+
+
 local profilerEnabled = false
 local fileName = ''
 local dragging = false
@@ -34,40 +67,11 @@ local debugColor = { 0.8, 0, 0, 0.5 }
 local highlightedWaypointColorForward = { 0, 0.7, 0, 0.3 }
 local highlightedWaypointColorBackward = { 0.7, 0, 0, 0.3 }
 local centerColor = { 0, 0.7, 1, 0.5 }
+local blockColor = { 1, 0.5, 0, 0.2 }
 local swathColor = { 0, 0.7, 0, 0.25 }
 local islandPointColor = { 0.7, 0, 0.7, 0.4 }
 local islandPerimeterPointColor = { 1, 0.4, 1 }
 
-local parameters = {}
--- number of headland passes around the field boundary
-local nHeadlandPasses = AdjustableParameter(3, 'headlands', 'P', 'p', 1, 0, 100);
-table.insert(parameters, nHeadlandPasses)
-local nHeadlandsWithRoundCorners = AdjustableParameter(0, 'headlands with round corners', 'R', 'r', 1, 0, 100);
-table.insert(parameters, nHeadlandsWithRoundCorners)
-local headlandClockwise = ToggleParameter('headlands clockwise', false, 'c');
-table.insert(parameters, headlandClockwise)
--- number of headland passes around the field islands
-local nIslandHeadlandPasses = AdjustableParameter(1, 'island headlands', 'I', 'i', 1, 1, 10);
-table.insert(parameters, nIslandHeadlandPasses)
--- working width of the equipment
-local workingWidth = AdjustableParameter(8.4, 'width', 'W', 'w', 0.2, 0, 100);
-table.insert(parameters, workingWidth)
-local turningRadius = AdjustableParameter(5.8, 'radius', 'T', 't', 0.2, 0, 20);
-table.insert(parameters, turningRadius)
-local fieldCornerRadius = AdjustableParameter(6, 'field corner radius', 'F', 'f', 1, 0, 30);
-table.insert(parameters, fieldCornerRadius)
-local sharpenCorners = ToggleParameter('sharpen corners', true, 's');
-table.insert(parameters, sharpenCorners)
-local bypassIslands = ToggleParameter('bypass islands', false, 'b');
-table.insert(parameters, bypassIslands)
-local autoRowAngle = ToggleParameter('auto row angle', false, '6');
-table.insert(parameters, autoRowAngle)
-local rowAngleDeg = AdjustableParameter(-90, 'row angle', 'A', 'a', 10, -90, 90);
-table.insert(parameters, rowAngleDeg)
-local evenRowDistribution = ToggleParameter('even row width', false, 'e');
-table.insert(parameters, evenRowDistribution)
-local useBaselineEdge = ToggleParameter('use base line edge', true, 'g');
-table.insert(parameters, useBaselineEdge)
 
 -- the selectedField to generate the course for
 ---@type cg.Field
@@ -250,14 +254,27 @@ local function drawIslandHeadland(h, color)
 end
 
 local function drawCenter()
-    if course:getCenter() then
-        local c = course:getCenter()
+    if course:getUpDownRows() then
+        local c = course:getUpDownRows()
+--[[
         love.graphics.setLineWidth(workingWidth:get())
         love.graphics.setColor(swathColor)
         love.graphics.line(c:getUnpackedVertices())
-        love.graphics.setLineWidth(2 * lineWidth)
-        love.graphics.setColor(centerColor)
-        love.graphics.line(c:getUnpackedVertices())
+]]
+        if course:getCenter():getDebugRows() then
+            for _, r in ipairs(course:getCenter():getDebugRows()) do
+                love.graphics.setColor(debugColor)
+                love.graphics.setLineWidth(3 * lineWidth)
+                love.graphics.line(r:getUnpackedVertices())
+            end
+        end
+        for _, b in ipairs(course:getCenter():getBlocks()) do
+            love.graphics.setColor(blockColor)
+            love.graphics.polygon('fill', b:getPolygon():getUnpackedVertices())
+            love.graphics.setLineWidth(2 * lineWidth)
+            love.graphics.setColor(centerColor)
+            love.graphics.line(b:getPath():getUnpackedVertices())
+        end
     end
 end
 

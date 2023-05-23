@@ -284,5 +284,32 @@ function LineSegment:getScalarProjection(point)
     return self.slope:scalarProjection(v)
 end
 
+--- Does this and the other line segment overlap.
+--- This works by checking if the projection of any of the endpoints of one segment is
+--- on the other segment, so the segments need to be more or less parallel to get
+--- useful results.
+--- Also note that if a:overlaps(b) is true then b:overlaps(a) is also true
+---@param other cg.LineSegment
+---@return boolean
+function LineSegment:overlaps(other)
+    local function isPointOverLineSegment(p, s)
+        local scalarProjection = s:getScalarProjection(p)
+        return scalarProjection >= 0 and scalarProjection <= s:getLength()
+    end
+    if isPointOverLineSegment(other:getBase(), self) then
+        return true
+    end
+    if isPointOverLineSegment(other:getEnd(), self) then
+        return true
+    end
+    if isPointOverLineSegment(self:getBase(), other) then
+        return true
+    end
+    if isPointOverLineSegment(self:getEnd(), other) then
+        return true
+    end
+    return false
+end
+
 ---@class cg.LineSegment
 cg.LineSegment = LineSegment

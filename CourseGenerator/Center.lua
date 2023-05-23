@@ -5,10 +5,11 @@ local Center = CpObject()
 ---@param context cg.FieldworkContext
 ---@param boundary cg.Polygon
 function Center:init(context, boundary, hasHeadland)
-    self.logger = cg.Logger('Center')
+    self.logger = cg.Logger('Center', cg.Logger.level.trace)
     self.boundary = boundary
     self.context = context
     self.hasHeadland = hasHeadland
+    self.path = cg.Polyline()
 end
 
 ---@return cg.Polyline
@@ -16,25 +17,26 @@ function Center:getPath()
     return self.path
 end
 
+---@return cg.Block[]
+function Center:getBlocks()
+    return self.blocks
+end
+
+--- Return the set of rows covering the entire field center, uncut. For debug purposes only.
+---@return cg.Row[]
+function Center:getDebugRows()
+    return self.rows
+end
+
 function Center:generate()
-    local rows
     if self.context.useBaselineEdge then
-        rows = self:_generateCurvedUpDownRows()
+        self.rows = self:_generateCurvedUpDownRows()
     else
         local angle = self.context.autoRowAngle and self:_findBestRowAngle() or self.context.rowAngle
-        rows = self:_generateStraightUpDownRows(angle)
+        self.rows = self:_generateStraightUpDownRows(angle)
     end
-    self.path = cg.Polyline()
-    for i, row in ipairs(rows) do
-        row = self:_splitRow(row, self.boundary)
-        self.logger:debug('Row %d has %d section(s)', i, #row)
-        for j, section in ipairs(row) do
-            self.logger:debug('  %.1f m, %d vertices', section:getLength(), #section)
-            -- TODO: properly connect up down rows
-            if i % 2 == 0 then section:reverse() end
-            self.path:appendMany(section)
-        end
-    end
+    self.blocks = self:_splitIntoBlocks(self.rows)
+    self.logger:debug('Found %d blocks.', #self.blocks)
 end
 
 ------------------------------------------------------------------------------------------------------------------------
@@ -74,14 +76,17 @@ function Center:_generateStraightUpDownRows(rowAngle, suppressLog)
 end
 
 function Center:_findBestRowAngle()
-    local minRows, bestAngle = math.huge, 0
+    local minScore, minRows, bestAngle = math.huge, math.huge, 0
     for a = -90, 90, 1 do
         local rows = self:_generateStraightUpDownRows(math.rad(a), true)
-        if #rows < minRows then
-            minRows = #rows
+        local blocks = self:_splitIntoBlocks(rows)
+        local score = 10 * #blocks + #rows
+        if score < minScore then
+            minScore = score
             bestAngle = math.rad(a)
         end
     end
+    self.logger:debug('  best row angle is %.1f', math.deg(bestAngle))
     return bestAngle
 end
 
@@ -158,60 +163,36 @@ function Center:_calculateRowDistribution(workingWidth, fieldWidth, hasHeadland,
     end
 end
 
---- Split a row at its intersections with boundary. In the trivial case of a rectangular field,
---- this returns an array with a single polyline element, the line between the two points where
---- the row intersects the boundary.
----
---- In complex cases, with concave fields, the result may be more than one segments (polylines)
---- so for any section of the row which is within the boundary there'll be one entry in the
---- returned array.
----
----@param row cg.Polyline the row
----@param boundary cg.Polygon the field boundary (or innermost headland)
----@return cg.Polyline[]
-function Center:_splitRow(row, boundary)
-    local intersections = row:getIntersections(boundary, 1)
-    if #intersections < 2 then
-        self.logger:warning('Row has only %d intersection with boundary', #intersections)
-        return cg.Polyline()
-    end
-    -- The assumption here is that the row always begins outside of the boundary
-
-
-    -- This latter condition is to properly handle the cases where the boundary intersects with
-    -- itself, for instance with fields where the total width of headlands are greater than the
-    -- field width (irregularly shaped fields, like ones with a peninsula)
-    -- we start outside of the boundary. If we cross it entering, we'll decrement this, if we cross leaving, we'll increment it.
-    local outside = 1
-    local lastInsideIx
-    local sections = {}
-    for i = 1, #intersections do
-        local isEntering = row:isEntering(boundary, intersections[i])
-        outside = outside + (isEntering and -1 or 1)
-        if not isEntering and outside == 1 then
-            -- exiting the polygon and we were inside before (outside was 0)
-            -- create a section here
-            table.insert(sections, row:cutAtIntersections(intersections[lastInsideIx], intersections[i]))
-        elseif isEntering then
-            lastInsideIx = i
-        end
-    end
-    return sections
-end
-
 function Center:_generateCurvedUpDownRows()
     local rows = {}
+
+    local function getIntersectionsExtending(row, boundary)
+        local intersections, extensions = {}, 0
+        repeat
+            intersections = row:getIntersections(boundary, 1)
+            if #intersections < 2 then
+                row:extend(50)
+                row:extend(-50)
+                extensions = extensions + 1
+            end
+        until #intersections > 1 or extensions > 3
+        if #intersections > 1 and extensions > 0 then
+            self.logger:debug('Row %d extended to intersect boundary', #rows + 1)
+        elseif #intersections < 2 then
+            self.logger:debug('Row %d could not be extended to intersect boundary (tries: %d)', #rows + 1, extensions)
+        end
+        return intersections
+    end
+
     local baseline = self:_createCurvedBaseline()
     baseline:extend(50)
     baseline:extend(-50)
     local row = baseline:createNext(self.context.workingWidth)
-
+    getIntersectionsExtending(row, self.boundary)
     table.insert(rows, row)
     repeat
         row = row:createNext(self.context.workingWidth)
-        row:extend(50)
-        row:extend(-50)
-        local intersections = row:getIntersections(self.boundary, 1)
+        local intersections = getIntersectionsExtending(row, self.boundary)
         table.insert(rows, row)
     until #rows > 100 or #intersections < 2
     return rows
@@ -245,6 +226,57 @@ function Center:_findLongestStraightSection(ix, radiusThreshold)
     self.logger:debug('Longest straight section found %d vertices, %.1f m', #section, section:getLength())
     cg.addDebugPolyline(section)
     return section
+end
+
+---@param rows cg.Row[]
+function Center:_splitIntoBlocks(rows)
+    local blocks = {}
+    local openBlocks = {}
+    local function closeBlocks(rowNumber)
+        local n = 0
+        for block, lastRowNumber in pairs(openBlocks) do
+            if rowNumber == nil or lastRowNumber ~= rowNumber then
+                table.insert(blocks, block)
+                openBlocks[block] = nil
+                n = n + 1
+            end
+        end
+        self.logger:trace('  closed %d blocks for row %s', n, rowNumber)
+    end
+
+    for i, row in ipairs(rows) do
+        local sections = row:split(self.boundary)
+        self.logger:trace('Row %d has %d section(s)', i, #sections)
+        for j, section in ipairs(sections) do
+            self.path:appendMany(section)
+            -- with how many existing blocks does this row overlap?
+            local overlappedBlocks = {}
+            for block, _ in pairs(openBlocks) do
+                if block:overlaps(section) then
+                    table.insert(overlappedBlocks, block)
+                end
+            end
+            self.logger:trace('  %.1f m, %d vertices, overlaps with %d block(s)',
+                    section:getLength(), #section, #overlappedBlocks)
+            if #overlappedBlocks == 0 or #overlappedBlocks > 1 then
+                local newBlock = cg.Block()
+                newBlock:addRow(section)
+                -- remember that we added a section for row #i
+                openBlocks[newBlock] = i
+                self.logger:trace('  %d block(s) closed, opened a new one', #overlappedBlocks)
+            else
+                -- overlaps with exactly one block, add this row to the overlapped block
+                overlappedBlocks[1]:addRow(section)
+                -- remember that we added a section for row #i
+                openBlocks[overlappedBlocks[1]] = i
+            end
+        end
+        -- close all open blocks where we did not add a section of this row
+        -- as we want all blocks to have a series of rows without gaps
+        closeBlocks(i)
+    end
+    closeBlocks()
+    return blocks
 end
 
 ---@class cg.Center

@@ -131,3 +131,21 @@ lu.assertIsTrue(a:isLeft(cg.Vector(-5, 5)))
 a = cg.LineSegment(0, 0, 0, -20)
 lu.assertIsFalse(a:isLeft(cg.Vector(-5, 5)))
 lu.assertIsTrue(a:isLeft(cg.Vector(5, 5)))
+
+-- overlaps
+a = cg.LineSegment(-5, -1, 5, -3)
+b = cg.LineSegment(-10, 1, 0, 2)
+lu.assertIsTrue(a:overlaps(b))
+lu.assertIsTrue(b:overlaps(a))
+
+b = cg.LineSegment(-1, 1, 0, 2)
+lu.assertIsTrue(a:overlaps(b))
+lu.assertIsTrue(b:overlaps(a))
+
+b = cg.LineSegment(-10, 1, 10, 2)
+lu.assertIsTrue(a:overlaps(b))
+lu.assertIsTrue(b:overlaps(a))
+
+b = cg.LineSegment(-15, 1, -5.5, 2)
+lu.assertIsFalse(a:overlaps(b))
+lu.assertIsFalse(b:overlaps(a))

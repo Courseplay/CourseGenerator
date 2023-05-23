@@ -130,9 +130,14 @@ function FieldworkCourse:getHeadland()
     return self.headland
 end
 
----@return cg.Polyline
+---@return cg.Center
 function FieldworkCourse:getCenter()
     return self.center
+end
+
+---@return cg.Polyline
+function FieldworkCourse:getUpDownRows()
+    return self.upDownRows
 end
 
 ---@return cg.Headland[]
@@ -144,11 +149,11 @@ end
 --- Up/down rows
 ------------------------------------------------------------------------------------------------------------------------
 function FieldworkCourse:generateUpDownRows()
-    local center = cg.Center(self.context,
+    self.center = cg.Center(self.context,
             #self.headlands > 0 and self.headlands[#self.headlands]:getPolygon() or self.boundary,
             #self.headlands > 0)
-    center:generate()
-    self.center = center:getPath()
+    self.center:generate()
+    self.upDownRows = self.center:getPath()
 end
 
 
