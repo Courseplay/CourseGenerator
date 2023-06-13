@@ -19,8 +19,16 @@
 
 local Block = CpObject()
 
-function Block:init()
+---@param rowPattern cg.RowPattern pattern to use for the up/down rows
+function Block:init(rowPattern, id)
+    self.id = id or 0
+    self.logger = cg.Logger('Block ' .. id)
+    -- rows in the order they were added, first vertex of each row is on the same side
     self.rows = {}
+    -- rows in the order they will be worked on, every second row in this sequence is reversed
+    -- so we remain on the same side of the block when switching to the next row
+    self.rowsInWorkSequence = {}
+    self.rowPattern = rowPattern or cg.RowPatternAlternating()
 end
 
 function Block:addRow(row)
@@ -39,15 +47,69 @@ function Block:getPolygon()
         -- assuming the first and last row in the array are also the first and last geographically (all other
         -- rows are between these two) and both have the same direction
         local firstRow, lastRow = self.rows[1], self.rows[#self.rows]
-        self.polygon = cg.Polygon({firstRow[1], firstRow[#firstRow], lastRow[#lastRow], lastRow[1]})
+        self.polygon = cg.Polygon({ firstRow[1], firstRow[#firstRow], lastRow[#lastRow], lastRow[1] })
     end
     return self.polygon
+end
+
+---@return cg.Row[] rows in the order they should be worked on. Every other row is reversed, so it starts at the
+--- end where the previous one ends.
+function Block:getRows()
+    if #self.rowsInWorkSequence ~= #self.rows then
+
+    end
+    return self.rowsInWorkSequence
+end
+
+--- Find the entry to this block closest to start location, distance measured on the headland.
+--- The purpose of this is to figure out where the vehicle should enter this block if it is currently
+--- located at startLocation. The block, consisting of a series of rows, may have multiple possible
+--- entry points, we pick here the one closest to the startLocation, assuming that the vehicle must
+--- drive on the headland to reach the entry point from the start location.
+---@param startLocation cg.Vector the location where the vehicle ended its previous path and now must
+--- continue working on this block
+---@param headland cg.Polygon the headland, distance between the startLocation and the entry is measured
+--- along this polygon.
+function Block:getClosestEntry(startLocation, headland)
+    local startLocationVertex = headland:findClosestVertexToPoint(startLocation)
+    local entries = self.rowPattern:getPossibleEntries(self.rows)
+    local closestEntry, dMin, shortestPath = nil, math.huge, nil
+    for _, entry in ipairs(entries) do
+        local entryVertex = headland:findClosestVertexToPoint(entry.position)
+        local pathOnHeadland = headland:getShortestPathBetween(startLocationVertex.ix, entryVertex.ix)
+        if pathOnHeadland:getLength() < dMin then
+            closestEntry = entry
+            dMin = pathOnHeadland:getLength()
+            shortestPath = pathOnHeadland
+        end
+    end
+    self.logger:debug('Closest entry: %s at %.1f m', closestEntry, dMin)
+    return closestEntry, dMin, shortestPath
+end
+
+function Block:setEntry(entry)
+    self.logger:debug('Setting entry %s', entry)
+    if entry.reverseRowOrder then
+        for i = 1, #self.rows / 2 do
+            self.rows[i], self.rows[#self.rows - i + 1] = self.rows[#self.rows - i + 1], self.rows[i]
+        end
+    end
+    self.logger:debug('Generating row sequence for %d rows, pattern: %s', #self.rows, self.rowPattern)
+    self.rowsInWorkSequence = {}
+    for i, row in self.rowPattern:iterator(self.rows) do
+        if i % 2 == (entry.reverseOddRows and 1 or 0) then
+            row:reverse()
+        end
+        table.insert(self.rowsInWorkSequence, row)
+    end
+    local lastRow = self.rowsInWorkSequence[#self.rowsInWorkSequence]
+    return lastRow[#lastRow]
 end
 
 function Block:getPath()
     if self.path == nil then
         self.path = cg.Polyline()
-        for i, row in ipairs(self.rows) do
+        for i, row in self.rowPattern:iterator(self.rows) do
             if i % 2 == 0 then
                 row:reverse()
             end
@@ -56,7 +118,6 @@ function Block:getPath()
     end
     return self.path
 end
-
 
 ---@class cg.Block
 cg.Block = Block

@@ -149,9 +149,11 @@ end
 --- Up/down rows
 ------------------------------------------------------------------------------------------------------------------------
 function FieldworkCourse:generateUpDownRows()
+    local innerMostHeadlandPolygon = self.headlands[#self.headlands]:getPolygon()
     self.center = cg.Center(self.context,
-            #self.headlands > 0 and self.headlands[#self.headlands]:getPolygon() or self.boundary,
-            #self.headlands > 0)
+            #self.headlands > 0 and innerMostHeadlandPolygon or self.boundary,
+            #self.headlands > 0,
+            #self.headlands > 0 and innerMostHeadlandPolygon[#innerMostHeadlandPolygon] or self.context.startLocation)
     self.center:generate()
     self.upDownRows = self.center:getPath()
 end

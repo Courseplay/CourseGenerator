@@ -13,34 +13,42 @@ dofile('include.lua')
 
 local parameters = {}
 -- number of headland passes around the field boundary
-local nHeadlandPasses = AdjustableParameter(3, 'headlands', 'P', 'p', 1, 0, 100);
+local nHeadlandPasses = AdjustableParameter(3, 'headlands', 'P', 'p', 1, 0, 100)
 table.insert(parameters, nHeadlandPasses)
-local nHeadlandsWithRoundCorners = AdjustableParameter(0, 'headlands with round corners', 'R', 'r', 1, 0, 100);
+local nHeadlandsWithRoundCorners = AdjustableParameter(0, 'headlands with round corners', 'R', 'r', 1, 0, 100)
 table.insert(parameters, nHeadlandsWithRoundCorners)
-local headlandClockwise = ToggleParameter('headlands clockwise', false, 'c');
+local headlandClockwise = ToggleParameter('headlands clockwise', false, 'c')
 table.insert(parameters, headlandClockwise)
 -- number of headland passes around the field islands
-local nIslandHeadlandPasses = AdjustableParameter(1, 'island headlands', 'I', 'i', 1, 1, 10);
+local nIslandHeadlandPasses = AdjustableParameter(1, 'island headlands', 'I', 'i', 1, 1, 10)
 table.insert(parameters, nIslandHeadlandPasses)
 -- working width of the equipment
-local workingWidth = AdjustableParameter(8.4, 'width', 'W', 'w', 0.2, 0, 100);
+local workingWidth = AdjustableParameter(8.4, 'width', 'W', 'w', 0.2, 0, 100)
 table.insert(parameters, workingWidth)
-local turningRadius = AdjustableParameter(5.8, 'radius', 'T', 't', 0.2, 0, 20);
+local turningRadius = AdjustableParameter(5.8, 'radius', 'T', 't', 0.2, 0, 20)
 table.insert(parameters, turningRadius)
-local fieldCornerRadius = AdjustableParameter(6, 'field corner radius', 'F', 'f', 1, 0, 30);
+local fieldCornerRadius = AdjustableParameter(6, 'field corner radius', 'F', 'f', 1, 0, 30)
 table.insert(parameters, fieldCornerRadius)
-local sharpenCorners = ToggleParameter('sharpen corners', true, 's');
+local sharpenCorners = ToggleParameter('sharpen corners', true, 's')
 table.insert(parameters, sharpenCorners)
-local bypassIslands = ToggleParameter('bypass islands', false, 'b');
+local bypassIslands = ToggleParameter('bypass islands', false, 'b')
 table.insert(parameters, bypassIslands)
-local autoRowAngle = ToggleParameter('auto row angle', true, '6');
+local autoRowAngle = ToggleParameter('auto row angle', true, '6')
 table.insert(parameters, autoRowAngle)
-local rowAngleDeg = AdjustableParameter(-90, 'row angle', 'A', 'a', 10, -90, 90);
+local rowAngleDeg = AdjustableParameter(-90, 'row angle', 'A', 'a', 10, -90, 90)
 table.insert(parameters, rowAngleDeg)
-local evenRowDistribution = ToggleParameter('even row width', false, 'e');
+local rowPattern = AdjustableParameter(cg.RowPattern.ALTERNATING, 'row pattern', 'O', 'o', 1, cg.RowPattern.ALTERNATING, cg.RowPattern.SKIP)
+table.insert(parameters, rowPattern)
+local nRows = AdjustableParameter(0, 'rows to skip/rows per land', 'K', 'k', 1, 0, 10)
+table.insert(parameters, nRows)
+local leaveSkippedRowsUnworked = ToggleParameter('leave skipped rows unworked', false, 'u')
+table.insert(parameters, leaveSkippedRowsUnworked)
+local evenRowDistribution = ToggleParameter('even row width', false, 'e')
 table.insert(parameters, evenRowDistribution)
-local useBaselineEdge = ToggleParameter('use base line edge', true, 'g');
+local useBaselineEdge = ToggleParameter('use base line edge', false, 'g')
 table.insert(parameters, useBaselineEdge)
+local showDebugInfo = ToggleParameter('show debug info', false, 'd', true)
+table.insert(parameters, showDebugInfo)
 
 
 local profilerEnabled = false
@@ -67,7 +75,9 @@ local debugColor = { 0.8, 0, 0, 0.5 }
 local highlightedWaypointColorForward = { 0, 0.7, 0, 0.3 }
 local highlightedWaypointColorBackward = { 0.7, 0, 0, 0.3 }
 local centerColor = { 0, 0.7, 1, 0.5 }
+local centerFontColor = { 0, 0.7, 1 }
 local blockColor = { 1, 0.5, 0, 0.2 }
+local blockFontColor = { 1, 0.5, 0, 1 }
 local swathColor = { 0, 0.7, 0, 0.25 }
 local islandPointColor = { 0.7, 0, 0.7, 0.4 }
 local islandPerimeterPointColor = { 1, 0.4, 1 }
@@ -108,6 +118,7 @@ local function generate()
     if profilerEnabled then
         love.profiler.start()
     end
+    context:setRowPattern(cg.RowPattern.create(rowPattern:get(), nRows:get(), leaveSkippedRowsUnworked:get()))
     course = cg.FieldworkCourse(context)
     course:generateHeadlands()
     course:generateHeadlandsAroundIslands()
@@ -165,7 +176,7 @@ function love.load(arg)
     contextTransform = love.math.newTransform(10, 10, 0, 1, 1, 0, 0)
     love.graphics.setPointSize(pointSize)
     love.graphics.setLineWidth(lineWidth)
-    love.window.setMode(windowWidth, windowHeight)
+    love.window.setMode(windowWidth, windowHeight, {highdpi = true})
     love.window.setTitle(string.format('Course Generator - %s - SelectedField %d', fileName, selectedField:getId()))
     generate()
 end
@@ -262,18 +273,35 @@ local function drawCenter()
         love.graphics.line(c:getUnpackedVertices())
 ]]
         if course:getCenter():getDebugRows() then
-            for _, r in ipairs(course:getCenter():getDebugRows()) do
-                love.graphics.setColor(debugColor)
-                love.graphics.setLineWidth(3 * lineWidth)
-                love.graphics.line(r:getUnpackedVertices())
+            if showDebugInfo:get() then
+                for _, r in ipairs(course:getCenter():getDebugRows()) do
+                    love.graphics.setColor(debugColor)
+                    love.graphics.setLineWidth(3 * lineWidth)
+                    love.graphics.line(r:getUnpackedVertices())
+                end
             end
         end
-        for _, b in ipairs(course:getCenter():getBlocks()) do
+        for ib, b in ipairs(course:getCenter():getBlocks()) do
             love.graphics.setColor(blockColor)
             love.graphics.polygon('fill', b:getPolygon():getUnpackedVertices())
             love.graphics.setLineWidth(2 * lineWidth)
-            love.graphics.setColor(centerColor)
-            love.graphics.line(b:getPath():getUnpackedVertices())
+            local blockCenter = b:getPolygon():getCenter()
+            love.graphics.push()
+            love.graphics.setColor(blockFontColor)
+            love.graphics.scale(1, -1)
+            love.graphics.print(string.format('%d (%d)', ib, b.id), blockCenter.x, -blockCenter.y, 0, 1/scale)
+            love.graphics.pop()
+
+            for i, r in ipairs(b:getRows()) do
+                love.graphics.setColor(centerColor)
+                love.graphics.line(r:getUnpackedVertices())
+                local m = r:getMiddle()
+                love.graphics.push()
+                love.graphics.setColor(centerFontColor)
+                love.graphics.scale(1, -1)
+                love.graphics.print(i, m.x, -m.y, 0, 1/scale)
+                love.graphics.pop()
+            end
         end
     end
 end
@@ -407,8 +435,10 @@ function love.draw()
     drawGraphics()
     drawStatus()
     drawContext()
-    drawDebugPoints()
-    drawDebugPolylines()
+    if showDebugInfo:get() then
+        drawDebugPoints()
+        drawDebugPolylines()
+    end
 end
 
 ------------------------------------------------------------------------------------------------------------------------

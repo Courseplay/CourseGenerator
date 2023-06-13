@@ -179,7 +179,35 @@ end
 function Polygon:calculateProperties(from, to)
     cg.Polyline.calculateProperties(self, from, to)
     -- dirty flag to trigger clockwise/area recalculation
-    self.deltaAngle, self.area, self.length = nil, nil, nil
+    self.deltaAngle, self.area, self.length, self.longestEdgeDirection = nil, nil, nil, nil
+end
+
+--- Find the direction this polygon is the longest. This can be used to determine
+--- the best direction for the up/down tracks. For a rectangle, this should be the same direction as
+--- the longer sides of the rectangle.
+---@return number approximate direction of the longest edge
+function Polygon:getLongestEdgeDirection()
+    if not self.longestEdgeDirection then
+        -- total length of edges at angles 0-179, weighted by their length
+        local totalEdgeLength = {}
+        for _, e in self:edges() do
+            -- normalize angle of the edges, two edges with 180 degrees difference count the same
+            local a = math.deg(e:getHeading())
+            a = a < 0 and ( a + 180 ) or a
+            a = a % 180
+            a = math.floor(a + 0.5)
+            totalEdgeLength[a] = (totalEdgeLength[a] or 0) + e:getLength()
+        end
+        local bestAngle, longest = 0, -math.huge
+        for a, l in pairs(totalEdgeLength) do
+            if l > longest then
+                longest = l
+                bestAngle = a
+            end
+        end
+        self.longestEdgeDirection = math.rad(bestAngle)
+    end
+    return self.longestEdgeDirection
 end
 
 function Polygon:ensureMinimumEdgeLength(minimumLength)
@@ -321,6 +349,17 @@ function Polygon:removeLoops(baseClockwise, startIx)
         end
     end
     return false
+end
+
+--- Get the shortest path between the vertices fromIx and toIx
+---@return Polyline
+function Polygon:getShortestPathBetween(fromIx, toIx)
+    local forward, backward = self:_getPathBetween(fromIx, toIx)
+    if forward:getLength() <= backward:getLength() then
+        return forward
+    else
+        return backward
+    end
 end
 
 ------------------------------------------------------------------------------------------------------------------------

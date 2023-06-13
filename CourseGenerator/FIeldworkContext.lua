@@ -57,6 +57,7 @@ end
 
 --- The (approximate) location where we want to start working on the headland when progressing inwards.
 function FieldworkContext:setStartLocation(x, y)
+    ---@type cg.Vector
     self.startLocation = cg.Vector(x, y)
 end
 
@@ -91,6 +92,12 @@ end
 --- all rows follow that baseline.
 function FieldworkContext:useBaselineEdge(use)
     self.useBaselineEdge = use
+end
+
+--- What pattern to use to determine in which order the rows within a block are worked on.
+---@param rowPattern cg.RowPattern
+function FieldworkContext:setRowPattern(rowPattern)
+    self.rowPattern = rowPattern
 end
 
 ---@class cg.FieldworkContext

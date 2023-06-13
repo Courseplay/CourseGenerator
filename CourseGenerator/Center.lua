@@ -4,11 +4,14 @@ local Center = CpObject()
 
 ---@param context cg.FieldworkContext
 ---@param boundary cg.Polygon
-function Center:init(context, boundary, hasHeadland)
-    self.logger = cg.Logger('Center', cg.Logger.level.trace)
+---@param hasHeadland boolean
+---@param startLocation cg.Vector location of the vehicle before it starts working on the center.
+function Center:init(context, boundary, hasHeadland, startLocation)
+    self.logger = cg.Logger('Center', cg.Logger.level.debug)
     self.boundary = boundary
     self.context = context
     self.hasHeadland = hasHeadland
+    self.startLocation = startLocation
     self.path = cg.Polyline()
 end
 
@@ -35,7 +38,23 @@ function Center:generate()
         local angle = self.context.autoRowAngle and self:_findBestRowAngle() or self.context.rowAngle
         self.rows = self:_generateStraightUpDownRows(angle)
     end
-    self.blocks = self:_splitIntoBlocks(self.rows)
+    local blocks = self:_splitIntoBlocks(self.rows)
+    -- now connect all blocks
+    local currentLocation = self.startLocation
+    local doneBlockIds = {}
+    self.blocks = {}
+    while #self.blocks < #blocks do
+        local closestBlock, closestEntry, dMin = nil, nil, math.huge
+        for _, b in ipairs(blocks) do
+            local entry, d = b:getClosestEntry(currentLocation, self.boundary)
+            if not doneBlockIds[b.id] and d < dMin then
+                closestBlock, closestEntry, dMin = b, entry, d
+            end
+        end
+        currentLocation = closestBlock:setEntry(closestEntry)
+        doneBlockIds[closestBlock.id] = true
+        table.insert(self.blocks, closestBlock)
+    end
     self.logger:debug('Found %d blocks.', #self.blocks)
 end
 
@@ -77,10 +96,15 @@ end
 
 function Center:_findBestRowAngle()
     local minScore, minRows, bestAngle = math.huge, math.huge, 0
+    local longestEdgeDirection = self.boundary:getLongestEdgeDirection()
+    self.logger:debug('  longest edge direction %.1f', math.deg(longestEdgeDirection))
     for a = -90, 90, 1 do
         local rows = self:_generateStraightUpDownRows(math.rad(a), true)
         local blocks = self:_splitIntoBlocks(rows)
-        local score = 10 * #blocks + #rows
+        local score = 10 * #blocks + #rows +
+                -- Prefer angles closest to the direction of the longest edge of the field
+                -- sin(a - longestEdgeDirection) will be 0 when angle is the closest.
+                3 * math.abs(math.sin(cg.Math.getDeltaAngle(math.rad(a), longestEdgeDirection)))
         if score < minScore then
             minScore = score
             bestAngle = math.rad(a)
@@ -170,12 +194,13 @@ function Center:_generateCurvedUpDownRows()
         local intersections, extensions = {}, 0
         repeat
             intersections = row:getIntersections(boundary, 1)
-            if #intersections < 2 then
+            local evenNumberOfIntersections = #intersections % 2 == 0
+            if #intersections < 2 or not evenNumberOfIntersections then
                 row:extend(50)
                 row:extend(-50)
                 extensions = extensions + 1
             end
-        until #intersections > 1 or extensions > 3
+        until (#intersections > 1 and evenNumberOfIntersections) or extensions > 3
         if #intersections > 1 and extensions > 0 then
             self.logger:debug('Row %d extended to intersect boundary', #rows + 1)
         elseif #intersections < 2 then
@@ -244,6 +269,9 @@ function Center:_splitIntoBlocks(rows)
         self.logger:trace('  closed %d blocks for row %s', n, rowNumber)
     end
 
+    -- assign a unique id to each block
+    local blockId = 1
+
     for i, row in ipairs(rows) do
         local sections = row:split(self.boundary)
         self.logger:trace('Row %d has %d section(s)', i, #sections)
@@ -259,7 +287,8 @@ function Center:_splitIntoBlocks(rows)
             self.logger:trace('  %.1f m, %d vertices, overlaps with %d block(s)',
                     section:getLength(), #section, #overlappedBlocks)
             if #overlappedBlocks == 0 or #overlappedBlocks > 1 then
-                local newBlock = cg.Block()
+                local newBlock = cg.Block(self.context.rowPattern, blockId)
+                blockId = blockId + 1
                 newBlock:addRow(section)
                 -- remember that we added a section for row #i
                 openBlocks[newBlock] = i

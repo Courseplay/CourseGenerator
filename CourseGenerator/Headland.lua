@@ -94,7 +94,7 @@ function Headland:bypassIsland(island, circle)
 end
 
 --- Generate a path to switch from this headland to the other, starting as close as possible to the
---- given vertex on this headland
+--- given vertex on this headland and append this path to headland
 ---@param other cg.Headland
 ---@return number index of the vertex on other where the transition ends
 function Headland:connectTo(other, ix, workingWidth, turningRadius)

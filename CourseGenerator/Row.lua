@@ -60,10 +60,8 @@ function Row:split(boundary)
     local lastInsideIx
     local sections = {}
     for i = 1, #intersections do
-        cg.addDebugPoint(intersections[i].is)
         local isEntering = self:isEntering(boundary, intersections[i])
         outside = outside + (isEntering and -1 or 1)
-        print(isEntering, outside)
         if not isEntering and outside == 1 then
             -- exiting the polygon and we were inside before (outside was 0)
             -- create a section here
@@ -75,6 +73,19 @@ function Row:split(boundary)
     return sections
 end
 
+--- Get the coordinates in the middle of the row, for instance to display the row number.
+---@return cg.Vector coordinates of the middle of the row
+function Row:getMiddle()
+    if #self % 2 == 0 then
+        -- even number of vertices, return a point between the middle two
+        local left = self[#self / 2]
+        local right = self[#self / 2 + 1]
+        return (left + right) / 2
+    else
+        -- odd number of vertices, return the middle one\
+        return self[math.floor(#self / 2)]
+    end
+end
 ------------------------------------------------------------------------------------------------------------------------
 --- Private functions
 ------------------------------------------------------------------------------------------------------------------------
