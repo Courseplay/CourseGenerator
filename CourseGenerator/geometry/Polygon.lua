@@ -101,7 +101,7 @@ function Polygon:edges(startIx)
         if i > #self then
             return nil, nil
         else
-            return i, cg.LineSegment.fromVectors(self[i], self[(i + 1) > #self and 1 or i + 1]), self[i]
+            return i, self[i]:getExitEdge() or cg.LineSegment.fromVectors(self[i], self[(i + 1) > #self and 1 or i + 1]), self[i]
         end
     end
 end
@@ -115,7 +115,7 @@ function Polygon:edgesBackwards(startIx)
         if i <= 2 then
             return nil, nil
         else
-            return i, cg.LineSegment.fromVectors(self[i], self[(i - 1) < 1 and #self or (i - 1)]), self[i]
+            return i, self[i]:getEntryEdge() or cg.LineSegment.fromVectors(self[i], self[(i - 1) < 1 and #self or (i - 1)]), self[i]
         end
     end
 end

@@ -96,11 +96,25 @@ end
 --- Generate a path to switch from this headland to the other, starting as close as possible to the
 --- given vertex on this headland and append this path to headland
 ---@param other cg.Headland
+---@param ix number vertex index to start the transition at
+---@param workingWidth number
+---@param turningRadius number
+---@param headlandFirst boolean if true, work on headlands first and then transition to the middle of the field
+--- for the up/down rows, if false start in the middle and work the headlands from the inside out
 ---@return number index of the vertex on other where the transition ends
-function Headland:connectTo(other, ix, workingWidth, turningRadius)
+function Headland:connectTo(other, ix, workingWidth, turningRadius, headlandFirst)
     local function ignoreIslandBypass(v)
         return not v:getAttributes():getIslandBypass()
     end
+
+    if (self.clockwise and headlandFirst) or (not self.clockwise and not headlandFirst) then
+        -- Dubins path types to use when changing to the next headland
+        self.transitionPathTypes = { DubinsSolver.PathType.RSL, DubinsSolver.PathType.RSR }
+    else
+        self.transitionPathTypes = { DubinsSolver.PathType.LSR, DubinsSolver.PathType.LSL }
+    end
+
+
     -- determine the theoretical minimum length of the transition (depending on the width and radius)
     local transitionLength = Headland._getTransitionLength(workingWidth, turningRadius)
     local transition = self:_continueUntilStraightSection(ix, transitionLength)
@@ -114,11 +128,14 @@ function Headland:connectTo(other, ix, workingWidth, turningRadius)
         -- In that case, the Dubins path generated will end up in a loop, so we use a target further ahead on the next headland.
         local tries = 5
         for i = 1, tries do
+            cg.addDebugPoint(self.polygon:at(ix + #transition))
+            cg.addDebugPoint(other.polygon:at(transitionEndIx))
             local connector, length = cg.AnalyticHelper.getDubinsSolutionAsVertices(
                     self.polygon:at(ix + #transition):getExitEdge():getBaseAsState3D(),
                     other.polygon:at(transitionEndIx):getExitEdge():getBaseAsState3D(),
                     -- enable any path type on the very last try
                     turningRadius, i < tries and self.transitionPathTypes or nil)
+            cg.addDebugPolyline(cg.Polyline(connector))
             -- maximum length without loops
             local maxPlausiblePathLength = workingWidth + 4 * turningRadius
             if length < maxPlausiblePathLength or i == tries then

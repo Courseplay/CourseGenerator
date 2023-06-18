@@ -1,5 +1,7 @@
 --- Generate the up/down rows covering the center part of the field,
 --- within the headlands (or the field boundary if there are no headlands)
+--- Split the center area into blocks if needed and connect the headland with first block
+--- and the blocks with each other
 local Center = CpObject()
 
 ---@param context cg.FieldworkContext
@@ -12,6 +14,8 @@ function Center:init(context, boundary, hasHeadland, startLocation)
     self.context = context
     self.hasHeadland = hasHeadland
     self.startLocation = startLocation
+    self.blocks = {}
+    self.connectingPaths = {}
     self.path = cg.Polyline()
 end
 
@@ -25,12 +29,21 @@ function Center:getBlocks()
     return self.blocks
 end
 
+--- The list of paths connecting the blocks of the field center. The first entry is
+--- the path from the end of the headland to the first block, the second entry is the path
+--- from the exit of the first block to the entry of the second, and so on.
+---@return cg.Polyline[]
+function Center:getConnectingPaths()
+    return self.connectingPaths
+end
+
 --- Return the set of rows covering the entire field center, uncut. For debug purposes only.
 ---@return cg.Row[]
 function Center:getDebugRows()
     return self.rows
 end
 
+---@return cg.Vertex the location of the last waypoint of the last row worked in the middle.
 function Center:generate()
     if self.context.useBaselineEdge then
         self.rows = self:_generateCurvedUpDownRows()
@@ -43,19 +56,22 @@ function Center:generate()
     local currentLocation = self.startLocation
     local doneBlockIds = {}
     self.blocks = {}
+    self.connectingPaths = {}
     while #self.blocks < #blocks do
-        local closestBlock, closestEntry, dMin = nil, nil, math.huge
+        local closestBlock, closestEntry, dMin, pathToClosestEntry = nil, nil, math.huge, nil
         for _, b in ipairs(blocks) do
-            local entry, d = b:getClosestEntry(currentLocation, self.boundary)
+            local entry, d, path = b:getClosestEntry(currentLocation, self.boundary)
             if not doneBlockIds[b.id] and d < dMin then
-                closestBlock, closestEntry, dMin = b, entry, d
+                closestBlock, closestEntry, dMin, pathToClosestEntry = b, entry, d, path
             end
         end
         currentLocation = closestBlock:setEntry(closestEntry)
         doneBlockIds[closestBlock.id] = true
         table.insert(self.blocks, closestBlock)
+        table.insert(self.connectingPaths, pathToClosestEntry)
     end
-    self.logger:debug('Found %d blocks.', #self.blocks)
+    self.logger:debug('Found %d block(s), %d connecting path(s).', #self.blocks, #self.connectingPaths)
+    return currentLocation
 end
 
 ------------------------------------------------------------------------------------------------------------------------
@@ -66,7 +82,6 @@ function Center:_generateStraightUpDownRows(rowAngle, suppressLog)
     local _, dMin, _, dMax = self.boundary:findClosestAndFarthestVertexToLineSegment(baseline[1]:getExitEdge())
     -- move the baseline to the edge of the area we want to cover
     baseline = baseline:createNext(dMin)
-
     local nRows, firstRowOffset, width, lastRowOffset = self:_calculateRowDistribution(
             self.context.workingWidth, dMax - dMin,
             self.hasHeadland, self.context.evenRowDistribution, true)
@@ -99,7 +114,7 @@ function Center:_findBestRowAngle()
     local longestEdgeDirection = self.boundary:getLongestEdgeDirection()
     self.logger:debug('  longest edge direction %.1f', math.deg(longestEdgeDirection))
     for a = -90, 90, 1 do
-        local rows = self:_generateStraightUpDownRows(math.rad(a), true)
+        local rows = self:_generateStraightUpDownRows(math.rad(a), false)
         local blocks = self:_splitIntoBlocks(rows)
         local score = 10 * #blocks + #rows +
                 -- Prefer angles closest to the direction of the longest edge of the field
@@ -211,12 +226,16 @@ function Center:_generateCurvedUpDownRows()
 
     local baseline = self:_createCurvedBaseline()
     baseline:extend(50)
+    baseline:calculateProperties()
     baseline:extend(-50)
-    local row = baseline:createNext(self.context.workingWidth)
+    baseline:calculateProperties()
+    -- always generate inwards
+    local offset = self.context.headlandClockwise and -self.context.workingWidth or self.context.workingWidth
+    local row = baseline:createNext(offset)
     getIntersectionsExtending(row, self.boundary)
     table.insert(rows, row)
     repeat
-        row = row:createNext(self.context.workingWidth)
+        row = row:createNext(offset)
         local intersections = getIntersectionsExtending(row, self.boundary)
         table.insert(rows, row)
     until #rows > 100 or #intersections < 2

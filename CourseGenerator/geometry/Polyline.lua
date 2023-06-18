@@ -80,14 +80,6 @@ function Polyline:getBoundingBox()
     return xMin, yMin, xMax, yMax
 end
 
-function Polyline:calculateEdges()
-    local edges = {}
-    for _, e in self:edges() do
-        table.insert(edges, e)
-    end
-    return edges
-end
-
 function Polyline:getUnpackedVertices()
     local unpackedVertices = {}
     for _, v in ipairs(self) do
@@ -122,7 +114,7 @@ function Polyline:edges(startIx)
         if i >= #self then
             return nil, nil, nil
         else
-            return i, cg.LineSegment.fromVectors(self[i], self[i + 1]), self[i]
+            return i, self[i]:getExitEdge() or cg.LineSegment.fromVectors(self[i], self[i + 1]), self[i]
         end
     end
 end
@@ -136,7 +128,7 @@ function Polyline:edgesBackwards(startIx)
         if i < 2 then
             return nil, nil, nil
         else
-            return i, cg.LineSegment.fromVectors(self[i], self[i - 1]), self[i]
+            return i, self[i]:getEntryEdge() or cg.LineSegment.fromVectors(self[i], self[i - 1]), self[i]
         end
     end
 end

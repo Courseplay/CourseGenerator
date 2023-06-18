@@ -7,6 +7,21 @@ function FieldworkCourse:init(context)
     self.headland = cg.Polyline()
 end
 
+function FieldworkCourse:generate()
+    self:generateHeadlands()
+    if self.context.headlandFirst then
+        self:connectHeadlandsFromOutside()
+        self:generateCenter()
+    else
+        local endOfLastRow = self:generateCenter()
+        self:connectHeadlandsFromInside(endOfLastRow)
+    end
+    if self.context.bypassIslands then
+        self:bypassIslands()
+    end
+    self.headland:calculateProperties()
+end
+
 ------------------------------------------------------------------------------------------------------------------------
 --- Headlands
 ------------------------------------------------------------------------------------------------------------------------
@@ -30,21 +45,6 @@ function FieldworkCourse:generateHeadlands(context)
         self:generateHeadlandsFromOutside(self.boundary, self.context.workingWidth / 2, 1)
     end
     self:_removeInvalidHeadlands()
-    self:connectHeadlands()
-    if self.context.bypassIslands then
-        self:generateHeadlandsAroundIslands()
-        --- Remember the islands we circled already, as even if multiple tracks cross it, we only want to
-        --- circle once.
-        self.circledIslands = {}
-        for _, island in pairs(self.context.field:getIslands()) do
-            local startIx = 1
-            while startIx ~= nil do
-                self.circledIslands[island], startIx = self.headland:goAround(
-                        island:getHeadlands()[1]:getPolygon(), startIx, not self.circledIslands[island])
-            end
-        end
-    end
-    self.headland:calculateProperties()
 end
 
 ---@param boundary Polygon field boundary or other headland to start the generation from
@@ -103,26 +103,44 @@ function FieldworkCourse:generateHeadlandsFromInside()
     end
 end
 
-function FieldworkCourse:connectHeadlands()
+function FieldworkCourse:connectHeadlandsFromOutside()
     if #self.headlands < 1 then
         return
     end
     self.headland = cg.Polyline()
-    local closestVertex = self.context.startLocation and
-            self.headlands[1]:getPolygon():findClosestVertexToPoint(self.context.startLocation) or
-            self.headlands[1]:getPolygon():at(1)
+    local closestVertex = self.headlands[1]:getPolygon():findClosestVertexToPoint(self.context.startLocation)
     -- make life easy: make headland polygons always start where the transition to the next headland is.
     -- In _setContext() we already took care of the direction, so the headland is always worked in the
     -- increasing indices
+    self.headlands[1].polygon:rebase(closestVertex.ix)
     for i = 1, #self.headlands - 1 do
-        self.headlands[i].polygon:rebase(closestVertex.ix)
         local transitionEndIx = self.headlands[i]:connectTo(self.headlands[i + 1], 1, self.context.workingWidth,
-                self.context.turningRadius)
+                self.context.turningRadius, true)
         -- rebase to the next vertex so the first waypoint of the next headland is right after the transition
         self.headlands[i + 1].polygon:rebase(transitionEndIx + 1)
         self.headland:appendMany(self.headlands[i]:getPolygon())
     end
     self.headland:appendMany(self.headlands[#self.headlands]:getPolygon())
+end
+
+function FieldworkCourse:connectHeadlandsFromInside(startLocation)
+    if #self.headlands < 1 then
+        return
+    end
+    self.headland = cg.Polyline()
+    local closestVertex = self.headlands[#self.headlands]:getPolygon():findClosestVertexToPoint(startLocation)
+    -- make life easy: make headland polygons always start where the transition to the next headland is.
+    -- In _setContext() we already took care of the direction, so the headland is always worked in the
+    -- increasing indices
+    self.headlands[#self.headlands].polygon:rebase(closestVertex.ix)
+    for i = #self.headlands, 2, - 1 do
+        local transitionEndIx = self.headlands[i]:connectTo(self.headlands[i - 1], 1, self.context.workingWidth,
+                self.context.turningRadius, false)
+        -- rebase to the next vertex so the first waypoint of the next headland is right after the transition
+        self.headlands[i - 1].polygon:rebase(transitionEndIx + 1)
+        self.headland:appendMany(self.headlands[i]:getPolygon())
+    end
+    self.headland:appendMany(self.headlands[1]:getPolygon())
 end
 
 ---@return cg.Polyline
@@ -135,11 +153,6 @@ function FieldworkCourse:getCenter()
     return self.center
 end
 
----@return cg.Polyline
-function FieldworkCourse:getUpDownRows()
-    return self.upDownRows
-end
-
 ---@return cg.Headland[]
 function FieldworkCourse:getHeadlands()
     return self.headlands
@@ -148,14 +161,19 @@ end
 ------------------------------------------------------------------------------------------------------------------------
 --- Up/down rows
 ------------------------------------------------------------------------------------------------------------------------
-function FieldworkCourse:generateUpDownRows()
-    local innerMostHeadlandPolygon = self.headlands[#self.headlands]:getPolygon()
-    self.center = cg.Center(self.context,
-            #self.headlands > 0 and innerMostHeadlandPolygon or self.boundary,
-            #self.headlands > 0,
-            #self.headlands > 0 and innerMostHeadlandPolygon[#innerMostHeadlandPolygon] or self.context.startLocation)
-    self.center:generate()
-    self.upDownRows = self.center:getPath()
+function FieldworkCourse:generateCenter()
+    -- if there are no headlands, or there are, but we start working in the middle, then use the
+    -- designated start location, otherwise the point where the innermost headland ends.
+    if #self.headlands == 0 then
+        self.center = cg.Center(self.context, self.boundary, false, self.context.startLocation)
+    else
+        local innerMostHeadlandPolygon = self.headlands[#self.headlands]:getPolygon()
+        self.center = cg.Center(self.context, innerMostHeadlandPolygon, true,
+                self.context.headlandFirst and
+                        innerMostHeadlandPolygon[#innerMostHeadlandPolygon] or
+                        self.context.startLocation)
+    end
+    return self.center:generate()
 end
 
 
@@ -168,11 +186,25 @@ function FieldworkCourse:generateHeadlandsAroundIslands()
     end
 end
 
+function FieldworkCourse:bypassIslands()
+    self:generateHeadlandsAroundIslands()
+    --- Remember the islands we circled already, as even if multiple tracks cross it, we only want to
+    --- circle once.
+    self.circledIslands = {}
+    for _, island in pairs(self.context.field:getIslands()) do
+        local startIx = 1
+        while startIx ~= nil do
+            self.circledIslands[island], startIx = self.headland:goAround(
+                    island:getHeadlands()[1]:getPolygon(), startIx, not self.circledIslands[island])
+        end
+    end
+end
 ------------------------------------------------------------------------------------------------------------------------
 --- Private functions
 ------------------------------------------------------------------------------------------------------------------------
 function FieldworkCourse:_setContext(context)
     self.context = context
+    self.context:log()
     self.nHeadlands = self.context.nHeadlands
     self.nHeadlandsWithRoundCorners = self.context.nHeadlandsWithRoundCorners
     ---@type cg.Polygon

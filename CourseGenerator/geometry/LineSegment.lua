@@ -169,7 +169,7 @@ function LineSegment:extendTo(other)
     return true
 end
 
---- Tidy up an two line segments to make sure they ends touch (but never intersect) and there are no gaps between them.
+--- Tidy up two line segments to make sure they ends touch (but never intersect) and there are no gaps between them.
 --- If segments intersect, the parts beyond the intersection point are clipped. 
 --- If there is a gap between them and preserveCorners is true, extend them until they meet.
 --- If preserveCorners is false, add a new segment filling the gap, unless the gap is less than minLength, in that

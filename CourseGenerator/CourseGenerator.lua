@@ -88,7 +88,7 @@ function NewCourseGenerator.addDebugPoint(v)
 end
 
 --- Add a point to the list of debug points we want to show on the test display
----@param v cg.Vector
+---@param p cg.Polyline
 function NewCourseGenerator.addDebugPolyline(p)
     if not NewCourseGenerator.debugPolylines then
         NewCourseGenerator.debugPolylines = {}

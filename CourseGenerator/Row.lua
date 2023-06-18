@@ -2,6 +2,7 @@
 --- innermost headland).
 local Row = CpObject(cg.Polyline)
 
+---@param vertices table[] array of tables with x, y (Vector, Vertex, State3D or just plain {x, y}
 function Row:init(vertices)
     self.logger = cg.Logger('Row', cg.Logger.level.debug)
     cg.Polyline.init(self, vertices)
@@ -14,7 +15,7 @@ function Row:createNext(offset)
     if offset >= 0 then
         return cg.Offset.generate(self, cg.Vector(0, 1), offset)
     else
-        return cg.Offset.generate(self, cg.Vector(0, -1), offset)
+        return cg.Offset.generate(self, cg.Vector(0, -1), -offset)
     end
 end
 

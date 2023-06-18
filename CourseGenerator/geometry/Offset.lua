@@ -29,6 +29,7 @@ function Offset.generate(polygon, offsetVector, targetOffset, currentOffset)
         return nil
     end
     polygon:ensureMinimumEdgeLength(cg.cMinEdgeLength)
+    polygon:calculateProperties()
     return Offset.generate(polygon, offsetVector, targetOffset, currentOffset)
 end
 

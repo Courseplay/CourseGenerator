@@ -70,6 +70,9 @@ end
 --- continue working on this block
 ---@param headland cg.Polygon the headland, distance between the startLocation and the entry is measured
 --- along this polygon.
+---@return cg.RowPattern.Entry the entry closest to the startLocation, as measured on the headland
+---@return number distance between the startLocation and the closest entry on the headland
+---@return cg.Polyline the path on the headland from the start location to the closest entry
 function Block:getClosestEntry(startLocation, headland)
     local startLocationVertex = headland:findClosestVertexToPoint(startLocation)
     local entries = self.rowPattern:getPossibleEntries(self.rows)
@@ -87,12 +90,16 @@ function Block:getClosestEntry(startLocation, headland)
     return closestEntry, dMin, shortestPath
 end
 
+--- Set the entry we will be using for this block and rearrange rows accordingly.
 function Block:setEntry(entry)
-    self.logger:debug('Setting entry %s', entry)
-    if entry.reverseRowOrder then
-        for i = 1, #self.rows / 2 do
-            self.rows[i], self.rows[#self.rows - i + 1] = self.rows[#self.rows - i + 1], self.rows[i]
+    local function reverseRows(rows)
+        for i = 1, #rows / 2 do
+            rows[i], rows[#rows - i + 1] = rows[#rows - i + 1], rows[i]
         end
+    end
+    self.logger:debug('Setting entry %s', entry)
+    if entry.reverseRowOrderBefore then
+        reverseRows(self.rows)
     end
     self.logger:debug('Generating row sequence for %d rows, pattern: %s', #self.rows, self.rowPattern)
     self.rowsInWorkSequence = {}
@@ -101,6 +108,9 @@ function Block:setEntry(entry)
             row:reverse()
         end
         table.insert(self.rowsInWorkSequence, row)
+    end
+    if entry.reverseRowOrderAfter then
+        reverseRows(self.rowsInWorkSequence)
     end
     local lastRow = self.rowsInWorkSequence[#self.rowsInWorkSequence]
     return lastRow[#lastRow]
