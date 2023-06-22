@@ -32,6 +32,7 @@ function Block:init(rowPattern, id)
 end
 
 function Block:addRow(row)
+    row:setSequenceNumber(#self.rows + 1)
     table.insert(self.rows, row)
 end
 
@@ -92,25 +93,22 @@ end
 
 --- Set the entry we will be using for this block and rearrange rows accordingly.
 function Block:setEntry(entry)
-    local function reverseRows(rows)
-        for i = 1, #rows / 2 do
-            rows[i], rows[#rows - i + 1] = rows[#rows - i + 1], rows[i]
-        end
-    end
     self.logger:debug('Setting entry %s', entry)
     if entry.reverseRowOrderBefore then
-        reverseRows(self.rows)
+        cg.reverseArray(self.rows)
     end
     self.logger:debug('Generating row sequence for %d rows, pattern: %s', #self.rows, self.rowPattern)
     self.rowsInWorkSequence = {}
     for i, row in self.rowPattern:iterator(self.rows) do
+        self.logger:debug('row %d is now at position %d', row:getSequenceNumber(), i)
+
         if i % 2 == (entry.reverseOddRows and 1 or 0) then
             row:reverse()
         end
         table.insert(self.rowsInWorkSequence, row)
     end
     if entry.reverseRowOrderAfter then
-        reverseRows(self.rowsInWorkSequence)
+        cg.reverseArray(self.rowsInWorkSequence)
     end
     local lastRow = self.rowsInWorkSequence[#self.rowsInWorkSequence]
     return lastRow[#lastRow]

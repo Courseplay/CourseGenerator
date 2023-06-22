@@ -4,12 +4,15 @@ local RowPattern = CpObject()
 
 RowPattern.ALTERNATING = 1
 RowPattern.SKIP = 2
+RowPattern.SPIRAL = 3
 
 function RowPattern.create(pattern, ...)
     if pattern == cg.RowPattern.ALTERNATING then
         return cg.RowPatternAlternating(...)
     elseif pattern == cg.RowPattern.SKIP then
         return cg.RowPatternSkip(...)
+    elseif pattern == cg.RowPattern.SPIRAL then
+        return cg.RowPatternSpiral(...)
     end
 end
 
@@ -17,21 +20,38 @@ function RowPattern:init()
     self.logger = cg.Logger('RowPattern')
 end
 
---- Iterate through rows in the sequence according to the pattern,
---- this default implementation returns them in their original order
----@param rows cg.Row[]
+--- Generate a sequence in which the rows must be worked on. It is just an array
+--- with the original row numbers, first element of the array is the index of the
+--- row the works starts with, last element is the index of the row to finish the
+--- work with.
+--- We assume that in iterator() we receive a contiguous list of rows.
+--- this default implementation leaves them in the original order (which is what
+--- the alternating pattern uses)
+function RowPattern:_generateSequence(nRows)
+    self.sequence = {}
+    for i = 1, nRows do
+        table.insert(self.sequence, i)
+    end
+    return self.sequence
+end
+
+--- Iterate through rows in the order they need to be worked on.
+---@param rows cg.Row[] rows to work on
 function RowPattern:iterator(rows)
     local i = 0
+    local sequence = self:_generateSequence(#rows)
     return function()
         i = i + 1
         if i <= #rows then
-            return i, rows[i]
+            return i, rows[sequence[i]]
         else
             return nil, nil
         end
     end
 end
 
+--- Iterate through rows in the sequence according to the generated sequence,
+---@param rows cg.Row[]
 function RowPattern:__tostring()
     return 'default'
 end
@@ -182,20 +202,109 @@ function RowPatternSkip:_generateSequence(nRows)
     return self.sequence
 end
 
---- Skipping one or more rows
----@param rows cg.Row[] rows to work on
-function RowPatternSkip:iterator(rows)
-    local i = 0
-    local sequence = self:_generateSequence(#rows)
-    return function()
-        i = i + 1
-        if i <= #rows then
-            return i, rows[sequence[i]]
-        else
-            return nil, nil
-        end
-    end
-end
-
 ---@class cg.RowPatternSkip : cg.RowPattern
 cg.RowPatternSkip = RowPatternSkip
+
+--- A spiral pattern, clockwise or not, starting from inside or outside
+local RowPatternSpiral = CpObject(RowPattern)
+
+---@param clockwise boolean direction to travel the spiral
+---@param fromInside boolean if true, start in the middle and continue outwards. If false,
+--- start from one of the outermost rows and continue inwards
+function RowPatternSpiral:init(clockwise, fromInside)
+    cg.RowPattern.init(self)
+    self.clockwise = clockwise
+    self.fromInside = fromInside
+end
+
+function RowPatternSpiral:__tostring()
+    return 'spiral'
+end
+
+function RowPatternSpiral:_generateSequence(nRows)
+    self.sequence = {}
+    -- sequence from outside
+    for i = 1, math.floor(nRows / 2) do
+        table.insert(self.sequence, i)
+        table.insert(self.sequence, nRows - i + 1)
+    end
+    if nRows % 2 ~= 0 then
+        table.insert(self.sequence, math.ceil(nRows / 2))
+    end
+    if self.fromInside then
+        -- flip if starting from the inside
+        cg.reverseArray(self.sequence)
+    end
+    return self.sequence
+end
+
+---@param rows cg.Row[]
+---@return cg.RowPattern.Entry[] list of entries usable for this pattern
+function RowPatternSpiral:getPossibleEntries(rows)
+    local sequence = self:_generateSequence(#rows)
+    local odd = #rows % 2 ~= 0
+    local firstRow = rows[sequence[1]]
+    local secondRow = rows[sequence[2]]
+    -- normalize rows, making sure the second (and all other) row are on the
+    -- right side of the first row when looking into the row's direction
+    -- this makes life easier later as reduces the number of combinations we need to think about.
+    if firstRow[1]:getExitEdge():isLeft(secondRow[1]) then
+        self.logger:debug('normalizing rows')
+        for _, row in ipairs(rows) do
+            row:reverse()
+        end
+    end
+    self.logger:debug('from inside %s, clockwise %s, odd %s', self.fromInside, self.clockwise, odd)
+    if self.fromInside then
+        if self.clockwise then
+            -- from inside, clockwise
+            if odd then
+                return {
+                    cg.RowPattern.Entry(firstRow[1], false, false, false)
+                }
+            else
+                return {
+                    cg.RowPattern.Entry(firstRow[#firstRow], true, false, true),
+                }
+            end
+        else
+            -- from inside, counterclockwise
+            if odd then
+                return {
+                    cg.RowPattern.Entry(firstRow[#firstRow], false, false, true)
+--                    cg.RowPattern.Entry(firstRow[1], false, false, false),
+                }
+            else
+                return {
+                    -- if there is only one row we can enter either end of it
+                    secondRow and cg.RowPattern.Entry(secondRow[1], true, false, false) or
+                            cg.RowPattern.Entry(firstRow[1], false, false, false),
+                }
+            end
+
+        end
+    else
+        if self.clockwise then
+            -- from outside, clockwise
+            return {
+                cg.RowPattern.Entry(firstRow[1], false, false, false),
+                -- if there is only one row we can enter either end of it
+                secondRow and cg.RowPattern.Entry(secondRow[#secondRow], true, false, true) or
+                        cg.RowPattern.Entry(firstRow[#firstRow], false, false, true),
+
+            }
+        else
+            -- from outside, counterclockwise
+            return {
+                cg.RowPattern.Entry(firstRow[#firstRow], false, false, true),
+                -- if there is only one row we can enter either end of it
+                secondRow and cg.RowPattern.Entry(secondRow[1], true, false, false) or
+                        cg.RowPattern.Entry(firstRow[1], false, false, false),
+            }
+        end
+    end
+    -- phuu. that was a long one ...
+end
+
+---@class cg.RowPatternSpiral : RowPattern
+cg.RowPatternSpiral = RowPatternSpiral

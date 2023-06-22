@@ -24,7 +24,7 @@ local nHeadlandsWithRoundCorners = AdjustableParameter(0, 'headlands with round 
 table.insert(parameters, nHeadlandsWithRoundCorners)
 local headlandClockwise = ToggleParameter('headlands clockwise', false, 'c')
 table.insert(parameters, headlandClockwise)
-local headlandFirst = ToggleParameter('headlands first', false, 'f')
+local headlandFirst = ToggleParameter('headlands first', true, 'f')
 table.insert(parameters, headlandFirst)
 -- number of headland passes around the field islands
 local nIslandHeadlandPasses = AdjustableParameter(1, 'island headlands', 'I', 'i', 1, 1, 10)
@@ -39,15 +39,20 @@ local autoRowAngle = ToggleParameter('auto row angle', true, '6')
 table.insert(parameters, autoRowAngle)
 local rowAngleDeg = AdjustableParameter(-90, 'row angle', 'A', 'a', 10, -90, 90)
 table.insert(parameters, rowAngleDeg)
-local rowPattern = AdjustableParameter(cg.RowPattern.ALTERNATING, 'row pattern', 'O', 'o', 1, cg.RowPattern.ALTERNATING, cg.RowPattern.SKIP)
+local rowPattern = AdjustableParameter(cg.RowPattern.SPIRAL, 'row pattern', 'O', 'o', 1, cg.RowPattern.ALTERNATING,
+        cg.RowPattern.SPIRAL)
 table.insert(parameters, rowPattern)
 local nRows = AdjustableParameter(1, 'rows to skip/rows per land', 'K', 'k', 1, 0, 10)
 table.insert(parameters, nRows)
 local leaveSkippedRowsUnworked = ToggleParameter('leave skipped rows unworked', false, 'u')
 table.insert(parameters, leaveSkippedRowsUnworked)
+local spiralClockwise = ToggleParameter('Spiral clockwise', true, '1')
+table.insert(parameters, spiralClockwise)
+local spiralFromInside = ToggleParameter('Spiral from inside', true, '!')
+table.insert(parameters, spiralFromInside)
 local evenRowDistribution = ToggleParameter('even row width', false, 'e')
 table.insert(parameters, evenRowDistribution)
-local useBaselineEdge = ToggleParameter('use base line edge', true, 'g')
+local useBaselineEdge = ToggleParameter('use base line edge', false, 'g')
 table.insert(parameters, useBaselineEdge)
 local showDebugInfo = ToggleParameter('show debug info', false, 'd', true)
 table.insert(parameters, showDebugInfo)
@@ -121,7 +126,11 @@ local function generate()
     if profilerEnabled then
         love.profiler.start()
     end
-    context:setRowPattern(cg.RowPattern.create(rowPattern:get(), nRows:get(), leaveSkippedRowsUnworked:get()))
+    if rowPattern:get() == cg.RowPattern.SPIRAL then
+        context:setRowPattern(cg.RowPattern.create(rowPattern:get(), spiralClockwise:get(), spiralFromInside:get()))
+    else
+        context:setRowPattern(cg.RowPattern.create(rowPattern:get(), nRows:get(), leaveSkippedRowsUnworked:get()))
+    end
     course = cg.FieldworkCourse(context)
     course:generate()
     if profilerEnabled then
@@ -277,8 +286,10 @@ end
 ---@param block cg.Block
 local function drawRows(block)
     for i, r in ipairs(block:getRows()) do
+        love.graphics.push()
         love.graphics.setColor(centerColor)
         love.graphics.line(r:getUnpackedVertices())
+        love.graphics.setPointSize(pointSize)
         for _, v in r:vertices() do
             drawVertex(v)
         end
@@ -288,7 +299,6 @@ local function drawRows(block)
         love.graphics.setColor(rowEndColor)
         love.graphics.points(r[#r].x, r[#r].y)
         local m = r:getMiddle()
-        love.graphics.push()
         love.graphics.setColor(centerFontColor)
         love.graphics.scale(1, -1)
         love.graphics.print(i, m.x, -m.y, 0, 1/scale)

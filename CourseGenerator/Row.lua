@@ -87,6 +87,16 @@ function Row:getMiddle()
         return self[math.floor(#self / 2)]
     end
 end
+
+--- Sequence number to keep the original row sequence for debug purposes
+function Row:setSequenceNumber(n)
+    self.sequenceNumber = n
+end
+
+function Row:getSequenceNumber()
+    return self.sequenceNumber
+end
+
 ------------------------------------------------------------------------------------------------------------------------
 --- Private functions
 ------------------------------------------------------------------------------------------------------------------------

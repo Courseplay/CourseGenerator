@@ -144,9 +144,7 @@ function Polyline:getShortestEdgeLength()
 end
 
 function Polyline:reverse()
-    for i = 1, #self / 2 do
-        self[i], self[#self - i + 1] = self[#self - i + 1], self[i]
-    end
+    cg.reverseArray(self)
     self:calculateProperties()
     return self
 end
