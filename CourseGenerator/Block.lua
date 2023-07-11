@@ -56,9 +56,6 @@ end
 ---@return cg.Row[] rows in the order they should be worked on. Every other row is reversed, so it starts at the
 --- end where the previous one ends.
 function Block:getRows()
-    if #self.rowsInWorkSequence ~= #self.rows then
-
-    end
     return self.rowsInWorkSequence
 end
 
@@ -73,7 +70,8 @@ end
 --- along this polygon.
 ---@return cg.RowPattern.Entry the entry closest to the startLocation, as measured on the headland
 ---@return number distance between the startLocation and the closest entry on the headland
----@return cg.Polyline the path on the headland from the start location to the closest entry
+---@return cg.Polyline the path on the headland from the start location to the closest entry. Always has at least
+--- one vertex
 function Block:getClosestEntry(startLocation, headland)
     local startLocationVertex = headland:findClosestVertexToPoint(startLocation)
     local entries = self.rowPattern:getPossibleEntries(self.rows)
@@ -101,7 +99,6 @@ function Block:setEntry(entry)
     self.rowsInWorkSequence = {}
     for i, row in self.rowPattern:iterator(self.rows) do
         self.logger:debug('row %d is now at position %d', row:getSequenceNumber(), i)
-
         if i % 2 == (entry.reverseOddRows and 1 or 0) then
             row:reverse()
         end
@@ -125,6 +122,17 @@ function Block:getPath()
         end
     end
     return self.path
+end
+
+---@param circle boolean when true, make a full circle on the other polygon, else just go around and continue
+function Block:bypassIslands(islandHeadlandPolygon, circle)
+    local thisIslandCircled = circle
+    for _, row in ipairs(self.rowsInWorkSequence) do
+        -- need vertices close enough so the smoothing in goAround() only starts close to the island
+        row:splitEdges(cg.cRowWaypointDistance)
+        thisIslandCircled = row:goAround(islandHeadlandPolygon, 1, not thisIslandCircled)
+    end
+    return thisIslandCircled
 end
 
 ---@class cg.Block

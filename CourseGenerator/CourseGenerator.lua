@@ -16,6 +16,8 @@ NewCourseGenerator.cMinEdgeLength = 0.5
 -- the previous vertex is less than this, the new vertex will be offset from the original
 -- edge so the result is an arc. Over this angle, we won't offset, so corners are kept sharp.
 NewCourseGenerator.cMaxDeltaAngleForMaxEdgeLength = math.rad(30)
+-- Approximate distance of waypoints on up/down rows
+NewCourseGenerator.cRowWaypointDistance = 10
 -- Maximum cross track error we tolerate when a vehicle follows a path. This is used to
 -- find corners which the vehicle can't make due to its turning radius without being more than
 -- cMaxCrossTrackError meters from the vertex in the corner.
@@ -30,6 +32,13 @@ NewCourseGenerator.headlandChangeMinRadius = 20
 NewCourseGenerator.headlandChangeMinDistanceToCorner = 20
 -- No headland change allowed if there is a corner behind within this distance in meters
 NewCourseGenerator.headlandChangeMinDistanceFromCorner = 10
+
+-- Just an arbitrary definition of an island 'too big': wider than s * work width, so
+-- at least x rows would have to drive around the island
+-- If an island is too big, we'll turn back into the next row when we reach the headland around the island,
+-- If an island is not too big, we make a circle around when the first row hits it and all subsequent rows
+-- will just simple drive around it. No rows intersecting the island will be split at the island.
+NewCourseGenerator.maxRowsToBypassIsland = 5
 
 -- when enabled, will print a lot of information
 NewCourseGenerator.traceEnabled = false

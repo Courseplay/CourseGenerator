@@ -1,3 +1,4 @@
+---@class FieldworkCourse
 local FieldworkCourse = CpObject()
 
 ---@param context cg.FieldworkContext
@@ -8,15 +9,21 @@ function FieldworkCourse:init(context)
 end
 
 function FieldworkCourse:generate()
+    self.logger:debug('### Generating headlands around the field perimeter ###')
     self:generateHeadlands()
     if self.context.headlandFirst then
+        self.logger:debug('### Connecting headlands from the outside towards the inside ###')
         self:connectHeadlandsFromOutside()
+        self.logger:debug('### Generating up/down rows ###')
         self:generateCenter()
     else
+        self.logger:debug('### Generating up/down rows ###')
         local endOfLastRow = self:generateCenter()
+        self.logger:debug('### Connecting headlands from the inside towards the outside ###')
         self:connectHeadlandsFromInside(endOfLastRow)
     end
     if self.context.bypassIslands then
+        self.logger:debug('### Bypass small islands ###')
         self:bypassIslands()
     end
     self.headland:calculateProperties()
@@ -181,8 +188,14 @@ end
 --- Islands
 ------------------------------------------------------------------------------------------------------------------------
 function FieldworkCourse:generateHeadlandsAroundIslands()
+    self.bigIslands, self.smallIslands = {}, {}
     for _, island in pairs(self.context.field:getIslands()) do
         island:generateHeadlands(self.context)
+        if island:isTooBigToBypass(self.context.workingWidth) then
+            table.insert(self.bigIslands, island)
+        else
+            table.insert(self.smallIslands, island)
+        end
     end
 end
 
@@ -194,9 +207,11 @@ function FieldworkCourse:bypassIslands()
     for _, island in pairs(self.context.field:getIslands()) do
         local startIx = 1
         while startIx ~= nil do
+            self.logger:debug('Bypassing island %d', island:getId())
             self.circledIslands[island], startIx = self.headland:goAround(
                     island:getHeadlands()[1]:getPolygon(), startIx, not self.circledIslands[island])
         end
+        self.center:bypassIslands(island:getHeadlands()[1]:getPolygon(), not self.circledIslands[island])
     end
 end
 ------------------------------------------------------------------------------------------------------------------------

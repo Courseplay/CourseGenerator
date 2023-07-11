@@ -5,12 +5,13 @@
 ---@class ListParameter
 ListParameter = CpObject()
 
-function ListParameter:init(current, name, up, down, values)
+function ListParameter:init(current, name, up, down, values, names)
 	self.current = current
 	self.name = name
 	self.up = up
 	self.down = down
 	self.values = values
+	self.names = names
 end
 
 function ListParameter:onKey(key, callback)
@@ -29,5 +30,5 @@ function ListParameter:get()
 end
 
 function ListParameter:__tostring()
-	return string.format('%s (%s/%s): %s', self.name, self.down, self.up, self:get())
+	return string.format('%s (%s/%s): %s', self.name, self.down, self.up, self.names[self.current])
 end

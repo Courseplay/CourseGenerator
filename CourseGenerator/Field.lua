@@ -4,6 +4,7 @@ local Field = CpObject()
 
 function Field:init(id)
 	self.id = id
+	self.logger = cg.Logger('Field ' .. id)
 	---@type cg.Polygon
 	self.boundary = cg.Polygon()
 	---@type cg.Polygon
@@ -83,6 +84,9 @@ function Field:setupIslands()
 	local islandPerimeterPoints = cg.Island.getIslandPerimeterPoints(self.islandPoints)
 	-- remember them for debug
 	self.islandPerimeterPoints = {}
+	if (#islandPerimeterPoints) > 0 then
+		self.logger:debug('setting up islands from %d points', #islandPerimeterPoints)
+	end
 	for _, p in ipairs(islandPerimeterPoints) do table.insert(self.islandPerimeterPoints, p:clone()) end
 	local islandId = 1
 	while #islandPerimeterPoints > 0 do

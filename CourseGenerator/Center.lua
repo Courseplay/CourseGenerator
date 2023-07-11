@@ -14,7 +14,11 @@ function Center:init(context, boundary, hasHeadland, startLocation)
     self.context = context
     self.hasHeadland = hasHeadland
     self.startLocation = startLocation
+    -- All the blocks we divided the center into
     self.blocks = {}
+    -- For each block, there is a path leading to it either from the previous block or from the headland.
+    -- The connecting path always has at least one vertex. A path with just one vertex can safely be skipped
+    -- as that vertex overlaps with the first vertex of the block
     self.connectingPaths = {}
     self.path = cg.Polyline()
 end
@@ -32,7 +36,10 @@ end
 --- The list of paths connecting the blocks of the field center. The first entry is
 --- the path from the end of the headland to the first block, the second entry is the path
 --- from the exit of the first block to the entry of the second, and so on.
----@return cg.Polyline[]
+--- There is always a connecting path for each block. The connecting path always has at
+--- least one vertex. A path with just one vertex can safely be skipped as that vertex
+--- overlaps with the first vertex of the block
+------@return cg.Polyline[]
 function Center:getConnectingPaths()
     return self.connectingPaths
 end
@@ -69,9 +76,19 @@ function Center:generate()
         doneBlockIds[closestBlock.id] = true
         table.insert(self.blocks, closestBlock)
         table.insert(self.connectingPaths, pathToClosestEntry)
+        self.logger:debug('Block %d, connecting path %d with %d waypoints',
+                #self.blocks, #self.connectingPaths, #pathToClosestEntry)
     end
     self.logger:debug('Found %d block(s), %d connecting path(s).', #self.blocks, #self.connectingPaths)
     return currentLocation
+end
+
+---@param circle boolean when true, make a full circle on the other polygon, else just go around and continue
+function Center:bypassIslands(islandHeadlandPolygon, circle)
+    local thisIslandCircled = circle
+    for _, block in ipairs(self.blocks) do
+        thisIslandCircled = block:bypassIslands(islandHeadlandPolygon, not thisIslandCircled)
+    end
 end
 
 ------------------------------------------------------------------------------------------------------------------------

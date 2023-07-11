@@ -1,5 +1,6 @@
 --- An up/down row (swath) in the middle of the field (the area surrounded by the field boundary or the
 --- innermost headland).
+---@class Row : Polyline
 local Row = CpObject(cg.Polyline)
 
 ---@param vertices table[] array of tables with x, y (Vector, Vertex, State3D or just plain {x, y}
@@ -74,7 +75,8 @@ function Row:split(boundary)
     return sections
 end
 
---- Get the coordinates in the middle of the row, for instance to display the row number.
+--- Get the coordinates in the middle of the row, for instance to display the row number. Assumes
+--- that the vertices are approximately evenly distributed
 ---@return cg.Vector coordinates of the middle of the row
 function Row:getMiddle()
     if #self % 2 == 0 then
@@ -83,7 +85,7 @@ function Row:getMiddle()
         local right = self[#self / 2 + 1]
         return (left + right) / 2
     else
-        -- odd number of vertices, return the middle one\
+        -- odd number of vertices, return the middle one
         return self[math.floor(#self / 2)]
     end
 end

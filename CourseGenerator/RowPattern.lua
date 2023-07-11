@@ -5,6 +5,7 @@ local RowPattern = CpObject()
 RowPattern.ALTERNATING = 1
 RowPattern.SKIP = 2
 RowPattern.SPIRAL = 3
+RowPattern.LANDS = 4
 
 function RowPattern.create(pattern, ...)
     if pattern == cg.RowPattern.ALTERNATING then
@@ -13,6 +14,8 @@ function RowPattern.create(pattern, ...)
         return cg.RowPatternSkip(...)
     elseif pattern == cg.RowPattern.SPIRAL then
         return cg.RowPatternSpiral(...)
+    elseif pattern == cg.RowPattern.LANDS then
+        return cg.RowPatternLands(...)
     end
 end
 
@@ -308,3 +311,122 @@ end
 
 ---@class cg.RowPatternSpiral : RowPattern
 cg.RowPatternSpiral = RowPatternSpiral
+
+--- A lands pattern, clockwise or not, dividing the field into "lands" which are
+--- individually being worked on in a fashion that the pipe of a combine is over
+--- harvested land most of the time
+local RowPatternLands = CpObject(RowPattern)
+
+---@param clockwise boolean direction to travel the lands, clockwise will keep a pipe on the
+--- left side out of the fruit, counterclockwise is for pipe on the right size
+---@param nRowsInLands boolean number of rows in each "land"
+function RowPatternLands:init(clockwise, nRowsInLands)
+    cg.RowPattern.init(self)
+    self.clockwise = clockwise
+    self.nRowsInLands = nRowsInLands
+end
+
+function RowPatternLands:__tostring()
+    return 'lands'
+end
+
+function RowPatternLands:_generateSequence(nRows)
+    self.sequence = {}
+    -- I know this could be generated but it is more readable and easy to visualize this way.
+    local rowOrderInLandsCounterclockwise =
+    {
+        {1},
+        {2, 1},
+        {2, 3, 1},
+        {2, 3, 1, 4},
+        {3, 4, 2, 5, 1},
+        {3, 4, 2, 5, 1, 6},
+        {4, 5, 3, 6, 2, 7, 1},
+        {4, 5, 3, 6, 2, 7, 1, 8},
+        {5, 6, 4, 7, 3, 8, 2, 9, 1},
+        {5, 6, 4, 7, 3, 8, 2, 9, 1, 10},
+        {6, 7, 5, 8, 4, 9, 3, 10, 2, 11, 1},
+        {6, 7, 5, 8, 4, 9, 3, 10, 2, 11, 1, 12},
+        {7, 8, 6, 9, 5, 10, 4, 11, 3, 12, 2, 13, 1},
+        {7, 8, 6, 9, 5, 10, 4, 11, 3, 12, 2, 13, 1, 14},
+        {8, 9, 7, 10, 6, 11, 5, 12, 4, 13, 3, 14, 2, 15, 1},
+        {8, 9, 7, 10, 6, 11, 5, 12, 4, 13, 3, 14, 2, 15, 1, 16},
+        {9, 10, 8, 11, 7, 12, 6, 13, 5, 14, 4, 15, 3, 16, 2, 17, 1},
+        {9, 10, 8, 11, 7, 12, 6, 13, 5, 14, 4, 15, 3, 16, 2, 17, 1, 18},
+        {10, 11, 9, 12, 8, 13, 7, 14, 6, 15, 5, 16, 4, 17, 3 , 18, 2, 19, 1},
+        {10, 11, 9, 12, 8, 13, 7, 14, 6, 15, 5, 16, 4, 17, 3 , 18, 2, 19, 1, 20},
+        {11, 12, 10, 13, 9, 14, 8, 15, 7, 16, 6, 17, 5, 18, 4, 19, 3, 20, 2, 21, 1},
+        {11, 12, 10, 13, 9, 14, 8, 15, 7, 16, 6, 17, 5, 18, 4, 19, 3, 20, 2, 21, 1, 22},
+        {12, 13, 11, 14, 10, 15, 9, 16, 8, 17, 7, 18, 6, 19, 5, 20, 4, 21, 3, 22, 2, 23, 1},
+        {12, 13, 11, 14, 10, 15, 9, 16, 8, 17, 7, 18, 6, 19, 5, 20, 4, 21, 3, 22, 2, 23, 1, 24}
+    }
+    local rowOrderInLandsClockwise =
+    {
+        {1},
+        {1, 2},
+        {2, 1, 3},
+        {3, 2, 4, 1},
+        {3, 2, 4, 1, 5},
+        {4, 3, 5, 2, 6, 1},
+        {4, 3, 5, 2, 6, 1, 7},
+        {5, 4, 6, 3, 7, 2, 8, 1},
+        {5, 4, 6, 3, 7, 2, 8, 1, 9},
+        {6, 5, 7, 4, 8, 3, 9, 2, 10, 1},
+        {6, 5, 7, 4, 8, 3, 9, 2, 10, 1, 11},
+        {7, 6, 8, 5, 9, 4, 10, 3, 11, 2, 12, 1},
+        {7, 6, 8, 5, 9, 4, 10, 3, 11, 2, 12, 1, 13},
+        {8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1},
+        {8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15},
+        {9, 8, 10, 7, 11, 6, 12, 5, 13, 4, 14, 3, 15, 2, 16, 1},
+        {9, 8, 10, 7, 11, 6, 12, 5, 13, 4, 14, 3, 15, 2, 16, 1, 17},
+        {10, 9, 11, 8, 12, 7, 13, 6, 14, 5, 15, 4, 16, 3, 17, 2, 18, 1},
+        {10, 9, 11, 8, 12, 7, 13, 6, 14, 5, 15, 4, 16, 3, 17, 2, 18, 1, 19},
+        {11, 10, 12, 9, 13, 8, 14, 7, 15, 6, 16, 5, 17, 4, 18, 3, 19, 2, 20, 1},
+        {11, 10, 12, 9, 13, 8, 14, 7, 15, 6, 16, 5, 17, 4, 18, 3, 19, 2, 20, 1, 21},
+        {12, 11, 13, 10, 14, 9, 15, 8, 16, 7, 17, 6, 18, 5, 19, 4, 20, 3, 21, 2, 22, 1},
+        {12, 11, 13, 10, 14, 9, 15, 8, 16, 7, 17, 6, 18, 5, 19, 4, 20, 3, 21, 2, 22, 1, 23},
+        {13, 12, 14, 11, 15, 10, 16, 9, 17, 8, 18, 7, 19, 6, 20, 5, 21, 4, 22, 3, 23, 2, 24, 1}
+    }
+
+    -- if we have an even number of rows per land, then we'll finish the land on the same side where we
+    -- started it and can work on the subsequent land in the same order
+    local rowOrderInLands = self.clockwise and rowOrderInLandsClockwise or rowOrderInLandsCounterclockwise
+    -- if we have an odd number of rows per land, we'll end up on the other side and need to use an alternate
+    -- order to keep the pipe out of the fruit
+    local rowOrderInLandsAlternate = self.clockwise and rowOrderInLandsCounterclockwise or rowOrderInLandsClockwise
+
+    for i = 0, math.floor(nRows / self.nRowsInLands) - 1 do
+        for _, j in ipairs(rowOrderInLands[self.nRowsInLands]) do
+            table.insert(self.sequence, i * self.nRowsInLands + j)
+        end
+        if self.nRowsInLands % 2 ~= 0 then
+            -- flip the pattern for the next block if we have an odd number of rows per land
+            rowOrderInLandsAlternate, rowOrderInLands = rowOrderInLands, rowOrderInLandsAlternate
+        end
+    end
+
+    local lastRow = self.nRowsInLands * math.floor(nRows / self.nRowsInLands)
+    local nRowsLeft = nRows % self.nRowsInLands
+
+    if nRowsLeft > 0 then
+        for _, j in ipairs(rowOrderInLands[nRowsLeft]) do
+            table.insert(self.sequence, lastRow + j)
+        end
+    end
+    return self.sequence
+end
+
+---@param rows cg.Row[]
+---@return cg.RowPattern.Entry[] list of entries usable for this pattern
+function RowPatternLands:getPossibleEntries(rows)
+    local sequence = self:_generateSequence(#rows)
+    local firstRow = rows[sequence[1]]
+    local lastRow = rows[#rows - sequence[1] + 1]
+    return {
+        cg.RowPattern.Entry(firstRow[1], false, false, false),
+        cg.RowPattern.Entry(lastRow[#lastRow], true, false, true)
+    }
+end
+
+---@class cg.RowPatternLands : RowPattern
+cg.RowPatternLands = RowPatternLands

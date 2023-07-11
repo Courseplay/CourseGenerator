@@ -230,6 +230,9 @@ end
 --- If two vertices are further than maximumLength apart, add a vertex between them. If the
 --- delta angle at the first vertex is less than maxDeltaAngleForOffset, also offset the new vertex
 --- to the left/right from the edge in an effort trying to follow a curve.
+--- Use this to fix a polyline with many vertices where some edges may be slightly longer than the
+--- maximum. Use splitEdges() instead if you have just a few (as little as 2) vertices and
+--- need a vertex at every given distance
 function Polyline:ensureMaximumEdgeLength(maximumLength, maxDeltaAngleForOffset)
     local i = 1
     while i <= self:fwdIterationLimit() do
@@ -250,6 +253,36 @@ function Polyline:ensureMaximumEdgeLength(maximumLength, maxDeltaAngleForOffset)
         end
     end
 end
+
+--- Use splitEdges() if you have just a few (as little as 2) vertices and
+--- need a vertex at every given distance
+---@param maximumLength number if an edge is longer than maximumLength, split it into multiple
+--- edges so none of the resulting edges will be longer than maximumLength
+function Polyline:splitEdges(maximumLength)
+    local i = 1
+    while i <= self:fwdIterationLimit() do
+        local exitEdge = cg.LineSegment.fromVectors(self:at(i), self:at(i + 1))
+        local totalLength = exitEdge:getLength()
+        if totalLength > maximumLength then
+            -- edge too long, will replace it with nEdges number of shorter edges
+            local nEdges = math.floor(totalLength / maximumLength) + 1
+            -- the length of each shorter edge is
+            local length = totalLength / nEdges
+            -- adjust original edge's length
+            exitEdge:setLength(length)
+            -- add new edges
+            local e = exitEdge:clone()
+            for _ = 1, nEdges - 1 do
+                e:setBase(e:getEnd())
+                table.insert(self, i + 1, cg.Vertex.fromVector(e:getBase()))
+                i = i + 1
+            end
+        end
+        i = i + 1
+    end
+    self:calculateProperties()
+end
+
 
 ---@param offsetVector cg.Vector offset to move the edges, relative to the edge's direction
 ---@return cg.LineSegment[] an array of edges parallel to the existing ones, same length
@@ -393,6 +426,7 @@ end
 --- between those points with the vertices of the other polyline or polygon.
 ---@param other Polyline
 ---@param startIx number index of the vertex we want to start looking for intersections.
+---@param circle boolean when true, make a full circle on the other polygon, else just go around and continue
 ---@return boolean, number true if there were an intersection and we actually went around, index of last vertex
 --- after the bypass
 function Polyline:goAround(other, startIx, circle)

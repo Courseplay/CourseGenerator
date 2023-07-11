@@ -33,22 +33,32 @@ local fieldCornerRadius = AdjustableParameter(6, 'field corner radius', 'F', 'f'
 table.insert(parameters, fieldCornerRadius)
 local sharpenCorners = ToggleParameter('sharpen corners', true, 's')
 table.insert(parameters, sharpenCorners)
-local bypassIslands = ToggleParameter('bypass islands', false, 'b')
+local bypassIslands = ToggleParameter('bypass islands', true, 'b')
 table.insert(parameters, bypassIslands)
 local autoRowAngle = ToggleParameter('auto row angle', true, '6')
 table.insert(parameters, autoRowAngle)
 local rowAngleDeg = AdjustableParameter(-90, 'row angle', 'A', 'a', 10, -90, 90)
 table.insert(parameters, rowAngleDeg)
-local rowPattern = AdjustableParameter(cg.RowPattern.SPIRAL, 'row pattern', 'O', 'o', 1, cg.RowPattern.ALTERNATING,
-        cg.RowPattern.SPIRAL)
+local rowPattern = ListParameter(cg.RowPattern.LANDS, 'row pattern', 'O', 'o',
+        { cg.RowPattern.ALTERNATING,
+          cg.RowPattern.SKIP,
+          cg.RowPattern.SPIRAL,
+          cg.RowPattern.LANDS
+        },
+        {
+            'alternating',
+            'skip',
+            'spiral',
+            'lands'
+        })
 table.insert(parameters, rowPattern)
-local nRows = AdjustableParameter(1, 'rows to skip/rows per land', 'K', 'k', 1, 0, 10)
+local nRows = AdjustableParameter(4, 'rows to skip/rows per land', 'K', 'k', 1, 0, 10)
 table.insert(parameters, nRows)
 local leaveSkippedRowsUnworked = ToggleParameter('leave skipped rows unworked', false, 'u')
 table.insert(parameters, leaveSkippedRowsUnworked)
-local spiralClockwise = ToggleParameter('Spiral clockwise', true, '1')
-table.insert(parameters, spiralClockwise)
-local spiralFromInside = ToggleParameter('Spiral from inside', true, '!')
+local centerClockwise = ToggleParameter('spiral/lands clockwise', true, '1')
+table.insert(parameters, centerClockwise)
+local spiralFromInside = ToggleParameter('spiral from inside', true, '!')
 table.insert(parameters, spiralFromInside)
 local evenRowDistribution = ToggleParameter('even row width', false, 'e')
 table.insert(parameters, evenRowDistribution)
@@ -56,7 +66,6 @@ local useBaselineEdge = ToggleParameter('use base line edge', false, 'g')
 table.insert(parameters, useBaselineEdge)
 local showDebugInfo = ToggleParameter('show debug info', false, 'd', true)
 table.insert(parameters, showDebugInfo)
-
 
 local profilerEnabled = false
 local fileName = ''
@@ -127,7 +136,9 @@ local function generate()
         love.profiler.start()
     end
     if rowPattern:get() == cg.RowPattern.SPIRAL then
-        context:setRowPattern(cg.RowPattern.create(rowPattern:get(), spiralClockwise:get(), spiralFromInside:get()))
+        context:setRowPattern(cg.RowPattern.create(rowPattern:get(), centerClockwise:get(), spiralFromInside:get()))
+    elseif rowPattern:get() == cg.RowPattern.LANDS then
+        context:setRowPattern(cg.RowPattern.create(rowPattern:get(), centerClockwise:get(), nRows:get()))
     else
         context:setRowPattern(cg.RowPattern.create(rowPattern:get(), nRows:get(), leaveSkippedRowsUnworked:get()))
     end
@@ -187,7 +198,7 @@ function love.load(arg)
     contextTransform = love.math.newTransform(10, 10, 0, 1, 1, 0, 0)
     love.graphics.setPointSize(pointSize)
     love.graphics.setLineWidth(lineWidth)
-    love.window.setMode(windowWidth, windowHeight, {highdpi = true})
+    love.window.setMode(windowWidth, windowHeight, { highdpi = true })
     love.window.setTitle(string.format('Course Generator - %s - SelectedField %d', fileName, selectedField:getId()))
     generate()
 end
@@ -279,7 +290,7 @@ local function drawText(x, y, color, textScale, ...)
     love.graphics.push()
     love.graphics.setColor(color)
     love.graphics.scale(1, -1)
-    love.graphics.print(string.format(...), x, -y, 0, (textScale or 1)/scale)
+    love.graphics.print(string.format(...), x, -y, 0, (textScale or 1) / scale)
     love.graphics.pop()
 end
 
@@ -301,7 +312,7 @@ local function drawRows(block)
         local m = r:getMiddle()
         love.graphics.setColor(centerFontColor)
         love.graphics.scale(1, -1)
-        love.graphics.print(i, m.x, -m.y, 0, 1/scale)
+        love.graphics.print(i, m.x, -m.y, 0, 1 / scale)
         love.graphics.pop()
     end
 end
@@ -310,15 +321,21 @@ end
 local function drawConnectingPaths(center)
     for i, p in ipairs(center:getConnectingPaths()) do
         love.graphics.setLineWidth(10 * lineWidth)
-        love.graphics.setColor(connectingPathColor)
-        if #p > 1 then
-            love.graphics.line(p:getUnpackedVertices())
+        if #p > 0 then
+            love.graphics.setColor(connectingPathColor)
+            if #p > 1 then
+                love.graphics.line(p:getUnpackedVertices())
+            end
             drawText(p[1].x, p[1].y, connectingPathFontColor, 1, '%d - start', i)
             drawText(p[#p].x, p[#p].y, connectingPathFontColor, 1, '%d - end', i)
+            love.graphics.setPointSize(pointSize * 6)
+            love.graphics.setColor(0, 1, 0, 0.5)
+            love.graphics.points(p[1].x, p[1].y)
+            love.graphics.setColor(1, 0, 0, 0.5)
+            love.graphics.points(p[#p].x, p[#p].y)
         end
     end
 end
-
 
 local function drawBlocks()
     for ib, b in ipairs(course:getCenter():getBlocks()) do
@@ -329,7 +346,7 @@ local function drawBlocks()
         love.graphics.push()
         love.graphics.setColor(blockFontColor)
         love.graphics.scale(1, -1)
-        love.graphics.print(string.format('%d (%d)', ib, b.id), blockCenter.x, -blockCenter.y, 0, 1/scale)
+        love.graphics.print(string.format('%d (%d)', ib, b.id), blockCenter.x, -blockCenter.y, 0, 1 / scale)
         love.graphics.pop()
         drawRows(b)
     end
@@ -383,8 +400,8 @@ local function drawFields()
 end
 
 local function drawHeadlands()
-    drawConnectingPaths(course:getCenter())
     drawHeadland(course:getHeadland(), courseColor)
+    drawConnectingPaths(course:getCenter())
 end
 
 -- Draw a tooltip with the vertex' details
@@ -470,7 +487,6 @@ local function drawDebugPolylines()
         love.graphics.pop()
     end
 end
-
 
 function love.draw()
     drawGraphics()

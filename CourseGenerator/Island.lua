@@ -16,15 +16,18 @@ function Island:init(id, perimeterPoints)
     self:createFromPerimeterPoints(perimeterPoints)
 end
 
+function Island:getId()
+    return self.id
+end
 ------------------------------------------------------------------------------------------------------------------------
 -- Functions to create an island as a polygon from a bunch of points (raster -> vector)
 ------------------------------------------------------------------------------------------------------------------------
 local function getNumberOfIslandNeighbors(point, islandPoints, gridSpacing)
     local nNeighbors = 0
     for _, v in ipairs(islandPoints) do
-        local d = (point - v):length()
+        local dSquare = cg.Vector.getDistanceSquared(point, v)
         -- 1.5 is around sqrt( 2 ), to find diagonal neighbors too, > 0 to ignore own point
-        if d > 0 and d < 1.5 * gridSpacing then
+        if dSquare > 0 and dSquare < 2.1 * gridSpacing then
             nNeighbors = nNeighbors + 1
         end
     end
@@ -100,6 +103,15 @@ end
 
 function Island:getHeadlands()
     return self.headlands
+end
+
+--- Is this island too big to just bypass? If so, we can't just drive
+-- around it, we actually have to end and turn the up/down rows
+function Island:isTooBigToBypass(width)
+    local area = self.headlands[1]:getPolygon():getArea() and self.headlands[1]:getPolygon():getArea() or 0
+    local isTooBig = area > NewCourseGenerator.maxRowsToBypassIsland * width * NewCourseGenerator.maxRowsToBypassIsland * width
+    self.logger:debug( "isTooBigToBypass = %s (area = %.0f, width = %.1f", tostring( isTooBig ), area, width )
+    return isTooBig
 end
 
 ------------------------------------------------------------------------------------------------------------------------

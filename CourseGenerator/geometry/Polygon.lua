@@ -352,7 +352,7 @@ function Polygon:removeLoops(baseClockwise, startIx)
 end
 
 --- Get the shortest path between the vertices fromIx and toIx
----@return Polyline
+---@return Polyline always has at least one vertex
 function Polygon:getShortestPathBetween(fromIx, toIx)
     local forward, backward = self:_getPathBetween(fromIx, toIx)
     if forward:getLength() <= backward:getLength() then
