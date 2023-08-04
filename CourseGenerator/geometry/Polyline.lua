@@ -441,11 +441,11 @@ function Polyline:goAround(other, startIx, circle)
             self.logger:debug('path A: %.1f, path B: %.1f', pathA:getLength(), pathB:getLength())
             if circle then
                 path = shortPath:clone()
-                path:_setAttributes(nil, nil, cg.WaypointAttributes.setIslandBypass, true)
+                path:setAttributes(nil, nil, cg.WaypointAttributes.setIslandBypass, true)
                 longPath:reverse()
                 path:appendMany(longPath)
                 -- mark this roundtrip as island bypass
-                path:_setAttributes(#path - #longPath, #path, cg.WaypointAttributes.setIslandBypass, true)
+                path:setAttributes(#path - #longPath, #path, cg.WaypointAttributes.setIslandBypass, true)
                 path:appendMany(shortPath)
                 self.logger:debug('Circled around, %d waypoints', #path)
             else
@@ -602,11 +602,11 @@ function Polyline:_getPathBetween(fromIx, toIx)
 end
 
 --- Set an attribute for a series of vertices
----@param first number index of first vertex to set the attribute
----@param last number index of last vertex
+---@param first number | nil index of first vertex to set the attribute
+---@param last number | nil index of last vertex
 ---@param setter cg.WaypointAttributes function to call on each vertex' attributes
 ---@param ... any arguments for setter
-function Polyline:_setAttributes(first, last, setter, ...)
+function Polyline:setAttributes(first, last, setter, ...)
     first = first or 1
     last = last or #self
     for i = first, last do

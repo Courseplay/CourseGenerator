@@ -8,6 +8,7 @@ local FieldworkContext = CpObject()
 ---@param nHeadlands number of headland passes
 function FieldworkContext:init(field, workingWidth, turningRadius, nHeadlands)
     self.field = field
+    self.startLocation = cg.Vector(0, 0)
     self.workingWidth = workingWidth
     self.turningRadius = turningRadius
 
@@ -59,43 +60,51 @@ end
 ---@param fieldCornerRadius number if a field has a corner under this radius, we'll sharpen it
 function FieldworkContext:setFieldCornerRadius(fieldCornerRadius)
     self.fieldCornerRadius = fieldCornerRadius
+    return self
 end
 
 ---@param bypass boolean if true, the course will go around islands
 function FieldworkContext:setBypassIslands(bypass)
     self.bypassIslands = bypass
+    return self
 end
 
 ---@param sharpen boolean if true, sharpen the corners of the headlands which are not rounded
 function FieldworkContext:setSharpenCorners(sharpen)
     self.sharpenCorners = sharpen
+    return self
 end
 
 ---@param clockwise boolean generate headlands in the clockwise direction if true, counterclockwise if false
 function FieldworkContext:setHeadlandClockwise(clockwise)
     self.headlandClockwise = clockwise
+    return self
 end
 
 ---@param headlandFirst boolean start working on the headland first and switch to the center when done (harvesting),
 --- If false, start on the up/down rows in the middle and do the headlands last (for instance sowing)
 function FieldworkContext:setHeadlandFirst(headlandFirst)
     self.headlandFirst = headlandFirst
+    return self
 end
 
 --- The (approximate) location where we want to start working on the headland when progressing inwards.
 function FieldworkContext:setStartLocation(x, y)
     ---@type cg.Vector
     self.startLocation = cg.Vector(x, y)
+    return self
 end
 
 --- Should the angle of rows determined automatically?
 function FieldworkContext:setAutoRowAngle(auto)
     self.autoRowAngle = auto
+    return self
 end
 
 --- Angle of the up/down rows when not automatically selected
 function FieldworkContext:setRowAngle(rowAngle)
     self.rowAngle = rowAngle
+    return self
 end
 
 --- Distribute rows evenly, so the distance between them may be less than the working width,
@@ -103,6 +112,7 @@ end
 --- the working width
 function FieldworkContext:setEvenRowDistribution(evenRowDistribution)
     self.evenRowDistribution = evenRowDistribution
+    return self
 end
 
 --- Select the edge of the field boundary which we will use as a baseline for up/down rows,
@@ -113,18 +123,21 @@ end
 --- Making the up/down rows parallel with such an edge may yield better results.
 function FieldworkContext:setBaselineEdge(x, y)
     self.baselineEdge = cg.Vector(x, y)
+    return self
 end
 
 --- Instead of generating straight up/down rows, use a baseline (set by setBaselineEdge()) and make
 --- all rows follow that baseline.
 function FieldworkContext:setUseBaselineEdge(use)
     self.useBaselineEdge = use
+    return self
 end
 
 --- What pattern to use to determine in which order the rows within a block are worked on.
 ---@param rowPattern cg.RowPattern
 function FieldworkContext:setRowPattern(rowPattern)
     self.rowPattern = rowPattern
+    return self
 end
 
 ---@class cg.FieldworkContext

@@ -22,8 +22,6 @@ function Polygon:rebase(base, reverse)
     local temp = {}
     for i = 0, #self - 1 do
         table.insert(temp, self:at(i + base))
-        -- preserve old index for debugs
-        temp[#temp].oldIx = temp[#temp].ix
     end
 
     for i = 1, #self do

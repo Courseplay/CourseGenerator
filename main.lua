@@ -143,7 +143,6 @@ local function generate()
         context:setRowPattern(cg.RowPattern.create(rowPattern:get(), nRows:get(), leaveSkippedRowsUnworked:get()))
     end
     course = cg.FieldworkCourse(context)
-    course:generate()
     if profilerEnabled then
         print(love.profiler.report(40))
         love.profiler.reset()
@@ -225,7 +224,7 @@ end
 
 local function findVertexForPosition(polygon, rx, ry)
     for _, v in polygon:vertices() do
-        if math.abs(v.x - rx) < 0.3 and math.abs(v.y - ry) < 0.3 then
+        if math.abs(v.x - rx) < 0.5 and math.abs(v.y - ry) < 0.5 then
             return v
         end
     end
@@ -234,10 +233,7 @@ end
 
 local function findCurrentVertex(sx, sy)
     local x, y = screenToWorld(sx, sy)
-    local v = findVertexForPosition(course:getHeadland(), x, y)
-    if v then
-        return v
-    end
+    return findVertexForPosition(course:getPath(), x, y)
 end
 
 local function selectFieldUnderCursor()
@@ -268,13 +264,12 @@ local function drawVertex(v)
     love.graphics.points(v.x, v.y)
 end
 
-local function drawHeadland(h, color)
-    if #h > 1 then
+local function drawPath(p, color)
+    if #p > 1 then
         love.graphics.setLineWidth(lineWidth)
         love.graphics.setColor(color)
-        love.graphics.line(h:getUnpackedVertices())
-        --love.graphics.polygon('line', h:getUnpackedVertices())
-        for _, v in h:vertices() do
+        love.graphics.line(p:getUnpackedVertices())
+        for _, v in p:vertices() do
             drawVertex(v)
         end
     end
@@ -299,11 +294,6 @@ local function drawRows(block)
     for i, r in ipairs(block:getRows()) do
         love.graphics.push()
         love.graphics.setColor(centerColor)
-        love.graphics.line(r:getUnpackedVertices())
-        love.graphics.setPointSize(pointSize)
-        for _, v in r:vertices() do
-            drawVertex(v)
-        end
         love.graphics.setPointSize(pointSize * 1.5)
         love.graphics.setColor(rowStartColor)
         love.graphics.points(r[1].x, r[1].y)
@@ -400,7 +390,7 @@ local function drawFields()
 end
 
 local function drawHeadlands()
-    drawHeadland(course:getHeadland(), courseColor)
+    --drawHeadland(course:getHeadlandPath(), courseColor)
     drawConnectingPaths(course:getCenter())
 end
 
@@ -410,13 +400,18 @@ local function drawVertexInfo(v)
     love.graphics.setColor(0.2, 0.2, 0.2)
     love.graphics.rectangle('fill', 0, 0, 100, 150)
     love.graphics.setColor(0.9, 0.9, 0.9)
-    love.graphics.printf(string.format('ix: %s old: %s',
-            intToString(v.ix), intToString(v.oldIx)), 10, 12, 130)
+    local row = 12
+    love.graphics.printf(string.format('ix: %s', intToString(v.ix)), 10, row, 130)
+    row = row + 12
     love.graphics.printf(string.format('r: %s xte: %s',
-            floatToString(v:getSignedRadius()), floatToString(v.xte)), 10, 24, 130)
-    love.graphics.printf(string.format('corner: %s', v.isCorner), 10, 36, 130)
+            floatToString(v:getSignedRadius()), floatToString(v.xte)), 10, row, 130)
+    row = row + 12
+    love.graphics.printf(string.format('corner: %s', v.isCorner), 10, row, 130)
+    row = row + 12
     love.graphics.printf(string.format('x: %s y: %s',
-            floatToString(v.x), floatToString(v.y)), 10, 48, 130)
+            floatToString(v.x), floatToString(v.y)), 10, row, 130)
+    row = row + 12
+    love.graphics.printf(string.format('headland: %s', v:getAttributes():getHeadlandPassNumber()), 10, row, 130)
 end
 
 -- Highlight a few vertices around the selected one
@@ -425,7 +420,7 @@ local function highlightPathAroundVertex(v)
     love.graphics.setPointSize(pointSize * 3)
     for i = v.ix - 20, v.ix + 30 do
         love.graphics.setColor(i < v.ix and highlightedWaypointColorBackward or highlightedWaypointColorForward)
-        local p = course:getHeadland():at(i)
+        local p = course:getPath():at(i)
         if p then
             love.graphics.points(p.x, p.y)
         end
@@ -438,6 +433,7 @@ local function drawGraphics()
     drawFields()
     drawHeadlands()
     drawCenter()
+    drawPath(course:getPath(), courseColor)
 end
 
 local function drawContext()

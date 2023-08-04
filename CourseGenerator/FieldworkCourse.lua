@@ -1,3 +1,10 @@
+--- A complete fieldwork course. This contains all main parts of the course in a structured form:
+--- headlands, the center with blocks, each block with a set of rows.
+--- The constructor FieldworkCourse() generates the course based on the parameters passed in the context.
+--- FieldworkCourse:getPath() then returns a continuous Polyline covering the entire field. This is the
+--- path a vehicle would follow to complete work on the field.
+--- The vertices of the path contain WaypointAttributes which provide additional navigation information
+--- for the vehicle.
 ---@class FieldworkCourse
 local FieldworkCourse = CpObject()
 
@@ -5,10 +12,8 @@ local FieldworkCourse = CpObject()
 function FieldworkCourse:init(context)
     self.logger = cg.Logger('FieldworkCourse')
     self:_setContext(context)
-    self.headland = cg.Polyline()
-end
+    self.headlandPath = cg.Polyline()
 
-function FieldworkCourse:generate()
     self.logger:debug('### Generating headlands around the field perimeter ###')
     self:generateHeadlands()
     if self.context.headlandFirst then
@@ -26,7 +31,48 @@ function FieldworkCourse:generate()
         self.logger:debug('### Bypass small islands ###')
         self:bypassIslands()
     end
-    self.headland:calculateProperties()
+    self.headlandPath:calculateProperties()
+end
+
+
+--- Returns a continuous Polyline covering the entire field. This is the
+--- path a vehicle would follow to complete work on the field.
+--- The vertices of the path contain WaypointAttributes which provide additional navigation information
+--- for the vehicle.
+---@return cg.Polyline
+function FieldworkCourse:getPath()
+    if not self.path then
+        self.path = cg.Polygon()
+        if self.context.headlandFirst then
+            self.path:appendMany(self:getHeadlandPath())
+            self.path:appendMany(self:getCenterPath())
+        else
+            self.path:appendMany(self:getCenterPath())
+            self.path:appendMany(self:getHeadlandPath())
+        end
+    end
+    self.path:calculateProperties()
+    return self.path
+end
+
+---@return cg.Polyline
+function FieldworkCourse:getHeadlandPath()
+    return self.headlandPath
+end
+
+---@return cg.Headland[]
+function FieldworkCourse:getHeadlands()
+    return self.headlands
+end
+
+---@return cg.Center
+function FieldworkCourse:getCenter()
+    return self.center
+end
+
+---@return cg.Polyline
+function FieldworkCourse:getCenterPath()
+    return self.center:getPath()
 end
 
 ------------------------------------------------------------------------------------------------------------------------
@@ -114,7 +160,7 @@ function FieldworkCourse:connectHeadlandsFromOutside()
     if #self.headlands < 1 then
         return
     end
-    self.headland = cg.Polyline()
+    self.headlandPath = cg.Polyline()
     local closestVertex = self.headlands[1]:getPolygon():findClosestVertexToPoint(self.context.startLocation)
     -- make life easy: make headland polygons always start where the transition to the next headland is.
     -- In _setContext() we already took care of the direction, so the headland is always worked in the
@@ -125,44 +171,30 @@ function FieldworkCourse:connectHeadlandsFromOutside()
                 self.context.turningRadius, true)
         -- rebase to the next vertex so the first waypoint of the next headland is right after the transition
         self.headlands[i + 1].polygon:rebase(transitionEndIx + 1)
-        self.headland:appendMany(self.headlands[i]:getPolygon())
+        self.headlandPath:appendMany(self.headlands[i]:getPath())
     end
-    self.headland:appendMany(self.headlands[#self.headlands]:getPolygon())
+    self.headlandPath:appendMany(self.headlands[#self.headlands]:getPath())
 end
 
 function FieldworkCourse:connectHeadlandsFromInside(startLocation)
     if #self.headlands < 1 then
         return
     end
-    self.headland = cg.Polyline()
+    self.headlandPath = cg.Polyline()
     local closestVertex = self.headlands[#self.headlands]:getPolygon():findClosestVertexToPoint(startLocation)
     -- make life easy: make headland polygons always start where the transition to the next headland is.
     -- In _setContext() we already took care of the direction, so the headland is always worked in the
     -- increasing indices
     self.headlands[#self.headlands].polygon:rebase(closestVertex.ix)
-    for i = #self.headlands, 2, - 1 do
+    for i = #self.headlands, 2, -1 do
         local transitionEndIx = self.headlands[i]:connectTo(self.headlands[i - 1], 1, self.context.workingWidth,
                 self.context.turningRadius, false)
         -- rebase to the next vertex so the first waypoint of the next headland is right after the transition
         self.headlands[i - 1].polygon:rebase(transitionEndIx + 1)
-        self.headland:appendMany(self.headlands[i]:getPolygon())
+        self.headlandPath:appendMany(self.headlands[i]:getPolygon())
     end
-    self.headland:appendMany(self.headlands[1]:getPolygon())
-end
-
----@return cg.Polyline
-function FieldworkCourse:getHeadland()
-    return self.headland
-end
-
----@return cg.Center
-function FieldworkCourse:getCenter()
-    return self.center
-end
-
----@return cg.Headland[]
-function FieldworkCourse:getHeadlands()
-    return self.headlands
+    self.headlandPath:appendMany(self.headlands[1]:getPolygon())
+    self.headlandPath:calculateProperties()
 end
 
 ------------------------------------------------------------------------------------------------------------------------
@@ -182,7 +214,6 @@ function FieldworkCourse:generateCenter()
     end
     return self.center:generate()
 end
-
 
 ------------------------------------------------------------------------------------------------------------------------
 --- Islands
@@ -208,7 +239,7 @@ function FieldworkCourse:bypassIslands()
         local startIx = 1
         while startIx ~= nil do
             self.logger:debug('Bypassing island %d', island:getId())
-            self.circledIslands[island], startIx = self.headland:goAround(
+            self.circledIslands[island], startIx = self.headlandPath:goAround(
                     island:getHeadlands()[1]:getPolygon(), startIx, not self.circledIslands[island])
         end
         self.center:bypassIslands(island:getHeadlands()[1]:getPolygon(), not self.circledIslands[island])

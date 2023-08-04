@@ -114,10 +114,7 @@ end
 function Block:getPath()
     if self.path == nil then
         self.path = cg.Polyline()
-        for i, row in self.rowPattern:iterator(self.rows) do
-            if i % 2 == 0 then
-                row:reverse()
-            end
+        for _, row in ipairs(self.rowsInWorkSequence) do
             self.path:appendMany(row)
         end
     end

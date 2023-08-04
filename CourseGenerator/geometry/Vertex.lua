@@ -9,10 +9,6 @@ function Vertex:init(x, y, ix)
     --- public properties (wish lua was a proper language...)
     --- This is a corner vertex, and should remain a sharp corner
     self.isCorner = nil
-    --- This is a vertex leading to a corner (there could be a few)
-    self.isCornerLead = nil
-    --- This is a vertex after a corner (there could be a few)
-    self.isCornerTail = nil
     --- Delta angle at this vertex, angle between the entry and exit edges
     self.dA = nil
     self.attributes = cg.WaypointAttributes()
@@ -33,9 +29,6 @@ end
 function Vertex:clone()
     local v = Vertex(self.x, self.y)
     v.isCorner = self.isCorner
-    v.isCornerLead = self.isCornerLead
-    v.isCornerTail = self.isCornerTail
-    v.oldIx = self.oldIx
     v.attributes = self.attributes:clone()
     return v
 end

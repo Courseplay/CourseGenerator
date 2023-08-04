@@ -2,6 +2,7 @@
 --- within the headlands (or the field boundary if there are no headlands)
 --- Split the center area into blocks if needed and connect the headland with first block
 --- and the blocks with each other
+---@class Center
 local Center = CpObject()
 
 ---@param context cg.FieldworkContext
@@ -20,11 +21,18 @@ function Center:init(context, boundary, hasHeadland, startLocation)
     -- The connecting path always has at least one vertex. A path with just one vertex can safely be skipped
     -- as that vertex overlaps with the first vertex of the block
     self.connectingPaths = {}
-    self.path = cg.Polyline()
 end
 
 ---@return cg.Polyline
 function Center:getPath()
+    if not self.path then
+        self.path = cg.Polyline()
+        for i = 1, #self.blocks do
+            self.path:appendMany(self.connectingPaths[i])
+            self.path:appendMany(self.blocks[i]:getPath())
+        end
+    end
+    self.path:calculateProperties()
     return self.path
 end
 
@@ -36,8 +44,8 @@ end
 --- The list of paths connecting the blocks of the field center. The first entry is
 --- the path from the end of the headland to the first block, the second entry is the path
 --- from the exit of the first block to the entry of the second, and so on.
---- There is always a connecting path for each block. The connecting path always has at
---- least one vertex. A path with just one vertex can safely be skipped as that vertex
+--- There is always a connecting path for each block. The connecting path may be empty or have
+--- just one vertex. An empty path or one with just one vertex can safely be skipped as that vertex
 --- overlaps with the first vertex of the block
 ------@return cg.Polyline[]
 function Center:getConnectingPaths()
@@ -75,7 +83,14 @@ function Center:generate()
         currentLocation = closestBlock:setEntry(closestEntry)
         doneBlockIds[closestBlock.id] = true
         table.insert(self.blocks, closestBlock)
-        table.insert(self.connectingPaths, pathToClosestEntry)
+        if not self.context.headlandFirst and #self.blocks == 1 then
+            -- we need a connecting path to the block when we start on the headland, or, when we start in
+            -- the middle and this is not the first block. There's no need for a connecting path to the first
+            -- block when we start in the middle.
+            table.insert(self.connectingPaths, {})
+        else
+            table.insert(self.connectingPaths, pathToClosestEntry)
+        end
         self.logger:debug('Block %d, connecting path %d with %d waypoints',
                 #self.blocks, #self.connectingPaths, #pathToClosestEntry)
     end
@@ -118,7 +133,7 @@ function Center:_generateStraightUpDownRows(rowAngle, suppressLog)
         table.insert(rows, row)
     end
     if not suppressLog then
-        self.logger:debug('Created %d rows at %d° to cover an area %.1f wide, width %.1f/%.1f/%.1f m',
+        self.logger:debug('Created %d rows at %.0f° to cover an area %.1f wide, width %.1f/%.1f/%.1f m',
                 nRows, math.deg(rowAngle), dMax - dMin, firstRowOffset, width or 0, lastRowOffset or 0)
         self.logger:debug('    has headland %s, even distribution %s, remainder last %s',
                 self.hasHeadland, self.context.evenRowDistribution, true)
@@ -312,7 +327,6 @@ function Center:_splitIntoBlocks(rows)
         local sections = row:split(self.boundary)
         self.logger:trace('Row %d has %d section(s)', i, #sections)
         for j, section in ipairs(sections) do
-            self.path:appendMany(section)
             -- with how many existing blocks does this row overlap?
             local overlappedBlocks = {}
             for block, _ in pairs(openBlocks) do

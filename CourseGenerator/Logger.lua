@@ -1,3 +1,4 @@
+---@class
 local Logger = CpObject()
 
 Logger.level = {

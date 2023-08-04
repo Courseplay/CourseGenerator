@@ -54,6 +54,13 @@ function Headland:init(basePolygon, clockwise, passNumber, width, outward)
     end
 end
 
+---@return cg.Polyline Headland vertices with waypoint attributes
+function Headland:getPath()
+    -- make sure all attributes are set correctly
+    self.polygon:setAttributes(nil, nil, cg.WaypointAttributes.setHeadlandPassNumber, self.passNumber)
+    return self.polygon
+end
+
 ---@return number which headland is it? 1 is the outermost.
 function Headland:getPassNumber()
     return self.passNumber
@@ -143,7 +150,7 @@ function Headland:connectTo(other, ix, workingWidth, turningRadius, headlandFirs
                 -- the current and the next
                 transition:appendMany(connector)
                 self.polygon:appendMany(transition)
-                self.polygon:_setAttributes(#self.polygon - #transition, #self.polygon,
+                self.polygon:setAttributes(#self.polygon - #transition, #self.polygon,
                         cg.WaypointAttributes.setHeadlandTransition, true)
                 self.polygon:calculateProperties()
                 self.logger:debug('Transition to next headland added, length %.1f, ix on next %d, try %d.',
