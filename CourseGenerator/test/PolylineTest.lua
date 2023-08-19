@@ -284,4 +284,39 @@ function testIsEntering()
     lu.assertFalse(p:isEntering(o, iss[2]))
 end
 
+function testShorten()
+    lu.EPS = 0.01
+    local p = cg.Polyline({ cg.Vertex(0, 0), cg.Vertex(0, 10)})
+    p:cutEnd(1)
+    p[1]:assertAlmostEquals(cg.Vector(0, 0))
+    p[#p]:assertAlmostEquals(cg.Vector(0, 9))
+    lu.assertEquals(p:getLength(), 9)
+
+    p:cutStart(1)
+    p[1]:assertAlmostEquals(cg.Vector(0, 1))
+    p[#p]:assertAlmostEquals(cg.Vector(0, 9))
+    lu.assertEquals(p:getLength(), 8)
+
+    p = cg.Polyline({ cg.Vertex(0, 0), cg.Vertex(0, 5), cg.Vertex(0, 10), cg.Vertex(5, 10),
+                            cg.Vertex(10, 10), cg.Vertex(15, 10), cg.Vertex(20, 10) })
+    lu.assertEquals(p:getLength(), 30)
+    p:cutEnd(1)
+    p[1]:assertAlmostEquals(cg.Vector(0, 0))
+    p[#p]:assertAlmostEquals(cg.Vector(19, 10))
+    lu.assertEquals(p:getLength(), 29)
+    p:cutStart(1)
+    lu.assertEquals(p:getLength(), 28)
+    p[1]:assertAlmostEquals(cg.Vector(0, 1))
+    p[#p]:assertAlmostEquals(cg.Vector(19, 10))
+    p:cutEnd(7)
+    lu.assertEquals(p:getLength(), 21)
+    p[1]:assertAlmostEquals(cg.Vector(0, 1))
+    p[#p]:assertAlmostEquals(cg.Vector(12, 10))
+    p:cutStart(7)
+    lu.assertAlmostEquals(p:getLength(), 12.38)
+    p[1]:assertAlmostEquals(cg.Vector(0, 8))
+    p[#p]:assertAlmostEquals(cg.Vector(12, 10))
+
+end
+
 os.exit(lu.LuaUnit.run())

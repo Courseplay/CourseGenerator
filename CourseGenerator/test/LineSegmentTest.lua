@@ -151,5 +151,16 @@ function testLineSegment()
     lu.assertIsFalse(a:overlaps(b))
     lu.assertIsFalse(b:overlaps(a))
 end
+
+function testExtend()
+    lu.EPS = 0.01
+    local a = cg.LineSegment(1, 1, 10, 10)
+    a:extend(math.sqrt(2))
+    a:getEnd():assertAlmostEquals(cg.Vector(11, 11))
+    a:getBase():assertAlmostEquals(cg.Vector(1, 1))
+    a:extend(-math.sqrt(2))
+    a:getBase():assertAlmostEquals(cg.Vector(0, 0))
+end
+
 os.exit(lu.LuaUnit.run())
 

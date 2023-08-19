@@ -4,33 +4,27 @@
 --- the vertex is strictly a geometric concept.
 local WaypointAttributes = CpObject()
 
-function WaypointAttributes:init()
-    self.islandBypass = false
-    self.headlandTransition = false
-    self.headlandPassNumber = nil
-end
-
 function WaypointAttributes:clone()
     local a = cg.WaypointAttributes()
-    a.islandBypass = self.islandBypass
-    a.headlandTransition = self.headlandTransition
-    a.headlandPassNumber = self.headlandPassNumber
+    for attribute, value in pairs(self) do
+        a[attribute] = value
+    end
     return a
 end
 
-function WaypointAttributes:setIslandBypass(bypass)
-    self.islandBypass = bypass
+function WaypointAttributes:setIslandBypass()
+    self.islandBypass = true
 end
 
-function WaypointAttributes:getIslandBypass()
+function WaypointAttributes:isIslandBypass()
     return self.islandBypass
 end
 
-function WaypointAttributes:setHeadlandTransition(transition)
-    self.headlandTransition = transition
+function WaypointAttributes:setHeadlandTransition()
+    self.headlandTransition = true
 end
 
-function WaypointAttributes:getHeadlandTransition()
+function WaypointAttributes:isHeadlandTransition()
     return self.headlandTransition
 end
 
@@ -39,15 +33,54 @@ function WaypointAttributes:setHeadlandPassNumber(n)
 end
 
 ---@return number | nil number of the headland, starting at 1 on the outermost headland. The section leading
---- to the next headland (getHeadlandTransition() == true) has the same pass number as the headland where the
+--- to the next headland (isHeadlandTransition() == true) has the same pass number as the headland where the
 --- section starts (transition from 1 -> 2 has pass number 1)
 function WaypointAttributes:getHeadlandPassNumber()
     return self.headlandPassNumber
 end
 
+function WaypointAttributes:setBlockNumber(n)
+    self.blockNumber = n
+end
+
+function WaypointAttributes:getBlockNumber()
+    return self.blockNumber
+end
+
+function WaypointAttributes:setRowNumber(n)
+    self.rowNumber = n
+end
+
+function WaypointAttributes:getRowNumber()
+    return self.rowNumber
+end
+
+---@return boolean true if this is the last waypoint of an up/down row. It is either time to switch to the next
+--- row (by starting a turn) of the same block, the first row of the next block, or, to the headland if we
+--- started working on the center of the field
+function WaypointAttributes:setRowEnd()
+    self.rowEnd = true
+end
+
+function WaypointAttributes:isRowEnd()
+    return self.rowEnd
+end
+
+function WaypointAttributes:setRowStart()
+    self.rowStart = true
+end
+
+---@return boolean true if this is the first waypoint of an up/down row.
+function WaypointAttributes:isRowStart()
+    return self.rowStart
+end
+
 function WaypointAttributes:__tostring()
-    local str = string.format('headlandPassNumber: %s, islandBypass: %s, headlandTransition %s',
-            self.headlandPassNumber, self.islandBypass, self.headlandTransition)
+    local str = '[ '
+    for attribute, value in pairs(self) do
+        str = str .. string.format('%s: %s ', attribute, value)
+    end
+    str = str .. ']'
     return str
 end
 

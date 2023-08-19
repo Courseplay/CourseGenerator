@@ -243,8 +243,8 @@ function Center:_generateCurvedUpDownRows()
             intersections = row:getIntersections(boundary, 1)
             local evenNumberOfIntersections = #intersections % 2 == 0
             if #intersections < 2 or not evenNumberOfIntersections then
-                row:extend(50)
-                row:extend(-50)
+                row:extendStart(50)
+                row:extendEnd(50)
                 extensions = extensions + 1
             end
         until (#intersections > 1 and evenNumberOfIntersections) or extensions > 3
@@ -257,10 +257,8 @@ function Center:_generateCurvedUpDownRows()
     end
 
     local baseline = self:_createCurvedBaseline()
-    baseline:extend(50)
-    baseline:calculateProperties()
-    baseline:extend(-50)
-    baseline:calculateProperties()
+    baseline:extendStart(50)
+    baseline:extendEnd(50)
     -- always generate inwards
     local offset = self.context.headlandClockwise and -self.context.workingWidth or self.context.workingWidth
     local row = baseline:createNext(offset)
@@ -324,7 +322,7 @@ function Center:_splitIntoBlocks(rows)
     local blockId = 1
 
     for i, row in ipairs(rows) do
-        local sections = row:split(self.boundary)
+        local sections = row:split(self.boundary, self.hasHeadland, self.context.workingWidth)
         self.logger:trace('Row %d has %d section(s)', i, #sections)
         for j, section in ipairs(sections) do
             -- with how many existing blocks does this row overlap?

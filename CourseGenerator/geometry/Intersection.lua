@@ -6,14 +6,18 @@ local Intersection = CpObject()
 ---@param ixB number the start index of the intersecting edge (edgeB) of polyline B
 ---@param is cg.Vector the intersection point.
 ---@param edgeA cg.LineSegment the edge of polygon A where where the intersection point is
----@param path cg.Polyline the list of vertices on A between this and the previous intersection, the 
---- last vertex is always the intersection point (is)
-function Intersection:init(ixA, ixB, is, edgeA, path)
+---@param edgeB cg.LineSegment the edge of polygon B where where the intersection point is
+function Intersection:init(ixA, ixB, is, edgeA, edgeB)
     self.ixA = ixA
     self.ixB = ixB
     self.is = is
     self.edgeA = edgeA
-    self.path = path
+    self.edgeB = edgeB
+end
+
+---@return number The angle (in radians) at the intersecting edges meet
+function Intersection:getAngle()
+    return cg.Math.getDeltaAngle(self.edgeA:getHeading(), self.edgeB:getHeading())
 end
 
 function Intersection.__lt(a, b)
@@ -36,8 +40,8 @@ function Intersection.__lt(a, b)
 end
 
 function Intersection:__tostring()
-    local str = string.format('ixA: %d, ixB: %d, is: %s, edgeA: %s',
-            self.ixA, self.ixB, self.is, self.edgeA)
+    local str = string.format('ixA: %d, ixB: %d, is: %s, edgeA: %s, edgeB: %s',
+            self.ixA, self.ixB, self.is, self.edgeA, self.edgeB)
     return str
 end
 

@@ -34,7 +34,6 @@ function FieldworkCourse:init(context)
     self.headlandPath:calculateProperties()
 end
 
-
 --- Returns a continuous Polyline covering the entire field. This is the
 --- path a vehicle would follow to complete work on the field.
 --- The vertices of the path contain WaypointAttributes which provide additional navigation information
@@ -191,9 +190,9 @@ function FieldworkCourse:connectHeadlandsFromInside(startLocation)
                 self.context.turningRadius, false)
         -- rebase to the next vertex so the first waypoint of the next headland is right after the transition
         self.headlands[i - 1].polygon:rebase(transitionEndIx + 1)
-        self.headlandPath:appendMany(self.headlands[i]:getPolygon())
+        self.headlandPath:appendMany(self.headlands[i]:getPath())
     end
-    self.headlandPath:appendMany(self.headlands[1]:getPolygon())
+    self.headlandPath:appendMany(self.headlands[1]:getPath())
     self.headlandPath:calculateProperties()
 end
 
@@ -236,11 +235,12 @@ function FieldworkCourse:bypassIslands()
     --- circle once.
     self.circledIslands = {}
     for _, island in pairs(self.context.field:getIslands()) do
-        local startIx = 1
+        local startIx, circled = 1, false
         while startIx ~= nil do
-            self.logger:debug('Bypassing island %d', island:getId())
-            self.circledIslands[island], startIx = self.headlandPath:goAround(
+            self.logger:debug('Bypassing island %d, at %d', island:getId(), startIx)
+            circled, startIx = self.headlandPath:goAround(
                     island:getHeadlands()[1]:getPolygon(), startIx, not self.circledIslands[island])
+            self.circledIslands[island] = circled or self.circledIslands[island]
         end
         self.center:bypassIslands(island:getHeadlands()[1]:getPolygon(), not self.circledIslands[island])
     end

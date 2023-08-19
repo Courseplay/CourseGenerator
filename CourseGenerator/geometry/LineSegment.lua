@@ -145,10 +145,12 @@ end
 --- the segment is extended backwards (base moved backwards).
 --- In either case, the segment's new length will be the original length + length.
 function LineSegment:extend(length)
-    self.slope:setLength(self.slope:length() + math.abs(length))
     if length < 0 then
-        self.base = self.base - self.slope
+        local slope = self.slope:clone()
+        slope:setLength(length)
+        self.base = self.base + slope
     end
+    self.slope:setLength(self.slope:length() + math.abs(length))
 end
 
 --- Extend this segment to intersect an other. Other is considered here as a line, not just a

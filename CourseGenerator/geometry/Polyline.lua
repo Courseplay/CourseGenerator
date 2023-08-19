@@ -173,20 +173,58 @@ function Polyline:moveForward(ix, d)
     return nil
 end
 
----@param length number if positive, the polyline is extended forward (last vertex moved), if negative,
+---@param length number the polyline is extended forward (last vertex moved)
 ----- the polyline is extended backwards (first vertex moved).
-function Polyline:extend(length)
-    if length >= 0 then
-        local newEntryEdge = self[#self]:getEntryEdge()
-        newEntryEdge:extend(length)
-        self[#self] = cg.Vertex.fromVector(newEntryEdge:getEnd())
-        self:calculateProperties(#self - 1)
-    else
-        local newExitEdge = self[1]:getExitEdge()
-        newExitEdge:extend(length)
-        self[1] = cg.Vertex.fromVector(newExitEdge:getBase())
+function Polyline:extendEnd(length)
+    local newEntryEdge = self[#self]:getEntryEdge()
+    newEntryEdge:extend(length)
+    self[#self] = cg.Vertex.fromVector(newEntryEdge:getEnd())
+    self:calculateProperties(#self - 1)
+
+end
+
+---@param length number the polyline is extended backwards (first vertex moved).
+function Polyline:extendStart(length)
+    local newExitEdge = self[1]:getExitEdge()
+    newExitEdge:extend(length)
+    self[1] = cg.Vertex.fromVector(newExitEdge:getBase())
+    self:calculateProperties(1, 2)
+end
+
+---@param length number shorten the Polyline at the last vertex
+function Polyline:cutEnd(length)
+    if #self == 2 then
+        local theOnlyEdge = self[1]:getExitEdge()
+        theOnlyEdge:setLength(theOnlyEdge:getLength() - length)
+        self[2] = cg.Vertex.fromVector(theOnlyEdge:getEnd())
         self:calculateProperties(1, 2)
+    else
+        local d = length
+        while d > 0 do
+            d = d - self[#self]:getEntryEdge():getLength()
+            self[#self] = nil
+        end
+        self:extendEnd(-d)
     end
+end
+---
+---@param length number shorten the polyline at the first vertex
+function Polyline:cutStart(length)
+    if #self == 2 then
+        local theOnlyEdge = self[1]:getExitEdge()
+        theOnlyEdge:setLength(length)
+        self[1] = cg.Vertex.fromVector(theOnlyEdge:getEnd())
+    else
+        local d, lastEdge = length, self[1]:getExitEdge()
+        while d > 0 and #self > 2 do
+            lastEdge = self[1]:getExitEdge()
+            d = d - lastEdge:getLength()
+            table.remove(self, 1)
+        end
+        lastEdge:setLength(lastEdge:getLength() - (-d))
+        self[1] = cg.Vertex.fromVector(lastEdge:getEnd())
+    end
+    self:calculateProperties(1, 2)
 end
 
 --- Calculate all interesting properties we may need later for more advanced functions
@@ -282,7 +320,6 @@ function Polyline:splitEdges(maximumLength)
     end
     self:calculateProperties()
 end
-
 
 ---@param offsetVector cg.Vector offset to move the edges, relative to the edge's direction
 ---@return cg.LineSegment[] an array of edges parallel to the existing ones, same length
@@ -427,7 +464,7 @@ end
 ---@param other Polyline
 ---@param startIx number index of the vertex we want to start looking for intersections.
 ---@param circle boolean when true, make a full circle on the other polygon, else just go around and continue
----@return boolean, number true if there were an intersection and we actually went around, index of last vertex
+---@return boolean, number true if there was an intersection and we actually went around, index of last vertex
 --- after the bypass
 function Polyline:goAround(other, startIx, circle)
     local intersections = self:getIntersections(other, startIx)
@@ -441,11 +478,11 @@ function Polyline:goAround(other, startIx, circle)
             self.logger:debug('path A: %.1f, path B: %.1f', pathA:getLength(), pathB:getLength())
             if circle then
                 path = shortPath:clone()
-                path:setAttributes(nil, nil, cg.WaypointAttributes.setIslandBypass, true)
+                path:setAttributes(nil, nil, cg.WaypointAttributes.setIslandBypass)
                 longPath:reverse()
                 path:appendMany(longPath)
                 -- mark this roundtrip as island bypass
-                path:setAttributes(#path - #longPath, #path, cg.WaypointAttributes.setIslandBypass, true)
+                path:setAttributes(#path - #longPath, #path, cg.WaypointAttributes.setIslandBypass)
                 path:appendMany(shortPath)
                 self.logger:debug('Circled around, %d waypoints', #path)
             else
@@ -524,7 +561,7 @@ function Polyline:getIntersections(other, startIx, backwards)
             if is then
                 -- do not add an intersection twice if it goes exactly through a vertex
                 if #intersections == 0 or (intersections[#intersections].is ~= is) then
-                    table.insert(intersections, cg.Intersection(i, j, is, edge))
+                    table.insert(intersections, cg.Intersection(i, j, is, edge, otherEdge))
                 end
             end
         end

@@ -43,4 +43,4 @@ jobs:
           lua HeadlandTest.lua
           lua FieldTest.lua
           lua FieldworkCourseTest.lua
-
+          lua RowPatternTest.lua

@@ -5,8 +5,8 @@ local Row = CpObject(cg.Polyline)
 
 ---@param vertices table[] array of tables with x, y (Vector, Vertex, State3D or just plain {x, y}
 function Row:init(vertices)
-    self.logger = cg.Logger('Row', cg.Logger.level.debug)
     cg.Polyline.init(self, vertices)
+    self.logger = cg.Logger('Row', cg.Logger.level.debug)
 end
 
 --- Create a row parallel to this one at offset distance.
@@ -46,8 +46,10 @@ end
 --- returned array.
 ---
 ---@param boundary cg.Polygon the field boundary (or innermost headland)
+---@param boundaryIsHeadland boolean true if the boundary is a headland
+---@param workingWidth number
 ---@return cg.Row[]
-function Row:split(boundary)
+function Row:split(boundary, boundaryIsHeadland, workingWidth)
     local intersections = self:getIntersections(boundary, 1)
     if #intersections < 2 then
         self.logger:warning('Row has only %d intersection with boundary', #intersections)
@@ -67,7 +69,9 @@ function Row:split(boundary)
         if not isEntering and outside == 1 then
             -- exiting the polygon and we were inside before (outside was 0)
             -- create a section here
-            table.insert(sections, self:_cutAtIntersections(intersections[lastInsideIx], intersections[i]))
+            local section = self:_cutAtIntersections(intersections[lastInsideIx], intersections[i])
+            section:_adjustLength(intersections[lastInsideIx], intersections[i], workingWidth, boundaryIsHeadland)
+            table.insert(sections, section)
         elseif isEntering then
             lastInsideIx = i
         end
@@ -90,6 +94,14 @@ function Row:getMiddle()
     end
 end
 
+function Row:setRowNumber(n)
+    self.rowNumber = n
+end
+
+function Row:setBlockNumber(n)
+    self.blockNumber = n
+end
+
 --- Sequence number to keep the original row sequence for debug purposes
 function Row:setSequenceNumber(n)
     self.sequenceNumber = n
@@ -97,6 +109,13 @@ end
 
 function Row:getSequenceNumber()
     return self.sequenceNumber
+end
+
+function Row:setAllAttributes()
+    self:setAttributes(1, 1, cg.WaypointAttributes.setRowStart)
+    self:setAttributes(#self, #self, cg.WaypointAttributes.setRowEnd)
+    self:setAttributes(nil, nil, cg.WaypointAttributes.setRowNumber, self.rowNumber)
+    self:setAttributes(nil, nil, cg.WaypointAttributes.setBlockNumber, self.blockNumber)
 end
 
 ------------------------------------------------------------------------------------------------------------------------
@@ -120,5 +139,58 @@ function Row:_cutAtIntersections(is1, is2)
     section:calculateProperties()
     return section
 end
+
+--- Adjust the length of this section for full coverage where it meets the headland or field boundary
+--- The adjustment depends on the angle the row meets the boundary/headland. In case of a headland,
+--- and an angle of 90 degrees, we don't have to drive all the way up to the headland centerline, only
+--- half workwidth.
+--- In case of a field boundary we have to drive up all the way to the boundary.
+--- The value obviously depends on the angle.
+---@param is1 cg.Intersection we assume that is1 is the first vertex of the line, is2 is the last
+---@param is2 cg.Intersection
+---@param workingWidth number
+---@param isHeadland boolean true if the intersections are with a headland, false if it is the field boundary
+---@return cg.Row
+function Row:_adjustLength(is1, is2, workingWidth, isHeadland)
+
+    -- how far to drive beyond the field edge/headland if we hit it at an angle, to cover the row completely
+    local function getDistanceBetweenRowEndAndFieldBoundary(angle)
+        -- with very low angles this becomes too much, in that case you need a headland, so limit it here
+        return math.abs( workingWidth / 2 / math.tan(math.max(math.abs(angle), math.pi / 12)))
+    end
+
+    -- if the up/down tracks were perpendicular to the boundary, we'd have to cut them off
+    -- width/2 meters from the intersection point with the boundary. But if we drive on to the
+    -- boundary at an angle, we have to drive further if we don't want to miss fruit.
+    local function getDistanceBetweenRowEndAndHeadland(angle)
+        angle = math.max(math.abs(angle), math.pi / 12)
+        -- distance between headland centerline and side at an angle
+        -- (is width / 2 when angle is 90 degrees)
+        local dHeadlandCenterAndSide = math.abs( workingWidth / 2 / math.sin( angle ))
+        return dHeadlandCenterAndSide - getDistanceBetweenRowEndAndFieldBoundary(workingWidth, angle)
+    end
+
+    local offsetStart, offsetEnd = 0, 0
+    if isHeadland then
+        offsetStart = -getDistanceBetweenRowEndAndHeadland(is1:getAngle())
+        offsetEnd = -getDistanceBetweenRowEndAndHeadland(is2:getAngle())
+    else
+        offsetStart = getDistanceBetweenRowEndAndFieldBoundary(is1:getAngle())
+        offsetEnd = getDistanceBetweenRowEndAndFieldBoundary(is2:getAngle())
+    end
+    self.logger:trace('%.1f %.1f', offsetStart, offsetEnd)
+    if offsetStart >= 0 then
+        self:extendStart(offsetStart)
+    else
+        self:cutStart(-offsetStart)
+    end
+    if offsetEnd >= 0 then
+        self:extendEnd(offsetEnd)
+    else
+        self:cutEnd(-offsetEnd)
+    end
+end
+
+
 ---@class cg.Row
 cg.Row = Row

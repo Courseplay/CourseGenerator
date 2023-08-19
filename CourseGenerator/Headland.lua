@@ -111,7 +111,7 @@ end
 ---@return number index of the vertex on other where the transition ends
 function Headland:connectTo(other, ix, workingWidth, turningRadius, headlandFirst)
     local function ignoreIslandBypass(v)
-        return not v:getAttributes():getIslandBypass()
+        return not v:getAttributes():isIslandBypass()
     end
 
     if (self.clockwise and headlandFirst) or (not self.clockwise and not headlandFirst) then
@@ -151,7 +151,7 @@ function Headland:connectTo(other, ix, workingWidth, turningRadius, headlandFirs
                 transition:appendMany(connector)
                 self.polygon:appendMany(transition)
                 self.polygon:setAttributes(#self.polygon - #transition, #self.polygon,
-                        cg.WaypointAttributes.setHeadlandTransition, true)
+                        cg.WaypointAttributes.setHeadlandTransition)
                 self.polygon:calculateProperties()
                 self.logger:debug('Transition to next headland added, length %.1f, ix on next %d, try %d.',
                         length, transitionEndIx, i)

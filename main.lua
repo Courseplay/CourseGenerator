@@ -18,7 +18,7 @@ table.insert(parameters, workingWidth)
 local turningRadius = AdjustableParameter(5.8, 'radius', 'T', 't', 0.2, 0, 20)
 table.insert(parameters, turningRadius)
 -- number of headland passes around the field boundary
-local nHeadlandPasses = AdjustableParameter(2, 'headlands', 'P', 'p', 1, 0, 100)
+local nHeadlandPasses = AdjustableParameter(0, 'headlands', 'P', 'p', 1, 0, 100)
 table.insert(parameters, nHeadlandPasses)
 local nHeadlandsWithRoundCorners = AdjustableParameter(0, 'headlands with round corners', 'R', 'r', 1, 0, 100)
 table.insert(parameters, nHeadlandsWithRoundCorners)
@@ -258,7 +258,7 @@ local function drawVertex(v)
     if v.isCorner then
         love.graphics.setColor(cornerColor)
     end
-    if v:getAttributes():getIslandBypass() then
+    if v:getAttributes():isIslandBypass() then
         love.graphics.setColor(islandBypassColor)
     end
     love.graphics.points(v.x, v.y)
@@ -398,20 +398,21 @@ end
 local function drawVertexInfo(v)
     love.graphics.replaceTransform(mouseTransform)
     love.graphics.setColor(0.2, 0.2, 0.2)
-    love.graphics.rectangle('fill', 0, 0, 100, 150)
+    local width, margin = 200, 10
+    love.graphics.rectangle('fill', 0, 0, 200, 100)
     love.graphics.setColor(0.9, 0.9, 0.9)
     local row = 12
-    love.graphics.printf(string.format('ix: %s', intToString(v.ix)), 10, row, 130)
+    love.graphics.printf(string.format('ix: %s', intToString(v.ix)), 10, row, width - 2 * margin)
     row = row + 12
     love.graphics.printf(string.format('r: %s xte: %s',
-            floatToString(v:getSignedRadius()), floatToString(v.xte)), 10, row, 130)
+            floatToString(v:getSignedRadius()), floatToString(v.xte)), 10, row, width - 2 * margin)
     row = row + 12
-    love.graphics.printf(string.format('corner: %s', v.isCorner), 10, row, 130)
+    love.graphics.printf(string.format('corner: %s', v.isCorner), 10, row, width - 2 * margin)
     row = row + 12
     love.graphics.printf(string.format('x: %s y: %s',
-            floatToString(v.x), floatToString(v.y)), 10, row, 130)
+            floatToString(v.x), floatToString(v.y)), 10, row, width - 2 * margin)
     row = row + 12
-    love.graphics.printf(string.format('headland: %s', v:getAttributes():getHeadlandPassNumber()), 10, row, 130)
+    love.graphics.printf(string.format('%s', v:getAttributes()), 10, row, width - 2 * margin)
 end
 
 -- Highlight a few vertices around the selected one

@@ -33,6 +33,7 @@ end
 
 function Block:addRow(row)
     row:setSequenceNumber(#self.rows + 1)
+    row:setBlockNumber(self.id)
     table.insert(self.rows, row)
 end
 
@@ -102,6 +103,10 @@ function Block:setEntry(entry)
         if i % 2 == (entry.reverseOddRows and 1 or 0) then
             row:reverse()
         end
+        -- need vertices close enough so the smoothing in goAround() only starts close to the island
+        row:splitEdges(cg.cRowWaypointDistance)
+        row:setRowNumber(i)
+        row:setAllAttributes()
         table.insert(self.rowsInWorkSequence, row)
     end
     if entry.reverseRowOrderAfter then
@@ -125,9 +130,9 @@ end
 function Block:bypassIslands(islandHeadlandPolygon, circle)
     local thisIslandCircled = circle
     for _, row in ipairs(self.rowsInWorkSequence) do
-        -- need vertices close enough so the smoothing in goAround() only starts close to the island
-        row:splitEdges(cg.cRowWaypointDistance)
-        thisIslandCircled = row:goAround(islandHeadlandPolygon, 1, not thisIslandCircled)
+        thisIslandCircled = row:goAround(islandHeadlandPolygon, 1, not thisIslandCircled) or thisIslandCircled
+        -- make sure all new bypass waypoints have the proper attributes
+        row:setAllAttributes()
     end
     return thisIslandCircled
 end
