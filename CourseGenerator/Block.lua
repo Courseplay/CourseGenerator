@@ -107,6 +107,7 @@ function Block:setEntry(entry)
         row:splitEdges(cg.cRowWaypointDistance)
         row:setRowNumber(i)
         row:setAllAttributes()
+        row:adjustLength()
         table.insert(self.rowsInWorkSequence, row)
     end
     if entry.reverseRowOrderAfter then

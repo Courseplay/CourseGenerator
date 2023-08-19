@@ -200,7 +200,7 @@ function Polyline:cutEnd(length)
         self:calculateProperties(1, 2)
     else
         local d = length
-        while d > 0 do
+        while d > 0 and #self > 2 do
             d = d - self[#self]:getEntryEdge():getLength()
             self[#self] = nil
         end

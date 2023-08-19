@@ -181,7 +181,7 @@ function Center:_createStraightBaseline(rowAngle)
         baselineStart = lowerRight - cg.Vector(w * math.cos(rowAngle), 0):setHeading(-rowAngle)
         baselineEnd = lowerRight + cg.Vector(h * math.sin(rowAngle), 0):setHeading(-rowAngle)
     end
-    return cg.Row({ baselineStart, baselineEnd })
+    return cg.Row(self.context.workingWidth, {baselineStart, baselineEnd})
 end
 
 --- Calculate how many rows we need with a given work width to fully cover a field and how far apart those
@@ -284,7 +284,7 @@ end
 ---@return cg.Row array of vectors (can be empty) from ix to the start of the straight section
 function Center:_findLongestStraightSection(ix, radiusThreshold)
     local i = ix
-    local section = cg.Row()
+    local section = cg.Row(self.context.workingWidth)
     while math.abs(self.boundary:at(i):getRadius()) > radiusThreshold do
         section:append((self.boundary:at(i)):clone())
         i = i - 1

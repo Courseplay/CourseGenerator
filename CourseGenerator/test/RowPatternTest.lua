@@ -2,7 +2,7 @@ require('include')
 lu.EPS = 0.01
 function testRowPattern()
     local rows = {}
-    local row = cg.Row({ cg.Vector(0, 1), cg.Vector(20, 1) })
+    local row = cg.Row(5, { cg.Vector(0, 1), cg.Vector(20, 1) })
     for _ = 1, 10 do
         table.insert(rows, row)
         row = row:createNext(1)

@@ -4,8 +4,9 @@
 local Row = CpObject(cg.Polyline)
 
 ---@param vertices table[] array of tables with x, y (Vector, Vertex, State3D or just plain {x, y}
-function Row:init(vertices)
+function Row:init(workingWidth, vertices)
     cg.Polyline.init(self, vertices)
+    self.workingWidth = workingWidth
     self.logger = cg.Logger('Row', cg.Logger.level.debug)
 end
 
@@ -22,7 +23,7 @@ end
 
 --- Override Polyline:createOffset() to make sure the offset is an instance of Row
 function Row:createOffset(offsetVector, minEdgeLength, preserveCorners)
-    local offsetRow = cg.Row()
+    local offsetRow = cg.Row(self.workingWidth)
     return self:_createOffset(offsetRow, offsetVector, minEdgeLength, preserveCorners)
 end
 
@@ -53,7 +54,7 @@ function Row:split(boundary, boundaryIsHeadland, workingWidth)
     local intersections = self:getIntersections(boundary, 1)
     if #intersections < 2 then
         self.logger:warning('Row has only %d intersection with boundary', #intersections)
-        return cg.Row()
+        return cg.Row(self.workingWidth)
     end
     -- The assumption here is that the row always begins outside of the boundary
     -- This latter condition is to properly handle the cases where the boundary intersects with
@@ -70,7 +71,9 @@ function Row:split(boundary, boundaryIsHeadland, workingWidth)
             -- exiting the polygon and we were inside before (outside was 0)
             -- create a section here
             local section = self:_cutAtIntersections(intersections[lastInsideIx], intersections[i])
-            section:_adjustLength(intersections[lastInsideIx], intersections[i], workingWidth, boundaryIsHeadland)
+            section.startHeadlandAngle = intersections[lastInsideIx]:getAngle()
+            section.endHeadlandAngle = intersections[i]:getAngle()
+            section.boundaryIsHeadland = boundaryIsHeadland
             table.insert(sections, section)
         elseif isEntering then
             lastInsideIx = i
@@ -118,26 +121,9 @@ function Row:setAllAttributes()
     self:setAttributes(nil, nil, cg.WaypointAttributes.setBlockNumber, self.blockNumber)
 end
 
-------------------------------------------------------------------------------------------------------------------------
---- Private functions
-------------------------------------------------------------------------------------------------------------------------
-
------- Cut a polyline at is1 and is2, keeping the section between the two. is1 and is2 becomes the start and
---- end of the cut polyline.
----@param is1 cg.Intersection
----@param is2 cg.Intersection
----@return cg.Row
-function Row:_cutAtIntersections(is1, is2)
-    local section = cg.Row()
-    section:append(is1.is)
-    local src = is1.ixA + 1
-    while src < is2.ixA do
-        section:append(self[src])
-        src = src + 1
-    end
-    section:append(is2.is)
-    section:calculateProperties()
-    return section
+function Row:reverse()
+    cg.Polyline.reverse(self)
+    self.startHeadlandAngle, self.endHeadlandAngle = self.endHeadlandAngle, self.startHeadlandAngle
 end
 
 --- Adjust the length of this section for full coverage where it meets the headland or field boundary
@@ -146,17 +132,13 @@ end
 --- half workwidth.
 --- In case of a field boundary we have to drive up all the way to the boundary.
 --- The value obviously depends on the angle.
----@param is1 cg.Intersection we assume that is1 is the first vertex of the line, is2 is the last
----@param is2 cg.Intersection
----@param workingWidth number
----@param isHeadland boolean true if the intersections are with a headland, false if it is the field boundary
 ---@return cg.Row
-function Row:_adjustLength(is1, is2, workingWidth, isHeadland)
+function Row:adjustLength()
 
     -- how far to drive beyond the field edge/headland if we hit it at an angle, to cover the row completely
     local function getDistanceBetweenRowEndAndFieldBoundary(angle)
         -- with very low angles this becomes too much, in that case you need a headland, so limit it here
-        return math.abs( workingWidth / 2 / math.tan(math.max(math.abs(angle), math.pi / 12)))
+        return math.abs(self.workingWidth / 2 / math.tan(math.max(math.abs(angle), math.pi / 12)))
     end
 
     -- if the up/down tracks were perpendicular to the boundary, we'd have to cut them off
@@ -166,19 +148,18 @@ function Row:_adjustLength(is1, is2, workingWidth, isHeadland)
         angle = math.max(math.abs(angle), math.pi / 12)
         -- distance between headland centerline and side at an angle
         -- (is width / 2 when angle is 90 degrees)
-        local dHeadlandCenterAndSide = math.abs( workingWidth / 2 / math.sin( angle ))
-        return dHeadlandCenterAndSide - getDistanceBetweenRowEndAndFieldBoundary(workingWidth, angle)
+        local dHeadlandCenterAndSide = math.abs(self.workingWidth / 2 / math.sin(angle))
+        return dHeadlandCenterAndSide - getDistanceBetweenRowEndAndFieldBoundary(angle)
     end
 
     local offsetStart, offsetEnd = 0, 0
-    if isHeadland then
-        offsetStart = -getDistanceBetweenRowEndAndHeadland(is1:getAngle())
-        offsetEnd = -getDistanceBetweenRowEndAndHeadland(is2:getAngle())
+    if self.boundaryIsHeadland then
+        offsetStart = -getDistanceBetweenRowEndAndHeadland(self.startHeadlandAngle)
+        offsetEnd = -getDistanceBetweenRowEndAndHeadland(self.endHeadlandAngle)
     else
-        offsetStart = getDistanceBetweenRowEndAndFieldBoundary(is1:getAngle())
-        offsetEnd = getDistanceBetweenRowEndAndFieldBoundary(is2:getAngle())
+        offsetStart = getDistanceBetweenRowEndAndFieldBoundary(self.startHeadlandAngle)
+        offsetEnd = getDistanceBetweenRowEndAndFieldBoundary(self.endHeadlandAngle)
     end
-    self.logger:trace('%.1f %.1f', offsetStart, offsetEnd)
     if offsetStart >= 0 then
         self:extendStart(offsetStart)
     else
@@ -190,6 +171,29 @@ function Row:_adjustLength(is1, is2, workingWidth, isHeadland)
         self:cutEnd(-offsetEnd)
     end
 end
+
+------------------------------------------------------------------------------------------------------------------------
+--- Private functions
+------------------------------------------------------------------------------------------------------------------------
+
+------ Cut a polyline at is1 and is2, keeping the section between the two. is1 and is2 becomes the start and
+--- end of the cut polyline.
+---@param is1 cg.Intersection
+---@param is2 cg.Intersection
+---@return cg.Row
+function Row:_cutAtIntersections(is1, is2)
+    local section = cg.Row(self.workingWidth)
+    section:append(is1.is)
+    local src = is1.ixA + 1
+    while src < is2.ixA do
+        section:append(self[src])
+        src = src + 1
+    end
+    section:append(is2.is)
+    section:calculateProperties()
+    return section
+end
+
 
 
 ---@class cg.Row

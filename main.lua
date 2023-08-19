@@ -18,7 +18,7 @@ table.insert(parameters, workingWidth)
 local turningRadius = AdjustableParameter(5.8, 'radius', 'T', 't', 0.2, 0, 20)
 table.insert(parameters, turningRadius)
 -- number of headland passes around the field boundary
-local nHeadlandPasses = AdjustableParameter(0, 'headlands', 'P', 'p', 1, 0, 100)
+local nHeadlandPasses = AdjustableParameter(2, 'headlands', 'P', 'p', 1, 0, 100)
 table.insert(parameters, nHeadlandPasses)
 local nHeadlandsWithRoundCorners = AdjustableParameter(0, 'headlands with round corners', 'R', 'r', 1, 0, 100)
 table.insert(parameters, nHeadlandsWithRoundCorners)
@@ -66,6 +66,8 @@ local useBaselineEdge = ToggleParameter('use base line edge', false, 'g')
 table.insert(parameters, useBaselineEdge)
 local showDebugInfo = ToggleParameter('show debug info', false, 'd', true)
 table.insert(parameters, showDebugInfo)
+local showSwath = ToggleParameter('show swath', false, '1', true)
+table.insert(parameters, showSwath)
 
 local profilerEnabled = false
 local fileName = ''
@@ -264,12 +266,14 @@ local function drawVertex(v)
     love.graphics.points(v.x, v.y)
 end
 
-local function drawPath(p, color)
+local function drawPath(p, color, width)
     if #p > 1 then
-        love.graphics.setLineWidth(lineWidth)
-        love.graphics.setColor(color)
-        love.graphics.line(p:getUnpackedVertices())
+        love.graphics.setLineWidth(width)
         for _, v in p:vertices() do
+            if not v:getAttributes():isRowEnd() and v:getExitEdge() then
+                love.graphics.setColor(color)
+                love.graphics.line(v.x, v.y, v:getExitEdge():getEnd().x, v:getExitEdge():getEnd().y)
+            end
             drawVertex(v)
         end
     end
@@ -434,7 +438,10 @@ local function drawGraphics()
     drawFields()
     drawHeadlands()
     drawCenter()
-    drawPath(course:getPath(), courseColor)
+    drawPath(course:getPath(), courseColor, lineWidth)
+    if showSwath:get() then
+        drawPath(course:getPath(), swathColor, workingWidth:get())
+    end
 end
 
 local function drawContext()
