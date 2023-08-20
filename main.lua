@@ -18,7 +18,7 @@ table.insert(parameters, workingWidth)
 local turningRadius = AdjustableParameter(5.8, 'radius', 'T', 't', 0.2, 0, 20)
 table.insert(parameters, turningRadius)
 -- number of headland passes around the field boundary
-local nHeadlandPasses = AdjustableParameter(2, 'headlands', 'P', 'p', 1, 0, 100)
+local nHeadlandPasses = AdjustableParameter(3, 'headlands', 'P', 'p', 1, 0, 100)
 table.insert(parameters, nHeadlandPasses)
 local nHeadlandsWithRoundCorners = AdjustableParameter(0, 'headlands with round corners', 'R', 'r', 1, 0, 100)
 table.insert(parameters, nHeadlandsWithRoundCorners)
@@ -85,6 +85,7 @@ local graphicsTransform, textTransform, statusTransform, mouseTransform, context
 
 local fieldBoundaryColor = { 0.5, 0.5, 0.5 }
 local courseColor = { 0, 0.7, 1 }
+local turnColor = { 1, 1, 0, 0.5 }
 local islandHeadlandColor = { 1, 1, 1, 0.2 }
 local waypointColor = { 0.7, 0.5, 0.2 }
 local cornerColor = { 1, 1, 0.0, 0.8 }
@@ -266,15 +267,35 @@ local function drawVertex(v)
     love.graphics.points(v.x, v.y)
 end
 
-local function drawPath(p, color, width)
+local function drawPath(p)
     if #p > 1 then
-        love.graphics.setLineWidth(width)
+        love.graphics.setLineWidth(lineWidth)
         for _, v in p:vertices() do
-            if not v:getAttributes():isRowEnd() and v:getExitEdge() then
-                love.graphics.setColor(color)
+            if v:getExitEdge() then
+                if v:getAttributes():isRowEnd() then
+                    love.graphics.setColor(turnColor)
+                else
+                    love.graphics.setColor(courseColor)
+                end
                 love.graphics.line(v.x, v.y, v:getExitEdge():getEnd().x, v:getExitEdge():getEnd().y)
             end
             drawVertex(v)
+        end
+    end
+end
+
+local function drawSwath(p)
+    if showSwath:get() then
+        if #p > 1 then
+            love.graphics.setLineWidth(workingWidth:get())
+            for _, v in p:vertices() do
+                if v:getExitEdge() then
+                    if not v:getAttributes():isRowEnd() then
+                        love.graphics.setColor(swathColor)
+                    end
+                    love.graphics.line(v.x, v.y, v:getExitEdge():getEnd().x, v:getExitEdge():getEnd().y)
+                end
+            end
         end
     end
 end
@@ -395,7 +416,7 @@ end
 
 local function drawHeadlands()
     --drawHeadland(course:getHeadlandPath(), courseColor)
-    drawConnectingPaths(course:getCenter())
+    --drawConnectingPaths(course:getCenter())
 end
 
 -- Draw a tooltip with the vertex' details
@@ -438,10 +459,8 @@ local function drawGraphics()
     drawFields()
     drawHeadlands()
     drawCenter()
-    drawPath(course:getPath(), courseColor, lineWidth)
-    if showSwath:get() then
-        drawPath(course:getPath(), swathColor, workingWidth:get())
-    end
+    drawPath(course:getPath())
+    drawSwath(course:getPath())
 end
 
 local function drawContext()

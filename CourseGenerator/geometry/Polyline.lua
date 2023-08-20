@@ -11,7 +11,10 @@ function Polyline:init(vertices)
     self:calculateProperties()
 end
 
----@param v table table with x, y (Vector, Vertex, State3D or just plain {x, y}
+--- Append a single vertex to the end of the polyline.
+--- Calling calculateProperties() is the responsibility of the caller
+---@param v table|cg.Vertex table with x, y (Vector, Vertex, State3D or just plain {x, y}
+--- if v is a cg.Vertex, it will be cloned, otherwise a new vertex created
 function Polyline:append(v)
     if v:is_a(cg.Vertex) then
         table.insert(self, v:clone())
@@ -21,10 +24,24 @@ function Polyline:append(v)
     end
 end
 
----@param p cg.Vertex[]
+--- Append multiple vertices to the end of the polyline.
+--- Calling calculateProperties() is the responsibility of the caller
+--- if elements of p are cg.Vertex, they will be cloned, otherwise a new vertex created for each
+---@param p table|cg.Vertex[]
 function Polyline:appendMany(p)
     for _, v in ipairs(p) do
         self:append(v)
+    end
+end
+
+--- Add v as the first vertex.
+--- Calling calculateProperties() is the responsibility of the caller
+---@param v table table with x, y (Vector, Vertex, State3D or just plain {x, y}
+function Polyline:prepend(v)
+    if v:is_a(cg.Vertex) then
+        table.insert(self, 1, v:clone())
+    else
+        table.insert(self, 1, cg.Vertex(v.x, v.y, #self + 1))
     end
 end
 
@@ -225,6 +242,25 @@ function Polyline:cutStart(length)
         self[1] = cg.Vertex.fromVector(lastEdge:getEnd())
     end
     self:calculateProperties(1, 2)
+end
+
+--- Cut all vertices from the first vertex up to but not including ix, shortening the polyline at the start
+---@param ix number
+function Polyline:cutStartAtIx(ix)
+    ix = math.min(ix - 1, #self - 2)
+    for _ = 1, ix do
+        table.remove(self, 1)
+    end
+    self:calculateProperties(1, 2)
+end
+
+--- Cut all vertices from ix (not including) to the last vertex, shortening the polyline at the end
+---@param ix number
+function Polyline:cutEndAtIx(ix)
+    for _ = #self, ix + 1, -1 do
+        table.remove(self)
+    end
+    self:calculateProperties(ix - 1, ix)
 end
 
 --- Calculate all interesting properties we may need later for more advanced functions
@@ -470,39 +506,49 @@ function Polyline:goAround(other, startIx, circle)
     local intersections = self:getIntersections(other, startIx)
     local is1, is2 = intersections[1], intersections[2]
     if is1 and is2 then
-        local pathA, pathB = other:_getPathBetween(is1.ixB, is2.ixB)
-        local path
-        if pathA and pathB then
-            local shortPath = pathA:getLength() < pathB:getLength() and pathA or pathB
-            local longPath = pathA:getLength() >= pathB:getLength() and pathA or pathB
-            self.logger:debug('path A: %.1f, path B: %.1f', pathA:getLength(), pathB:getLength())
-            if circle then
-                path = shortPath:clone()
-                path:setAttributes(nil, nil, cg.WaypointAttributes.setIslandBypass)
-                longPath:reverse()
-                path:appendMany(longPath)
-                -- mark this roundtrip as island bypass
-                path:setAttributes(#path - #longPath, #path, cg.WaypointAttributes.setIslandBypass)
-                path:appendMany(shortPath)
-                self.logger:debug('Circled around, %d waypoints', #path)
-            else
-                path = shortPath
-                self.logger:debug('Took the shorter path, no circle')
-            end
-        else
-            path = pathA
-        end
-        table.insert(path, 1, cg.Vertex.fromVector(is1.is))
-        table.insert(path, cg.Vertex.fromVector(is2.is))
-        if path then
-            local lastIx = self:replace(is1.ixA, is2.ixA + 1, path)
-            -- make the transitions a little smoother
-            cg.SplineHelper.smooth(self, 3, is1.ixA, lastIx)
-            self:calculateProperties()
-            return true, lastIx
-        end
+        -- we cross other completely, none of our ends are within other, there may be more intersections with other though
+        return self:goAroundBetweenIntersections(other, circle, is1, is2)
+    else
+        -- there is one intersection only, one of our ends is within other, and there are no more intersections with other
+        return false
     end
-    return false
+end
+
+function Polyline:goAroundBetweenIntersections(other, circle, is1, is2)
+    local pathA, pathB = other:_getPathBetween(is1.ixB, is2.ixB)
+    local path
+    if pathA and pathB then
+        local shortPath = pathA:getLength() < pathB:getLength() and pathA or pathB
+        local longPath = pathA:getLength() >= pathB:getLength() and pathA or pathB
+        self.logger:debug('path A: %.1f, path B: %.1f', pathA:getLength(), pathB:getLength())
+        if circle then
+            path = shortPath:clone()
+            path:setAttributes(nil, nil, cg.WaypointAttributes.setIslandBypass)
+            longPath:reverse()
+            path:appendMany(longPath)
+            -- mark this roundtrip as island bypass
+            path:setAttributes(#path - #longPath, #path, cg.WaypointAttributes.setIslandBypass)
+            path:appendMany(shortPath)
+            self.logger:debug('Circled around, %d waypoints', #path)
+        else
+            path = shortPath
+            self.logger:debug('Took the shorter path, no circle')
+        end
+    else
+        path = pathA
+    end
+    table.insert(path, 1, cg.Vertex.fromVector(is1.is))
+    table.insert(path, cg.Vertex.fromVector(is2.is))
+    if path then
+        local lastIx = self:replace(is1.ixA, is2.ixA + 1, path)
+        -- make the transitions a little smoother
+        cg.SplineHelper.smooth(self, 3, is1.ixA, lastIx)
+        self:calculateProperties()
+        return true, lastIx
+    else
+        self.logger:warning('No path around other polygon found')
+        return false
+    end
 end
 
 ---@param lineSegment cg.LineSegment
@@ -673,6 +719,7 @@ function Polyline:_createOffset(result, offsetVector, minEdgeLength, preserveCor
     result:calculateProperties()
     return result
 end
+
 
 function Polyline:__tostring()
     local result = ''

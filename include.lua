@@ -20,6 +20,7 @@ dofile('CourseGenerator/geometry/Slider.lua')
 dofile('CourseGenerator/geometry/Offset.lua')
 
 dofile('CourseGenerator/Math.lua')
+dofile('CourseGenerator/FieldworkCourseHelper.lua')
 dofile('CourseGenerator/WaypointAttributes.lua')
 dofile('CourseGenerator/Field.lua')
 dofile('CourseGenerator/Row.lua')

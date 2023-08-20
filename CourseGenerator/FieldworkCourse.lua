@@ -41,7 +41,7 @@ end
 ---@return cg.Polyline
 function FieldworkCourse:getPath()
     if not self.path then
-        self.path = cg.Polygon()
+        self.path = cg.Polyline()
         if self.context.headlandFirst then
             self.path:appendMany(self:getHeadlandPath())
             self.path:appendMany(self:getCenterPath())
@@ -237,12 +237,13 @@ function FieldworkCourse:bypassIslands()
     for _, island in pairs(self.context.field:getIslands()) do
         local startIx, circled = 1, false
         while startIx ~= nil do
-            self.logger:debug('Bypassing island %d, at %d', island:getId(), startIx)
+            self.logger:debug('Bypassing island %d on the headland, at %d', island:getId(), startIx)
             circled, startIx = self.headlandPath:goAround(
                     island:getHeadlands()[1]:getPolygon(), startIx, not self.circledIslands[island])
             self.circledIslands[island] = circled or self.circledIslands[island]
         end
-        self.center:bypassIslands(island:getHeadlands()[1]:getPolygon(), not self.circledIslands[island])
+        self.logger:debug('Bypassing island %d on the center', island:getId())
+        self.center:bypassIsland(island:getHeadlands()[1]:getPolygon(), not self.circledIslands[island])
     end
 end
 ------------------------------------------------------------------------------------------------------------------------

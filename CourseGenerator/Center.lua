@@ -80,7 +80,7 @@ function Center:generate()
                 closestBlock, closestEntry, dMin, pathToClosestEntry = b, entry, d, path
             end
         end
-        currentLocation = closestBlock:setEntry(closestEntry)
+        currentLocation = closestBlock:finalize(closestEntry)
         doneBlockIds[closestBlock.id] = true
         table.insert(self.blocks, closestBlock)
         if not self.context.headlandFirst and #self.blocks == 1 then
@@ -99,10 +99,14 @@ function Center:generate()
 end
 
 ---@param circle boolean when true, make a full circle on the other polygon, else just go around and continue
-function Center:bypassIslands(islandHeadlandPolygon, circle)
+function Center:bypassIsland(islandHeadlandPolygon, circle)
     local thisIslandCircled = circle
     for _, block in ipairs(self.blocks) do
-        thisIslandCircled = block:bypassIslands(islandHeadlandPolygon, not thisIslandCircled)
+        thisIslandCircled = block:bypassIsland(islandHeadlandPolygon, not thisIslandCircled) or thisIslandCircled
+    end
+    for _, connectingPath in ipairs(self.connectingPaths) do
+        thisIslandCircled = cg.FieldworkCourseHelper.bypassIsland(connectingPath, self.context.workingWidth,
+                self.hasHeadland, islandHeadlandPolygon, 1, not thisIslandCircled) or thisIslandCircled
     end
 end
 

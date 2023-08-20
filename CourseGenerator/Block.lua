@@ -90,8 +90,12 @@ function Block:getClosestEntry(startLocation, headland)
     return closestEntry, dMin, shortestPath
 end
 
---- Set the entry we will be using for this block and rearrange rows accordingly.
-function Block:setEntry(entry)
+--- Finalize this block, set the entry we will be using, rearrange rows accordingly, set all row attributes and create
+--- a sequence in which the rows must be worked on
+---@param entry cg.RowPattern.Entry the entry to be used for this block
+---@return cg.Vertex the last vertex of the last row, the exit point from this block (to be used to find the entry
+--- to the next one.
+function Block:finalize(entry)
     self.logger:debug('Setting entry %s', entry)
     if entry.reverseRowOrderBefore then
         cg.reverseArray(self.rows)
@@ -103,11 +107,11 @@ function Block:setEntry(entry)
         if i % 2 == (entry.reverseOddRows and 1 or 0) then
             row:reverse()
         end
+        row:adjustLength()
         -- need vertices close enough so the smoothing in goAround() only starts close to the island
         row:splitEdges(cg.cRowWaypointDistance)
         row:setRowNumber(i)
         row:setAllAttributes()
-        row:adjustLength()
         table.insert(self.rowsInWorkSequence, row)
     end
     if entry.reverseRowOrderAfter then
@@ -128,10 +132,10 @@ function Block:getPath()
 end
 
 ---@param circle boolean when true, make a full circle on the other polygon, else just go around and continue
-function Block:bypassIslands(islandHeadlandPolygon, circle)
+function Block:bypassIsland(islandHeadlandPolygon, circle)
     local thisIslandCircled = circle
     for _, row in ipairs(self.rowsInWorkSequence) do
-        thisIslandCircled = row:goAround(islandHeadlandPolygon, 1, not thisIslandCircled) or thisIslandCircled
+        thisIslandCircled = row:bypassIsland(islandHeadlandPolygon, 1, not thisIslandCircled) or thisIslandCircled
         -- make sure all new bypass waypoints have the proper attributes
         row:setAllAttributes()
     end

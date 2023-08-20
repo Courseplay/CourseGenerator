@@ -48,9 +48,8 @@ end
 ---
 ---@param boundary cg.Polygon the field boundary (or innermost headland)
 ---@param boundaryIsHeadland boolean true if the boundary is a headland
----@param workingWidth number
 ---@return cg.Row[]
-function Row:split(boundary, boundaryIsHeadland, workingWidth)
+function Row:split(boundary, boundaryIsHeadland)
     local intersections = self:getIntersections(boundary, 1)
     if #intersections < 2 then
         self.logger:warning('Row has only %d intersection with boundary', #intersections)
@@ -126,50 +125,26 @@ function Row:reverse()
     self.startHeadlandAngle, self.endHeadlandAngle = self.endHeadlandAngle, self.startHeadlandAngle
 end
 
---- Adjust the length of this section for full coverage where it meets the headland or field boundary
+--- Adjust the length of this tow for full coverage where it meets the headland or field boundary
 --- The adjustment depends on the angle the row meets the boundary/headland. In case of a headland,
 --- and an angle of 90 degrees, we don't have to drive all the way up to the headland centerline, only
 --- half workwidth.
 --- In case of a field boundary we have to drive up all the way to the boundary.
 --- The value obviously depends on the angle.
----@return cg.Row
 function Row:adjustLength()
+    cg.FieldworkCourseHelper.adjustLengthAtStart(self, self.workingWidth, self.boundaryIsHeadland, self.startHeadlandAngle)
+    cg.FieldworkCourseHelper.adjustLengthAtEnd(self, self.workingWidth, self.boundaryIsHeadland, self.endHeadlandAngle)
+end
 
-    -- how far to drive beyond the field edge/headland if we hit it at an angle, to cover the row completely
-    local function getDistanceBetweenRowEndAndFieldBoundary(angle)
-        -- with very low angles this becomes too much, in that case you need a headland, so limit it here
-        return math.abs(self.workingWidth / 2 / math.tan(math.max(math.abs(angle), math.pi / 12)))
-    end
-
-    -- if the up/down tracks were perpendicular to the boundary, we'd have to cut them off
-    -- width/2 meters from the intersection point with the boundary. But if we drive on to the
-    -- boundary at an angle, we have to drive further if we don't want to miss fruit.
-    local function getDistanceBetweenRowEndAndHeadland(angle)
-        angle = math.max(math.abs(angle), math.pi / 12)
-        -- distance between headland centerline and side at an angle
-        -- (is width / 2 when angle is 90 degrees)
-        local dHeadlandCenterAndSide = math.abs(self.workingWidth / 2 / math.sin(angle))
-        return dHeadlandCenterAndSide - getDistanceBetweenRowEndAndFieldBoundary(angle)
-    end
-
-    local offsetStart, offsetEnd = 0, 0
-    if self.boundaryIsHeadland then
-        offsetStart = -getDistanceBetweenRowEndAndHeadland(self.startHeadlandAngle)
-        offsetEnd = -getDistanceBetweenRowEndAndHeadland(self.endHeadlandAngle)
-    else
-        offsetStart = getDistanceBetweenRowEndAndFieldBoundary(self.startHeadlandAngle)
-        offsetEnd = getDistanceBetweenRowEndAndFieldBoundary(self.endHeadlandAngle)
-    end
-    if offsetStart >= 0 then
-        self:extendStart(offsetStart)
-    else
-        self:cutStart(-offsetStart)
-    end
-    if offsetEnd >= 0 then
-        self:extendEnd(offsetEnd)
-    else
-        self:cutEnd(-offsetEnd)
-    end
+--- Find the first two intersections with another polyline or polygon and replace the section
+--- between those points with the vertices of the other polyline or polygon.
+---@param other Polyline
+---@param startIx number index of the vertex we want to start looking for intersections.
+---@param circle boolean when true, make a full circle on the other polygon, else just go around and continue
+---@return boolean, number true if there was an intersection and we actually went around, index of last vertex
+--- after the bypass
+function Row:bypassIsland(other, startIx, circle)
+    cg.FieldworkCourseHelper.bypassIsland(self, self.workingWidth, self.boundaryIsHeadland, other, startIx, circle)
 end
 
 ------------------------------------------------------------------------------------------------------------------------
@@ -193,7 +168,6 @@ function Row:_cutAtIntersections(is1, is2)
     section:calculateProperties()
     return section
 end
-
 
 
 ---@class cg.Row
