@@ -49,11 +49,28 @@ end
 ---@param boundary cg.Polygon the field boundary (or innermost headland)
 ---@param boundaryIsHeadland boolean true if the boundary is a headland
 ---@return cg.Row[]
-function Row:split(boundary, boundaryIsHeadland)
-    local intersections = self:getIntersections(boundary, 1)
+function Row:split(boundary, boundaryIsHeadland, bigIslands)
+    local intersections = self:getIntersections(boundary, 1,
+            function(is)
+                return self:isEntering(boundary, is)
+            end)
     if #intersections < 2 then
         self.logger:warning('Row has only %d intersection with boundary', #intersections)
         return cg.Row(self.workingWidth)
+    end
+
+    for _, island in ipairs(bigIslands) do
+        local outermostIslandHeadland = island:getOutermostHeadland():getPolygon()
+        local islandIntersections = self:getIntersections(outermostIslandHeadland, 1,
+                function(is)
+                    return not self:isEntering(outermostIslandHeadland, is)
+                end)
+
+        self.logger:trace('Row has %d intersections with island %d', #islandIntersections, island:getId())
+        for _, is in ipairs(islandIntersections) do
+            table.insert(intersections, is)
+        end
+        table.sort(intersections)
     end
     -- The assumption here is that the row always begins outside of the boundary
     -- This latter condition is to properly handle the cases where the boundary intersects with
@@ -64,9 +81,9 @@ function Row:split(boundary, boundaryIsHeadland)
     local lastInsideIx
     local sections = {}
     for i = 1, #intersections do
-        local isEntering = self:isEntering(boundary, intersections[i])
-        outside = outside + (isEntering and -1 or 1)
-        if not isEntering and outside == 1 then
+        local isEnteringField = intersections[i]:getUserData()(intersections[i])
+        outside = outside + (isEnteringField and -1 or 1)
+        if not isEnteringField and outside == 1 then
             -- exiting the polygon and we were inside before (outside was 0)
             -- create a section here
             local section = self:_cutAtIntersections(intersections[lastInsideIx], intersections[i])
@@ -74,7 +91,7 @@ function Row:split(boundary, boundaryIsHeadland)
             section.endHeadlandAngle = intersections[i]:getAngle()
             section.boundaryIsHeadland = boundaryIsHeadland
             table.insert(sections, section)
-        elseif isEntering then
+        elseif isEnteringField then
             lastInsideIx = i
         end
     end
@@ -168,7 +185,6 @@ function Row:_cutAtIntersections(is1, is2)
     section:calculateProperties()
     return section
 end
-
 
 ---@class cg.Row
 cg.Row = Row

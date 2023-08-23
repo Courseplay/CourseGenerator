@@ -107,9 +107,9 @@ function Block:finalize(entry)
         if i % 2 == (entry.reverseOddRows and 1 or 0) then
             row:reverse()
         end
-        row:adjustLength()
         -- need vertices close enough so the smoothing in goAround() only starts close to the island
         row:splitEdges(cg.cRowWaypointDistance)
+        row:adjustLength()
         row:setRowNumber(i)
         row:setAllAttributes()
         table.insert(self.rowsInWorkSequence, row)

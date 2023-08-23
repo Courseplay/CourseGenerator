@@ -14,6 +14,8 @@ function FieldworkCourse:init(context)
     self:_setContext(context)
     self.headlandPath = cg.Polyline()
 
+    self.logger:debug('### Generating headlands around islands ###')
+    self:generateHeadlandsAroundIslands()
     self.logger:debug('### Generating headlands around the field perimeter ###')
     self:generateHeadlands()
     if self.context.headlandFirst then
@@ -203,13 +205,14 @@ function FieldworkCourse:generateCenter()
     -- if there are no headlands, or there are, but we start working in the middle, then use the
     -- designated start location, otherwise the point where the innermost headland ends.
     if #self.headlands == 0 then
-        self.center = cg.Center(self.context, self.boundary, false, self.context.startLocation)
+        self.center = cg.Center(self.context, self.boundary, false, self.context.startLocation, self.bigIslands)
     else
         local innerMostHeadlandPolygon = self.headlands[#self.headlands]:getPolygon()
         self.center = cg.Center(self.context, innerMostHeadlandPolygon, true,
                 self.context.headlandFirst and
                         innerMostHeadlandPolygon[#innerMostHeadlandPolygon] or
-                        self.context.startLocation)
+                        self.context.startLocation,
+                self.bigIslands)
     end
     return self.center:generate()
 end
@@ -230,11 +233,16 @@ function FieldworkCourse:generateHeadlandsAroundIslands()
 end
 
 function FieldworkCourse:bypassIslands()
-    self:generateHeadlandsAroundIslands()
     --- Remember the islands we circled already, as even if multiple tracks cross it, we only want to
     --- circle once.
     self.circledIslands = {}
-    for _, island in pairs(self.context.field:getIslands()) do
+    for _, island in pairs(self.bigIslands) do
+        local startIx = 1
+        while startIx ~= nil do
+            _, startIx = self.headlandPath:goAround(island:getOutermostHeadland():getPolygon(), startIx, false)
+        end
+    end
+    for _, island in pairs(self.smallIslands) do
         local startIx, circled = 1, false
         while startIx ~= nil do
             self.logger:debug('Bypassing island %d on the headland, at %d', island:getId(), startIx)
@@ -243,7 +251,7 @@ function FieldworkCourse:bypassIslands()
             self.circledIslands[island] = circled or self.circledIslands[island]
         end
         self.logger:debug('Bypassing island %d on the center', island:getId())
-        self.center:bypassIsland(island:getHeadlands()[1]:getPolygon(), not self.circledIslands[island])
+        self.center:bypassIsland(island:getInnermostHeadland():getPolygon(), not self.circledIslands[island])
     end
 end
 ------------------------------------------------------------------------------------------------------------------------

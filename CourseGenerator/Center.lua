@@ -9,12 +9,14 @@ local Center = CpObject()
 ---@param boundary cg.Polygon
 ---@param hasHeadland boolean
 ---@param startLocation cg.Vector location of the vehicle before it starts working on the center.
-function Center:init(context, boundary, hasHeadland, startLocation)
+---@param bigIslands cg.Island[] islands too big to circle
+function Center:init(context, boundary, hasHeadland, startLocation, bigIslands)
     self.logger = cg.Logger('Center', cg.Logger.level.debug)
     self.boundary = boundary
     self.context = context
     self.hasHeadland = hasHeadland
     self.startLocation = startLocation
+    self.bigIslands = bigIslands
     -- All the blocks we divided the center into
     self.blocks = {}
     -- For each block, there is a path leading to it either from the previous block or from the headland.
@@ -89,6 +91,7 @@ function Center:generate()
             -- block when we start in the middle.
             table.insert(self.connectingPaths, {})
         else
+            pathToClosestEntry:setAttributes(nil, nil, cg.WaypointAttributes.setOnConnectingPath)
             table.insert(self.connectingPaths, pathToClosestEntry)
         end
         self.logger:debug('Block %d, connecting path %d with %d waypoints',
@@ -326,7 +329,7 @@ function Center:_splitIntoBlocks(rows)
     local blockId = 1
 
     for i, row in ipairs(rows) do
-        local sections = row:split(self.boundary, self.hasHeadland, self.context.workingWidth)
+        local sections = row:split(self.boundary, self.hasHeadland, self.bigIslands)
         self.logger:trace('Row %d has %d section(s)', i, #sections)
         for j, section in ipairs(sections) do
             -- with how many existing blocks does this row overlap?

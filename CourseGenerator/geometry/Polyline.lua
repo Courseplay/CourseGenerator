@@ -191,19 +191,17 @@ function Polyline:moveForward(ix, d)
 end
 
 ---@param length number the polyline is extended forward (last vertex moved)
------ the polyline is extended backwards (first vertex moved).
 function Polyline:extendEnd(length)
     local newEntryEdge = self[#self]:getEntryEdge()
     newEntryEdge:extend(length)
     self[#self] = cg.Vertex.fromVector(newEntryEdge:getEnd())
     self:calculateProperties(#self - 1)
-
 end
 
 ---@param length number the polyline is extended backwards (first vertex moved).
 function Polyline:extendStart(length)
     local newExitEdge = self[1]:getExitEdge()
-    newExitEdge:extend(length)
+    newExitEdge:extend(-length)
     self[1] = cg.Vertex.fromVector(newExitEdge:getBase())
     self:calculateProperties(1, 2)
 end
@@ -597,17 +595,17 @@ end
 --- Get all intersections with other, in the order we would meet them traversing self in the given direction
 ---@param other cg.Polyline
 ---@param startIx number index to start looking for intersections with other
----@param backwards boolean start traversing self at startIx backwards (decreasing indices)
+---@param userData any user data to add to the Intersection objects (to later identify them)
 ---@return cg.Intersection[] list of intersections
-function Polyline:getIntersections(other, startIx, backwards)
+function Polyline:getIntersections(other, startIx, userData)
     local intersections = {}
-    for i, edge, _ in (backwards and self:edgesBackwards(startIx) or self:edges(startIx)) do
+    for i, edge, _ in self:edges(startIx) do
         for j, otherEdge in other:edges() do
             local is = edge:intersects(otherEdge)
             if is then
                 -- do not add an intersection twice if it goes exactly through a vertex
                 if #intersections == 0 or (intersections[#intersections].is ~= is) then
-                    table.insert(intersections, cg.Intersection(i, j, is, edge, otherEdge))
+                    table.insert(intersections, cg.Intersection(i, j, is, edge, otherEdge, userData))
                 end
             end
         end

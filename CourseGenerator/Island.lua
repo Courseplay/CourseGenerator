@@ -82,6 +82,7 @@ function Island:createFromPerimeterPoints(perimeterPoints)
         end
     end
     self.boundary:calculateProperties()
+    self.boundary:ensureMinimumEdgeLength(2)
     self.logger:debug( "created with %d vertices, area %.0f", self.id, #self.boundary, self.boundary:getArea())
 end
 
@@ -97,13 +98,22 @@ function Island:generateHeadlands(context)
     -- outermost headland is offset from the field boundary by half width
     self.headlands[1] = cg.Headland(self.boundary, self.boundary:isClockwise(), 1, self.context.workingWidth / 2, true, self.context.turningRadius)
     for i = 2, self.context.nIslandHeadlands do
-        self.headlands[i] = cg.Headland(self.headlands[i - 1]:getPolygon(), i - 1, self.context.workingWidth, true, self.context.turningRadius)
+        self.headlands[i] = cg.Headland(self.headlands[i - 1]:getPolygon(), self.context.headlandClockwise, i - 1, self.context.workingWidth, true, self.context.turningRadius)
     end
 end
 
 function Island:getHeadlands()
     return self.headlands
 end
+
+function Island:getOutermostHeadland()
+    return self.headlands[#self.headlands]
+end
+
+function Island:getInnermostHeadland()
+    return self.headlands[1]
+end
+
 
 --- Is this island too big to just bypass? If so, we can't just drive
 -- around it, we actually have to end and turn the up/down rows

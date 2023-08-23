@@ -39,7 +39,7 @@ local autoRowAngle = ToggleParameter('auto row angle', true, '6')
 table.insert(parameters, autoRowAngle)
 local rowAngleDeg = AdjustableParameter(-90, 'row angle', 'A', 'a', 10, -90, 90)
 table.insert(parameters, rowAngleDeg)
-local rowPattern = ListParameter(cg.RowPattern.LANDS, 'row pattern', 'O', 'o',
+local rowPattern = ListParameter(cg.RowPattern.ALTERNATING, 'row pattern', 'O', 'o',
         { cg.RowPattern.ALTERNATING,
           cg.RowPattern.SKIP,
           cg.RowPattern.SPIRAL,
@@ -113,7 +113,7 @@ local selectedField
 ---@type cg.FieldworkCourse
 local course
 local savedFields
-local currentVertex
+local currentVertices
 
 ------------------------------------------------------------------------------------------------------------------------
 --- Generate the fieldwork course
@@ -226,15 +226,16 @@ local function intToString(d)
 end
 
 local function findVertexForPosition(polygon, rx, ry)
+    local vertices = {}
     for _, v in polygon:vertices() do
         if math.abs(v.x - rx) < 0.5 and math.abs(v.y - ry) < 0.5 then
-            return v
+            table.insert(vertices, v)
         end
     end
-    return nil
+    return vertices
 end
 
-local function findCurrentVertex(sx, sy)
+local function findCurrentVertices(sx, sy)
     local x, y = screenToWorld(sx, sy)
     return findVertexForPosition(course:getPath(), x, y)
 end
@@ -292,8 +293,8 @@ local function drawSwath(p)
                 if v:getExitEdge() then
                     if not v:getAttributes():isRowEnd() then
                         love.graphics.setColor(swathColor)
+                        love.graphics.line(v.x, v.y, v:getExitEdge():getEnd().x, v:getExitEdge():getEnd().y)
                     end
-                    love.graphics.line(v.x, v.y, v:getExitEdge():getEnd().x, v:getExitEdge():getEnd().y)
                 end
             end
         end
@@ -341,13 +342,13 @@ local function drawConnectingPaths(center)
             if #p > 1 then
                 love.graphics.line(p:getUnpackedVertices())
             end
+            love.graphics.setPointSize(pointSize * 6)
+            love.graphics.setColor(0, 1, 0, 0.3)
+            love.graphics.points(p[1].x, p[1].y)
+            love.graphics.setColor(1, 0, 0, 0.3)
+            love.graphics.points(p[#p].x, p[#p].y)
             drawText(p[1].x, p[1].y, connectingPathFontColor, 1, '%d - start', i)
             drawText(p[#p].x, p[#p].y, connectingPathFontColor, 1, '%d - end', i)
-            love.graphics.setPointSize(pointSize * 6)
-            love.graphics.setColor(0, 1, 0, 0.5)
-            love.graphics.points(p[1].x, p[1].y)
-            love.graphics.setColor(1, 0, 0, 0.5)
-            love.graphics.points(p[#p].x, p[#p].y)
         end
     end
 end
@@ -416,28 +417,31 @@ end
 
 local function drawHeadlands()
     --drawHeadland(course:getHeadlandPath(), courseColor)
-    --drawConnectingPaths(course:getCenter())
+    drawConnectingPaths(course:getCenter())
 end
 
 -- Draw a tooltip with the vertex' details
-local function drawVertexInfo(v)
+local function drawVertexInfo()
     love.graphics.replaceTransform(mouseTransform)
     love.graphics.setColor(0.2, 0.2, 0.2)
     local width, margin = 200, 10
-    love.graphics.rectangle('fill', 0, 0, 200, 100)
+    love.graphics.rectangle('fill', 0, 0, 200, #currentVertices * 100)
     love.graphics.setColor(0.9, 0.9, 0.9)
     local row = 12
-    love.graphics.printf(string.format('ix: %s', intToString(v.ix)), 10, row, width - 2 * margin)
-    row = row + 12
-    love.graphics.printf(string.format('r: %s xte: %s',
-            floatToString(v:getSignedRadius()), floatToString(v.xte)), 10, row, width - 2 * margin)
-    row = row + 12
-    love.graphics.printf(string.format('corner: %s', v.isCorner), 10, row, width - 2 * margin)
-    row = row + 12
-    love.graphics.printf(string.format('x: %s y: %s',
-            floatToString(v.x), floatToString(v.y)), 10, row, width - 2 * margin)
-    row = row + 12
-    love.graphics.printf(string.format('%s', v:getAttributes()), 10, row, width - 2 * margin)
+    for _, v in ipairs(currentVertices) do
+        love.graphics.printf(string.format('ix: %s', intToString(v.ix)), 10, row, width - 2 * margin)
+        row = row + 12
+        love.graphics.printf(string.format('r: %s xte: %s',
+                floatToString(v:getSignedRadius()), floatToString(v.xte)), 10, row, width - 2 * margin)
+        row = row + 12
+        love.graphics.printf(string.format('corner: %s', v.isCorner), 10, row, width - 2 * margin)
+        row = row + 12
+        love.graphics.printf(string.format('x: %s y: %s',
+                floatToString(v.x), floatToString(v.y)), 10, row, width - 2 * margin)
+        row = row + 12
+        love.graphics.printf(string.format('%s', v:getAttributes()), 10, row, width - 2 * margin)
+        row = row + 36
+    end
 end
 
 -- Highlight a few vertices around the selected one
@@ -479,9 +483,9 @@ local function drawStatus()
     local mx, my = love.mouse.getPosition()
     local x, y = screenToWorld(mx, my)
     love.graphics.print(string.format('%.1f %.1f (%.1f %.1f / %.1f)', x, y, xOffset, yOffset, scale), 0, 0)
-    if currentVertex then
-        drawVertexInfo(currentVertex)
-        highlightPathAroundVertex(currentVertex)
+    if currentVertices and #currentVertices > 0 then
+        drawVertexInfo(currentVertices)
+        highlightPathAroundVertex(currentVertices[1])
     end
 end
 
@@ -567,5 +571,5 @@ function love.mousemoved(x, y, dx, dy)
         updateTransform()
     end
     mouseTransform:setTransformation(x + 20, y + 20)
-    currentVertex = findCurrentVertex(x, y)
+    currentVertices = findCurrentVertices(x, y)
 end

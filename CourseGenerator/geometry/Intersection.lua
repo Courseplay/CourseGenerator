@@ -7,12 +7,19 @@ local Intersection = CpObject()
 ---@param is cg.Vector the intersection point.
 ---@param edgeA cg.LineSegment the edge of polygon A where where the intersection point is
 ---@param edgeB cg.LineSegment the edge of polygon B where where the intersection point is
-function Intersection:init(ixA, ixB, is, edgeA, edgeB)
+---@param userData any user data to add to the Intersection objects (to later identify them)
+function Intersection:init(ixA, ixB, is, edgeA, edgeB, userData)
     self.ixA = ixA
     self.ixB = ixB
     self.is = is
     self.edgeA = edgeA
     self.edgeB = edgeB
+    self.userData = userData
+end
+
+---@return any
+function Intersection:getUserData()
+    return self.userData
 end
 
 ---@return number The angle (in radians) at the intersecting edges meet
@@ -40,8 +47,8 @@ function Intersection.__lt(a, b)
 end
 
 function Intersection:__tostring()
-    local str = string.format('ixA: %d, ixB: %d, is: %s, edgeA: %s, edgeB: %s',
-            self.ixA, self.ixB, self.is, self.edgeA, self.edgeB)
+    local str = string.format('ixA: %d, ixB: %d, is: %s, edgeA: %s, edgeB: %s, userData: %s',
+            self.ixA, self.ixB, self.is, self.edgeA, self.edgeB, self.userData)
     return str
 end
 
