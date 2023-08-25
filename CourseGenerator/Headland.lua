@@ -81,7 +81,7 @@ function Headland:sharpenCorners(minimumRadius)
 end
 
 function Headland:isValid()
-    return self.polygon ~= nil
+    return self.polygon ~= nil and #self.polygon > 2
 end
 
 function Headland:getPolygon()
@@ -96,8 +96,36 @@ function Headland:getUnpackedVertices()
     return self.unpackedVertices
 end
 
-function Headland:bypassIsland(island, circle)
-    return self.polygon:goAround(island:getHeadlands()[1]:getPolygon(), nil, circle)
+function Headland:bypassSmallIslands(smallIslands)
+    for _, island in pairs(smallIslands) do
+            local startIx, circled = 1, false
+            while startIx ~= nil do
+                self.logger:debug('Bypassing island %d, at %d', island:getId(), startIx)
+                circled, startIx = self.polygon:goAround(
+                        island:getHeadlands()[1]:getPolygon(), startIx, not self.circledIslands[island])
+                self.circledIslands[island] = circled or self.circledIslands[island]
+            end
+        end
+end
+
+function Headland:bypassBigIslands(bigIslands)
+    for _, island in pairs(bigIslands) do
+        self.logger:debug('Bypassing big island %d', island:getId())
+        local islandHeadlandPolygon = island:getSecondInnermostHeadland():getPolygon()
+        local intersections = self.polygon:getIntersections(islandHeadlandPolygon, 1)
+        local is1, is2 = intersections[1], intersections[2]
+        if #intersections > 0 then
+            if islandHeadlandPolygon:isVectorInside(self.polygon[1]) then
+                self.polygon:rebase(is1.ixA + 1)
+            elseif islandHeadlandPolygon:isVectorInside(self.polygon[#self.polygon]) then
+                self.polygon:rebase(is2.ixA - 1)
+            end
+            local startIx = 1
+            while startIx ~= nil do
+                _, startIx = self.polygon:goAround(islandHeadlandPolygon, startIx, false)
+            end
+        end
+    end
 end
 
 --- Generate a path to switch from this headland to the other, starting as close as possible to the

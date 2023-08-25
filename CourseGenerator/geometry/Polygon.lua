@@ -147,6 +147,13 @@ function Polygon:isInside(x, y)
     return windingNumber ~= 0
 end
 
+--- Same as isInside, but accepts a Vector
+---@param v cg.Vector
+---@return boolean true if v is inside of this
+function Polygon:isVectorInside(v)
+    return self:isInside(v.x, v.y)
+end
+
 --- Is his polygon clockwise?
 --- Returns nil if it is not possible to determine, for instance an 8 shape.
 ---@return boolean or nil
@@ -159,6 +166,7 @@ function Polygon:isClockwise()
     else
         -- delta angle must be around 2*pi, otherwise there are multiple loops or knots
         -- (2*pi isn't a guarantee that there are no knots
+        self.logger:warning('Can\'t tell if polygon is clockwise or not, delta angle is %.0fº', math.deg(self.deltaAngle))
         return nil
     end
 end
@@ -213,6 +221,7 @@ function Polygon:ensureMinimumEdgeLength(minimumLength)
     if (self[1] - self[#self]):length() < minimumLength then
         table.remove(self, #self)
     end
+    self:calculateProperties(#self - 1)
 end
 
 --- Make sure the edges are properly connected, their ends touch nicely without gaps and never

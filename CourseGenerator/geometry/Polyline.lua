@@ -255,10 +255,10 @@ end
 --- Cut all vertices from ix (not including) to the last vertex, shortening the polyline at the end
 ---@param ix number
 function Polyline:cutEndAtIx(ix)
-    for _ = #self, ix + 1, -1 do
+    for _ = #self, ix + 2, -1 do
         table.remove(self)
     end
-    self:calculateProperties(ix - 1, ix)
+    self:calculateProperties(ix, ix + 1)
 end
 
 --- Calculate all interesting properties we may need later for more advanced functions
@@ -297,6 +297,7 @@ function Polyline:ensureMinimumEdgeLength(minimumLength)
             i = i + 1
         end
     end
+    self:calculateProperties()
 end
 
 --- If two vertices are further than maximumLength apart, add a vertex between them. If the
@@ -498,7 +499,11 @@ end
 ---@param other Polyline
 ---@param startIx number index of the vertex we want to start looking for intersections.
 ---@param circle boolean when true, make a full circle on the other polygon, else just go around and continue
----@return boolean, number true if there was an intersection and we actually went around, index of last vertex
+---@return boolean, number true if there were two intersections and we actually went around other (circle or not),
+--- then the second return value is the index of last vertex, this is the startIx of the next call to goAround() should
+--- be to continue looking for more intersections with other.
+--- If false, and there was one intersection (meaning either the start or end of this polyline is within other, then return
+--- the index on the polyline where it intersects other.
 --- after the bypass
 function Polyline:goAround(other, startIx, circle)
     local intersections = self:getIntersections(other, startIx)
@@ -540,7 +545,10 @@ function Polyline:goAroundBetweenIntersections(other, circle, is1, is2)
     if path then
         local lastIx = self:replace(is1.ixA, is2.ixA + 1, path)
         -- make the transitions a little smoother
-        cg.SplineHelper.smooth(self, 3, is1.ixA, lastIx)
+        self:calculateProperties()
+        -- size may change after smoothing
+        local oldSize = #self
+        lastIx = cg.SplineHelper.smooth(self, 1, is1.ixA, lastIx)
         self:calculateProperties()
         return true, lastIx
     else

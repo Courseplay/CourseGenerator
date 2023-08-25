@@ -95,10 +95,16 @@ function Island:generateHeadlands(context)
     self.context = context
     self.logger:debug('generating %d headland(s)', self.context.nIslandHeadlands, self.context.turningRadius)
     self.headlands = {}
+    self.boundary = cg.FieldworkCourseHelper.createUsableBoundary(self.boundary, self.context.islandHeadlandClockwise)
     -- outermost headland is offset from the field boundary by half width
-    self.headlands[1] = cg.Headland(self.boundary, self.boundary:isClockwise(), 1, self.context.workingWidth / 2, true, self.context.turningRadius)
+    self.headlands[1] = cg.Headland(self.boundary, self.context.islandHeadlandClockwise, 1, self.context.workingWidth / 2, true)
     for i = 2, self.context.nIslandHeadlands do
-        self.headlands[i] = cg.Headland(self.headlands[i - 1]:getPolygon(), self.context.headlandClockwise, i - 1, self.context.workingWidth, true, self.context.turningRadius)
+        if not self.headlands[i - 1]:isValid() then
+            self.logger:warning('headland %d is invalid, removing', i - 1)
+            self.headlands[i - 1] = nil
+            break
+        end
+        self.headlands[i] = cg.Headland(self.headlands[i - 1]:getPolygon(), self.context.islandHeadlandClockwise, i, self.context.workingWidth, true)
     end
 end
 
@@ -110,6 +116,10 @@ function Island:getOutermostHeadland()
     return self.headlands[#self.headlands]
 end
 
+function Island:getSecondInnermostHeadland()
+    return self.headlands[math.min(2, #self.headlands)]
+end
+
 function Island:getInnermostHeadland()
     return self.headlands[1]
 end
@@ -118,10 +128,14 @@ end
 --- Is this island too big to just bypass? If so, we can't just drive
 -- around it, we actually have to end and turn the up/down rows
 function Island:isTooBigToBypass(width)
-    local area = self.headlands[1]:getPolygon():getArea() and self.headlands[1]:getPolygon():getArea() or 0
-    local isTooBig = area > NewCourseGenerator.maxRowsToBypassIsland * width * NewCourseGenerator.maxRowsToBypassIsland * width
-    self.logger:debug( "isTooBigToBypass = %s (area = %.0f, width = %.1f", tostring( isTooBig ), area, width )
-    return isTooBig
+    if self.headlands[1] and self.headlands[1]:isValid() then
+        local area = self.headlands[1]:getPolygon():getArea() and self.headlands[1]:getPolygon():getArea() or 0
+        local isTooBig = area > NewCourseGenerator.maxRowsToBypassIsland * width * NewCourseGenerator.maxRowsToBypassIsland * width
+        self.logger:debug( "isTooBigToBypass = %s (area = %.0f, width = %.1f", tostring( isTooBig ), area, width )
+        return isTooBig
+    else
+        return false
+    end
 end
 
 ------------------------------------------------------------------------------------------------------------------------

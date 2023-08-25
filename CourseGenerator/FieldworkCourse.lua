@@ -118,6 +118,7 @@ function FieldworkCourse:generateHeadlandsFromOutside(boundary, firstHeadlandWid
     end
     if self.context.sharpenCorners then
         self.headlands[startIx]:sharpenCorners(self.context.turningRadius)
+        self.headlands[startIx]:bypassBigIslands(self.bigIslands)
     end
     for i = startIx + 1, self.nHeadlands do
         self.headlands[i] = cg.Headland(self.headlands[i - 1]:getPolygon(), self.context.headlandClockwise, i,
@@ -125,6 +126,7 @@ function FieldworkCourse:generateHeadlandsFromOutside(boundary, firstHeadlandWid
         if self:isValidHeadland(self.headlands[i]) then
             if self.context.sharpenCorners then
                 self.headlands[i]:sharpenCorners(self.context.turningRadius)
+                self.headlands[i]:bypassBigIslands(self.bigIslands)
             end
         else
             self:_removeHeadland(i)
@@ -143,6 +145,8 @@ function FieldworkCourse:generateHeadlandsFromInside()
                 self.nHeadlandsWithRoundCorners, (self.nHeadlandsWithRoundCorners - 0.5) * self.context.workingWidth, false)
         if self:isValidHeadland(self.headlands[self.nHeadlandsWithRoundCorners]) then
             self.headlands[self.nHeadlandsWithRoundCorners]:roundCorners(self.context.turningRadius)
+            self.headlands[self.nHeadlandsWithRoundCorners]:bypassBigIslands(self.bigIslands)
+
             break
         else
             self:_removeHeadland(self.nHeadlandsWithRoundCorners)
@@ -154,6 +158,7 @@ function FieldworkCourse:generateHeadlandsFromInside()
         self.headlands[i] = cg.Headland(self.headlands[i + 1]:getPolygon(), self.context.headlandClockwise, i,
                 self.context.workingWidth, true)
         self.headlands[i]:roundCorners(self.context.turningRadius)
+        self.headlands[i]:bypassBigIslands(self.bigIslands)
     end
 end
 
@@ -224,34 +229,36 @@ function FieldworkCourse:generateHeadlandsAroundIslands()
     self.bigIslands, self.smallIslands = {}, {}
     for _, island in pairs(self.context.field:getIslands()) do
         island:generateHeadlands(self.context)
-        if island:isTooBigToBypass(self.context.workingWidth) then
-            table.insert(self.bigIslands, island)
+        -- for some wierd cases we may not have been able to generate island headlands, so ignore those islands
+        if island:getInnermostHeadland() then
+            if island:isTooBigToBypass(self.context.workingWidth) then
+                table.insert(self.bigIslands, island)
+            else
+                table.insert(self.smallIslands, island)
+            end
         else
-            table.insert(self.smallIslands, island)
+            self.logger:warning('Could not generate headlands for island %d', island:getId())
         end
     end
 end
 
 function FieldworkCourse:bypassIslands()
-    --- Remember the islands we circled already, as even if multiple tracks cross it, we only want to
-    --- circle once.
     self.circledIslands = {}
     for _, island in pairs(self.bigIslands) do
-        local startIx = 1
-        while startIx ~= nil do
-            _, startIx = self.headlandPath:goAround(island:getOutermostHeadland():getPolygon(), startIx, false)
-        end
+        self.center:bypassBigIsland(island:getSecondInnermostHeadland():getPolygon())
     end
     for _, island in pairs(self.smallIslands) do
         local startIx, circled = 1, false
         while startIx ~= nil do
             self.logger:debug('Bypassing island %d on the headland, at %d', island:getId(), startIx)
+            --- Remember the islands we circled already, as even if multiple tracks cross it, we only want to
+            --- circle once.
             circled, startIx = self.headlandPath:goAround(
                     island:getHeadlands()[1]:getPolygon(), startIx, not self.circledIslands[island])
             self.circledIslands[island] = circled or self.circledIslands[island]
         end
         self.logger:debug('Bypassing island %d on the center', island:getId())
-        self.center:bypassIsland(island:getInnermostHeadland():getPolygon(), not self.circledIslands[island])
+        self.center:bypassSmallIsland(island:getInnermostHeadland():getPolygon(), not self.circledIslands[island])
     end
 end
 ------------------------------------------------------------------------------------------------------------------------
@@ -263,16 +270,7 @@ function FieldworkCourse:_setContext(context)
     self.nHeadlands = self.context.nHeadlands
     self.nHeadlandsWithRoundCorners = self.context.nHeadlandsWithRoundCorners
     ---@type cg.Polygon
-    self.boundary = context.field:getBoundary():clone()
-    -- some field scans are not perfect and have sudden direction changes which screws up the clockwise calculation
-    self.boundary:removeGlitches()
-    if self.boundary:isClockwise() ~= self.context.headlandClockwise then
-        -- all headlands are generated in the same direction as the field boundary,
-        -- so if it does not match the required cw/ccw, reverse it
-        self.logger:debug('Field boundary clockwise %s, desired %s, reversing boundary',
-                self.boundary:isClockwise(), self.context.headlandClockwise)
-        self.boundary:reverse()
-    end
+    self.boundary = cg.FieldworkCourseHelper.createUsableBoundary(context.field:getBoundary(), self.context.headlandClockwise)
     if self.context.fieldCornerRadius > 0 then
         self.logger:debug('sharpening field boundary corners')
         self.boundary:ensureMinimumRadius(self.context.fieldCornerRadius, true)

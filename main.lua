@@ -13,12 +13,12 @@ dofile('include.lua')
 
 local parameters = {}
 -- working width of the equipment
-local workingWidth = AdjustableParameter(7.8, 'width', 'W', 'w', 0.2, 0, 100)
+local workingWidth = AdjustableParameter(6, 'width', 'W', 'w', 0.2, 0, 100)
 table.insert(parameters, workingWidth)
 local turningRadius = AdjustableParameter(5.8, 'radius', 'T', 't', 0.2, 0, 20)
 table.insert(parameters, turningRadius)
 -- number of headland passes around the field boundary
-local nHeadlandPasses = AdjustableParameter(3, 'headlands', 'P', 'p', 1, 0, 100)
+local nHeadlandPasses = AdjustableParameter(5, 'headlands', 'P', 'p', 1, 0, 100)
 table.insert(parameters, nHeadlandPasses)
 local nHeadlandsWithRoundCorners = AdjustableParameter(0, 'headlands with round corners', 'R', 'r', 1, 0, 100)
 table.insert(parameters, nHeadlandsWithRoundCorners)
@@ -27,7 +27,7 @@ table.insert(parameters, headlandClockwise)
 local headlandFirst = ToggleParameter('headlands first', true, 'f')
 table.insert(parameters, headlandFirst)
 -- number of headland passes around the field islands
-local nIslandHeadlandPasses = AdjustableParameter(1, 'island headlands', 'I', 'i', 1, 1, 10)
+local nIslandHeadlandPasses = AdjustableParameter(2, 'island headlands', 'I', 'i', 1, 1, 10)
 table.insert(parameters, nIslandHeadlandPasses)
 local fieldCornerRadius = AdjustableParameter(6, 'field corner radius', 'F', 'f', 1, 0, 30)
 table.insert(parameters, fieldCornerRadius)
@@ -102,6 +102,7 @@ local rowStartColor = { 1, 0, 0, 1 }
 local connectingPathColor = { 0.3, 0.3, 0.3, 1 }
 local connectingPathFontColor = { 0.8, 0.8, 0.8, 1 }
 local swathColor = { 0, 0.7, 0, 0.25 }
+local islandColor = { 0.7, 0, 0.7, 1 }
 local islandPointColor = { 0.7, 0, 0.7, 0.4 }
 local islandPerimeterPointColor = { 1, 0.4, 1 }
 
@@ -304,7 +305,9 @@ end
 local function drawIslandHeadland(h, color)
     love.graphics.setLineWidth(10 * lineWidth)
     love.graphics.setColor(color)
-    love.graphics.polygon('line', h:getUnpackedVertices())
+    if h:isValid() then
+        love.graphics.polygon('line', h:getUnpackedVertices())
+    end
 end
 
 local function drawText(x, y, color, textScale, ...)
@@ -385,18 +388,31 @@ local function drawFields()
     for _, f in pairs(savedFields) do
         love.graphics.setLineWidth(lineWidth)
         love.graphics.setColor(fieldBoundaryColor)
+        local unpackedVertices = f:getUnpackedVertices()
+        if #unpackedVertices < 3 then return end
         love.graphics.polygon('line', f:getUnpackedVertices())
         for _, v in ipairs(f:getBoundary()) do
             love.graphics.points(v.x, v.y)
         end
         for _, i in ipairs(f:getIslands()) do
-            love.graphics.setColor(fieldBoundaryColor)
+            love.graphics.setColor(islandColor)
+            love.graphics.setLineWidth(lineWidth)
             if #i:getBoundary() > 2 then
                 love.graphics.polygon('line', i:getBoundary():getUnpackedVertices())
             end
-            for _, h in ipairs(i:getHeadlands()) do
+            local islandHeadlands = i:getHeadlands();
+            for _, h in ipairs(islandHeadlands) do
                 drawIslandHeadland(h, islandHeadlandColor)
             end
+
+            love.graphics.setColor(islandColor)
+            local c = i:getBoundary():getCenter()
+            love.graphics.push()
+            love.graphics.scale(1, -1)
+            love.graphics.print(i:getId(), c.x, -c.y)
+            love.graphics.pop()
+
+--[[
             for _, p in ipairs(f.islandPoints) do
                 love.graphics.setColor(islandPointColor)
                 love.graphics.points(p.x, p.y)
@@ -405,9 +421,11 @@ local function drawFields()
                 love.graphics.setColor(islandPerimeterPointColor)
                 love.graphics.points(p.x, p.y)
             end
+]]
         end
+
         love.graphics.setColor(fieldBoundaryColor)
-        local c = f:getCenter()
+        c = f:getCenter()
         love.graphics.push()
         love.graphics.scale(1, -1)
         love.graphics.print(f:getId(), c.x, -c.y)

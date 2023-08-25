@@ -21,6 +21,7 @@ function FieldworkContext:init(field, workingWidth, turningRadius, nHeadlands)
     self.sharpenCorners = true
     self.bypassIslands = true
     self.nIslandHeadlands = 1
+    self.islandHeadlandClockwise = true
 
     self.rowPattern = cg.RowPatternAlternating()
     self.autoRowAngle = true
@@ -33,8 +34,8 @@ end
 function FieldworkContext:log()
     self.logger:debug('working width: %.1f, turning radius: %.1f, headlands: %d, %d with round corners, clockwise %s',
             self.workingWidth, self.turningRadius, self.nHeadlands, self.nHeadlandsWithRoundCorners, self.headlandClockwise)
-    self.logger:debug('field corner radius: %.1f, sharpen corners: %s, bypass islands: %s, headlands around islands %d',
-            self.fieldCornerRadius, self.sharpenCorners, self.bypassIslands, self.nIslandHeadlands)
+    self.logger:debug('field corner radius: %.1f, sharpen corners: %s, bypass islands: %s, headlands around islands %d, island headland cw %s',
+            self.fieldCornerRadius, self.sharpenCorners, self.bypassIslands, self.nIslandHeadlands, self.islandHeadlandClockwise)
     self.logger:debug('row pattern: %s, row angle auto: %s, %.1fº, even row distribution: %s, use baseline edge: %s',
             self.rowPattern, self.autoRowAngle, math.deg(self.rowAngle), self.evenRowDistribution, self.useBaselineEdge)
 end
@@ -57,6 +58,7 @@ function FieldworkContext:setIslandHeadlands(nIslandHeadlands)
     return self
 end
 
+
 ---@param fieldCornerRadius number if a field has a corner under this radius, we'll sharpen it
 function FieldworkContext:setFieldCornerRadius(fieldCornerRadius)
     self.fieldCornerRadius = fieldCornerRadius
@@ -69,13 +71,19 @@ function FieldworkContext:setBypassIslands(bypass)
     return self
 end
 
+---@param clockwise boolean generate the headlands around the islands int the clockwise direction if true, counterclockwise if false
+function FieldworkContext:setHeadlandClockwise(clockwise)
+    self.headlandClockwise = clockwise
+    return self
+end
+
 ---@param sharpen boolean if true, sharpen the corners of the headlands which are not rounded
 function FieldworkContext:setSharpenCorners(sharpen)
     self.sharpenCorners = sharpen
     return self
 end
 
----@param clockwise boolean generate headlands in the clockwise direction if true, counterclockwise if false
+---@param clockwise boolean generate headlands around the field boundary in the clockwise direction if true, counterclockwise if false
 function FieldworkContext:setHeadlandClockwise(clockwise)
     self.headlandClockwise = clockwise
     return self

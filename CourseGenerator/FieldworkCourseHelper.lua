@@ -3,6 +3,8 @@
 ---@class FieldworkCourseHelper
 local FieldworkCourseHelper = {}
 
+FieldworkCourseHelper.logger = cg.Logger('FieldworkCourseHelper')
+
 -- how far to drive beyond the field edge/headland if we hit it at an angle, to cover the row completely
 local function getDistanceBetweenRowEndAndFieldBoundary(workingWidth, angle)
     -- with very low angles this becomes too much, in that case you need a headland, so limit it here
@@ -68,7 +70,7 @@ function FieldworkCourseHelper.bypassIsland(polyline, workingWidth, isHeadland, 
     elseif is1 then
         -- there is one intersection only, one of our ends is within other, and there are no more intersections with other
         -- so, the end of the row is on the island, we have to move it out of the island
-        if other:isInside(polyline[#polyline].x, polyline[#polyline].y) then
+        if other:isVectorInside(polyline[#polyline]) then
             polyline.logger:debug('End of row is on an island, removing all vertices after index %d', is1.ixA)
             polyline:cutEndAtIx(is1.ixA)
             polyline:append(is1.is)
@@ -83,6 +85,24 @@ function FieldworkCourseHelper.bypassIsland(polyline, workingWidth, isHeadland, 
         end
         return false
     end
+end
+
+--- Remove glitches from a potentially fuzzy field or island boundary, and then align into the same
+--- direction as we want the headlands to be generated
+---@param originalBoundary cg.Polygon raw field/island boundary
+---@param clockwise boolean if true, we want to generate headlands based on this boundary in the clockwise direction.
+--- if boundary has a different orientation, it'll be reversed to match the desired direction
+function FieldworkCourseHelper.createUsableBoundary(originalBoundary, clockwise)
+    local usableBoundary = originalBoundary:clone()
+    -- some field scans are not perfect and have sudden direction changes which screws up the clockwise calculation
+    usableBoundary:removeGlitches()
+    if usableBoundary:isClockwise() ~= clockwise then
+        -- all headlands are generated in the same direction as the field boundary,
+        -- so if it does not match the required cw/ccw, reverse it
+        FieldworkCourseHelper.logger:debug('Boundary clockwise %s, desired %s, reversing boundary', originalBoundary:isClockwise(), clockwise)
+        usableBoundary:reverse()
+    end
+    return usableBoundary
 end
 
 ---@class cg.FieldworkCourseHelper

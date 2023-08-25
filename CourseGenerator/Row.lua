@@ -38,31 +38,40 @@ function Row:overlaps(other)
     return myEndToEnd:overlaps(otherEndToEnd)
 end
 
---- Split a row at its intersections with boundary. In the trivial case of a rectangular field,
---- this returns an array with a single polyline element, the line between the two points where
---- the row intersects the boundary.
+--- Split a row at its intersections with the field boundary and with big islands.
+--- In the trivial case of a rectangular field, this returns an array with a single polyline element,
+--- the line between the two points where the row intersects the boundary.
 ---
 --- In complex cases, with concave fields, the result may be more than one segments (polylines)
 --- so for any section of the row which is within the boundary there'll be one entry in the
 --- returned array.
 ---
+--- Big islands in the field also split a row which intersects them. We just drive around
+--- smaller islands but at bigger ones it is better to end the row and turn around into the next.
+---
 ---@param boundary cg.Polygon the field boundary (or innermost headland)
 ---@param boundaryIsHeadland boolean true if the boundary is a headland
 ---@return cg.Row[]
 function Row:split(boundary, boundaryIsHeadland, bigIslands)
+
+    -- get all the intersections with the field boundary
     local intersections = self:getIntersections(boundary, 1,
             function(is)
+                -- when entering a field boundary polygon, we move on to the field
                 return self:isEntering(boundary, is)
             end)
+
     if #intersections < 2 then
         self.logger:warning('Row has only %d intersection with boundary', #intersections)
         return cg.Row(self.workingWidth)
     end
 
+    -- then get all the intersections with big islands
     for _, island in ipairs(bigIslands) do
         local outermostIslandHeadland = island:getOutermostHeadland():getPolygon()
         local islandIntersections = self:getIntersections(outermostIslandHeadland, 1,
                 function(is)
+                    -- when entering an island headland, we move off the field
                     return not self:isEntering(outermostIslandHeadland, is)
                 end)
 
@@ -72,8 +81,13 @@ function Row:split(boundary, boundaryIsHeadland, bigIslands)
         end
         table.sort(intersections)
     end
-    -- The assumption here is that the row always begins outside of the boundary
-    -- This latter condition is to properly handle the cases where the boundary intersects with
+    -- At this point, intersections contains all intersections of the row with the field boundary and any big islands,
+    -- in the order the row crosses them.
+
+    -- The assumption here is that the row always begins outside of the boundary. So whenever we cross a field boundary
+    -- entering, we are on the field, whenever cross an island headland, we move off the field.
+
+    -- This is also to properly handle the cases where the boundary intersects with
     -- itself, for instance with fields where the total width of headlands are greater than the
     -- field width (irregularly shaped fields, like ones with a peninsula)
     -- we start outside of the boundary. If we cross it entering, we'll decrement this, if we cross leaving, we'll increment it.
@@ -81,6 +95,7 @@ function Row:split(boundary, boundaryIsHeadland, bigIslands)
     local lastInsideIx
     local sections = {}
     for i = 1, #intersections do
+        -- getUserData() depends on if this is a field boundary or an island
         local isEnteringField = intersections[i]:getUserData()(intersections[i])
         outside = outside + (isEnteringField and -1 or 1)
         if not isEnteringField and outside == 1 then

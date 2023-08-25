@@ -20,19 +20,31 @@ end
 
 --- Add a vertex between existing ones
 function SplineHelper.refine(p, from, to)
-    for i, cv, pv, _ in p:vertices(to, from, -1) do
-        if pv and cv then
+    -- iterate through the existing table but do not insert the
+    -- new points, only remember the index where they would end up
+    -- (as we do not want to modify the table while iterating)
+    local verticesToInsert = {}
+    local ix = p:getRawIndex(from)
+    for i, cv, _, nv in p:vertices(from, to) do
+        -- initialize ix to the first value of i
+        if nv and cv then
             if not cv.isCorner and cv.dA and math.abs(cv.dA) > cg.cMinSmoothingAngle then
-                local m = (pv + cv) / 2
-                local newVertex = pv:clone()
+                local m = (nv + cv) / 2
+                local newVertex = cv:clone()
                 newVertex.x, newVertex.y = m.x, m.y
-                table.insert(p, i, newVertex)
+                ix = ix + 1
+                table.insert(verticesToInsert, {ix = ix, vertex = newVertex})
             end
         end
+        ix = ix + 1
     end
-    p:calculateProperties(from, to)
+    for _, v in ipairs(verticesToInsert) do
+        table.insert(p, v.ix, v.vertex )
+    end
+    p:calculateProperties(from, to + #verticesToInsert)
 end
 
+---@return number the index where
 function SplineHelper.smooth(p, order, from, to)
     if (order <= 0) then
         return
@@ -44,6 +56,7 @@ function SplineHelper.smooth(p, order, from, to)
         SplineHelper.tuck(p, from, to, -0.15)
         SplineHelper.smooth(p, order - 1, from, to)
     end
+    return to
 end
 
 ---@class SplineHelper

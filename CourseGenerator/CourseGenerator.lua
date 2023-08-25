@@ -24,7 +24,7 @@ NewCourseGenerator.cRowWaypointDistance = 10
 NewCourseGenerator.cMaxCrossTrackError = 0.3
 -- The delta angle above which smoothing kicks in. No smoothing around vertices with a delta
 -- angle below this
-NewCourseGenerator.cMinSmoothingAngle = math.rad(25)
+NewCourseGenerator.cMinSmoothingAngle = math.rad(15)
 -- Minimum radius in meters where a change to the next headland is allowed. This is to ensure that
 -- we only change lanes on relatively straight sections of the headland (not around corners)
 NewCourseGenerator.headlandChangeMinRadius = 20
