@@ -174,7 +174,6 @@ function love.load(arg)
     fileName = arg[1]
     cg.debug('Reading %s...', fileName)
     savedFields = cg.Field.loadSavedFields(fileName)
-    print("Fields found in file:")
     for _, f in pairs(savedFields) do
         if f:getId() == tonumber(arg[2]) then
             selectedField = f
@@ -389,43 +388,33 @@ local function drawFields()
         love.graphics.setLineWidth(lineWidth)
         love.graphics.setColor(fieldBoundaryColor)
         local unpackedVertices = f:getUnpackedVertices()
-        if #unpackedVertices < 3 then return end
-        love.graphics.polygon('line', f:getUnpackedVertices())
-        for _, v in ipairs(f:getBoundary()) do
-            love.graphics.points(v.x, v.y)
-        end
-        for _, i in ipairs(f:getIslands()) do
-            love.graphics.setColor(islandColor)
-            love.graphics.setLineWidth(lineWidth)
-            if #i:getBoundary() > 2 then
-                love.graphics.polygon('line', i:getBoundary():getUnpackedVertices())
+        if #unpackedVertices > 2 then
+            love.graphics.polygon('line', f:getUnpackedVertices())
+            for _, v in ipairs(f:getBoundary()) do
+                love.graphics.points(v.x, v.y)
             end
-            local islandHeadlands = i:getHeadlands();
-            for _, h in ipairs(islandHeadlands) do
-                drawIslandHeadland(h, islandHeadlandColor)
-            end
+            for _, i in ipairs(f:getIslands()) do
+                love.graphics.setColor(islandColor)
+                love.graphics.setLineWidth(lineWidth)
+                if #i:getBoundary() > 2 then
+                    love.graphics.polygon('line', i:getBoundary():getUnpackedVertices())
+                end
+                local islandHeadlands = i:getHeadlands();
+                for _, h in ipairs(islandHeadlands) do
+                    drawIslandHeadland(h, islandHeadlandColor)
+                end
 
-            love.graphics.setColor(islandColor)
-            local c = i:getBoundary():getCenter()
-            love.graphics.push()
-            love.graphics.scale(1, -1)
-            love.graphics.print(i:getId(), c.x, -c.y)
-            love.graphics.pop()
-
---[[
-            for _, p in ipairs(f.islandPoints) do
-                love.graphics.setColor(islandPointColor)
-                love.graphics.points(p.x, p.y)
+                love.graphics.setColor(islandColor)
+                local c = i:getBoundary():getCenter()
+                love.graphics.push()
+                love.graphics.scale(1, -1)
+                love.graphics.print(i:getId(), c.x, -c.y)
+                love.graphics.pop()
             end
-            for _, p in ipairs(f.islandPerimeterPoints) do
-                love.graphics.setColor(islandPerimeterPointColor)
-                love.graphics.points(p.x, p.y)
-            end
-]]
         end
 
         love.graphics.setColor(fieldBoundaryColor)
-        c = f:getCenter()
+        local c = f:getCenter()
         love.graphics.push()
         love.graphics.scale(1, -1)
         love.graphics.print(f:getId(), c.x, -c.y)
