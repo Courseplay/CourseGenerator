@@ -439,7 +439,9 @@ function Polyline:ensureMinimumRadius(r, makeCorners)
             local entry = cg.Slider(self, currentIx, 0)
             local exit = cg.Slider(self, currentIx, 0)
             local rMin
-            local step, totalMoved, maxDistanceToMove = 0.2, 0, 2 * r
+            -- we can move back a lot when rounding corners, but otherwise, limit that as we may end up
+            -- being outside of the field with the corner...
+            local step, totalMoved, maxDistanceToMove = 0.2, 0, r * (makeCorners and 2 or 10)
             repeat
                 -- from the corner, start widening the gap until we can fit an
                 -- arc with r between
