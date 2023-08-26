@@ -27,6 +27,12 @@ function ToggleParameter:get()
     return self.value
 end
 
+---@return table to use with love.graphics.print()
+function ToggleParameter:toColoredText(nameColor, keyColor, valueColor)
+    return {nameColor, self.name, keyColor, string.format(' (%s): ', self.toggle),
+            valueColor, tostring(self.value)}
+end
+
 function ToggleParameter:__tostring()
     return string.format('%s (%s): %s', self.name, self.toggle, self.value)
 end

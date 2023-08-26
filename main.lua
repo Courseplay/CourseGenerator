@@ -24,7 +24,7 @@ local nHeadlandsWithRoundCorners = AdjustableParameter(0, 'headlands with round 
 table.insert(parameters, nHeadlandsWithRoundCorners)
 local headlandClockwise = ToggleParameter('headlands clockwise', false, 'c')
 table.insert(parameters, headlandClockwise)
-local headlandFirst = ToggleParameter('headlands first', true, 'f')
+local headlandFirst = ToggleParameter('headlands first', true, 'h')
 table.insert(parameters, headlandFirst)
 -- number of headland passes around the field islands
 local nIslandHeadlandPasses = AdjustableParameter(2, 'island headlands', 'I', 'i', 1, 1, 10)
@@ -83,6 +83,11 @@ local startX, startY, baselineX, baselineY = 0, 0, 0, 0
 
 local graphicsTransform, textTransform, statusTransform, mouseTransform, contextTransform
 
+local parameterNameColor = {1, 1, 1}
+local parameterKeyColor = {0, 1, 1}
+local parameterValueColor = {1, 1, 0}
+
+local startLocationColor = { 0.8, 0.8, 0.8 }
 local fieldBoundaryColor = { 0.5, 0.5, 0.5 }
 local courseColor = { 0, 0.7, 1 }
 local turnColor = { 1, 1, 0, 0.5 }
@@ -91,8 +96,9 @@ local waypointColor = { 0.7, 0.5, 0.2 }
 local cornerColor = { 1, 1, 0.0, 0.8 }
 local islandBypassColor = { 0, 0.2, 1.0 }
 local debugColor = { 0.8, 0, 0, 0.5 }
-local highlightedWaypointColorForward = { 0, 0.7, 0, 0.3 }
-local highlightedWaypointColorBackward = { 0.7, 0, 0, 0.3 }
+local highlightedWaypointColor = { 0.7, 0.7, 0.7, 1 }
+local highlightedWaypointColorForward = { 0, 0.7, 0, 1 }
+local highlightedWaypointColorBackward = { 0.7, 0, 0, 1 }
 local centerColor = { 0, 0.7, 1, 0.8 }
 local centerFontColor = { 0, 0.7, 1 }
 local blockColor = { 1, 0.5, 0, 0.2 }
@@ -389,7 +395,7 @@ local function drawFields()
         love.graphics.setColor(fieldBoundaryColor)
         local unpackedVertices = f:getUnpackedVertices()
         if #unpackedVertices > 2 then
-            love.graphics.polygon('line', f:getUnpackedVertices())
+            love.graphics.polygon('line', unpackedVertices)
             for _, v in ipairs(f:getBoundary()) do
                 love.graphics.points(v.x, v.y)
             end
@@ -454,14 +460,24 @@ end
 -- Highlight a few vertices around the selected one
 local function highlightPathAroundVertex(v)
     love.graphics.replaceTransform(graphicsTransform)
-    love.graphics.setPointSize(pointSize * 3)
     for i = v.ix - 20, v.ix + 30 do
-        love.graphics.setColor(i < v.ix and highlightedWaypointColorBackward or highlightedWaypointColorForward)
+        love.graphics.setColor(i == v.ix and highlightedWaypointColor or
+                (i < v.ix and highlightedWaypointColorBackward or highlightedWaypointColorForward))
         local p = course:getPath():at(i)
         if p then
-            love.graphics.points(p.x, p.y)
+            love.graphics.circle('line', p.x, p.y, 1.5)
         end
     end
+end
+
+local function drawStartLocation()
+    love.graphics.replaceTransform(graphicsTransform)
+    love.graphics.setColor(startLocationColor)
+    love.graphics.circle('line', startX, startY, 2)
+    love.graphics.push()
+    love.graphics.scale(1, -1)
+    love.graphics.print('Start location', startX + 2, -startY, 0, 1 / scale)
+    love.graphics.pop()
 end
 
 local function drawGraphics()
@@ -472,16 +488,18 @@ local function drawGraphics()
     drawCenter()
     drawPath(course:getPath())
     drawSwath(course:getPath())
+    drawStartLocation()
 end
 
 local function drawContext()
-    love.graphics.setColor(1, 1, 0)
+    love.graphics.setColor(1, 1, 1) -- base color for the coloredText is white (love2D can sometimes be strange)
     love.graphics.replaceTransform(contextTransform)
-    local context = ''
+    love.graphics.print({parameterNameColor, 'To generate, hit ', parameterKeyColor, 'SPACE or right click'}, 0, 0)
+    local y = 24
     for _, p in ipairs(parameters) do
-        context = context .. tostring(p) .. '\n'
+        love.graphics.print(p:toColoredText(parameterNameColor, parameterKeyColor, parameterValueColor), 0, y)
+        y = y + 12
     end
-    love.graphics.print(context, 0, 0)
 end
 
 local function drawStatus()
@@ -537,7 +555,10 @@ end
 ---------------------------------------------------------------------------------------------------------------------------
 function love.textinput(key)
     for _, p in pairs(parameters) do
-        p:onKey(key, generate)
+        p:onKey(key, function () return true end)
+    end
+    if key == ' ' then
+        generate()
     end
 end
 

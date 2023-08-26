@@ -29,6 +29,12 @@ function ListParameter:get()
 	return self.values[self.current]
 end
 
+---@return table to use with love.graphics.print()
+function ListParameter:toColoredText(nameColor, keyColor, valueColor)
+	return {nameColor, self.name, keyColor, string.format(' (%s/%s): ', self.down, self.up),
+			valueColor, self.values[self.current]}
+end
+
 function ListParameter:__tostring()
 	return string.format('%s (%s/%s): %s', self.name, self.down, self.up, self.names[self.current])
 end

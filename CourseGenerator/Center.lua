@@ -295,7 +295,7 @@ end
 --- of the field boundary. This way some odd-shaped fields can be covered with less turns.
 function Center:_createCurvedBaseline()
     local closest = self.boundary:findClosestVertexToPoint(self.context.baselineEdge or self.boundary:at(1))
-    return self:_findLongestStraightSection(closest.ix, 10)
+    return self:_findLongestStraightSection(closest.ix, self.context.turningRadius)
 end
 
 ---@param ix number the vertex of the boundary to start the search
