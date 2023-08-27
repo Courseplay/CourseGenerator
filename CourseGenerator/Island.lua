@@ -19,6 +19,11 @@ end
 function Island:getId()
     return self.id
 end
+
+function Island:__tostring()
+    return self:getId()
+end
+
 ------------------------------------------------------------------------------------------------------------------------
 -- Functions to create an island as a polygon from a bunch of points (raster -> vector)
 ------------------------------------------------------------------------------------------------------------------------
@@ -97,14 +102,14 @@ function Island:generateHeadlands(context)
     self.headlands = {}
     self.boundary = cg.FieldworkCourseHelper.createUsableBoundary(self.boundary, self.context.islandHeadlandClockwise)
     -- outermost headland is offset from the field boundary by half width
-    self.headlands[1] = cg.Headland(self.boundary, self.context.islandHeadlandClockwise, 1, self.context.workingWidth / 2, true)
+    self.headlands[1] = cg.IslandHeadland(self.boundary, self.context.islandHeadlandClockwise, 1, self.context.workingWidth / 2, true)
     for i = 2, self.context.nIslandHeadlands do
         if not self.headlands[i - 1]:isValid() then
             self.logger:warning('headland %d is invalid, removing', i - 1)
             self.headlands[i - 1] = nil
             break
         end
-        self.headlands[i] = cg.Headland(self.headlands[i - 1]:getPolygon(), self.context.islandHeadlandClockwise, i, self.context.workingWidth, true)
+        self.headlands[i] = cg.IslandHeadland(self.headlands[i - 1]:getPolygon(), self.context.islandHeadlandClockwise, i, self.context.workingWidth, true)
     end
 end
 

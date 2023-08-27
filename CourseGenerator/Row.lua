@@ -56,10 +56,13 @@ function Row:split(boundary, boundaryIsHeadland, bigIslands)
 
     -- get all the intersections with the field boundary
     local intersections = self:getIntersections(boundary, 1,
-            function(is)
-                -- when entering a field boundary polygon, we move on to the field
-                return self:isEntering(boundary, is)
-            end)
+            {
+                isEnteringField = function(is)
+                    -- when entering a field boundary polygon, we move on to the field
+                    return self:isEntering(boundary, is)
+                end
+            }
+    )
 
     if #intersections < 2 then
         self.logger:warning('Row has only %d intersection with boundary', #intersections)
@@ -70,10 +73,14 @@ function Row:split(boundary, boundaryIsHeadland, bigIslands)
     for _, island in ipairs(bigIslands) do
         local outermostIslandHeadland = island:getOutermostHeadland():getPolygon()
         local islandIntersections = self:getIntersections(outermostIslandHeadland, 1,
-                function(is)
-                    -- when entering an island headland, we move off the field
-                    return not self:isEntering(outermostIslandHeadland, is)
-                end)
+                {
+                    isEnteringField = function(is)
+                        -- when entering an island headland, we move off the field
+                        return not self:isEntering(outermostIslandHeadland, is)
+                    end,
+                    atIsland = island
+                }
+        )
 
         self.logger:trace('Row has %d intersections with island %d', #islandIntersections, island:getId())
         for _, is in ipairs(islandIntersections) do
@@ -96,14 +103,18 @@ function Row:split(boundary, boundaryIsHeadland, bigIslands)
     local sections = {}
     for i = 1, #intersections do
         -- getUserData() depends on if this is a field boundary or an island
-        local isEnteringField = intersections[i]:getUserData()(intersections[i])
+        local isEnteringField = intersections[i]:getUserData().isEnteringField(intersections[i])
         outside = outside + (isEnteringField and -1 or 1)
         if not isEnteringField and outside == 1 then
             -- exiting the polygon and we were inside before (outside was 0)
             -- create a section here
             local section = self:_cutAtIntersections(intersections[lastInsideIx], intersections[i])
+            -- remember the angle we met the headland so we can adjust the length of the row to have 100% coverage
             section.startHeadlandAngle = intersections[lastInsideIx]:getAngle()
+            -- remember if the row ends at an island headland so we know where switch to the island headland
+            section.startsAtIsland = intersections[lastInsideIx]:getUserData().atIsland
             section.endHeadlandAngle = intersections[i]:getAngle()
+            section.endsAtIsland = intersections[i]:getUserData().atIsland
             section.boundaryIsHeadland = boundaryIsHeadland
             table.insert(sections, section)
         elseif isEnteringField then
@@ -147,7 +158,9 @@ end
 
 function Row:setAllAttributes()
     self:setAttributes(1, 1, cg.WaypointAttributes.setRowStart)
+    self:setAttributes(1, 1, cg.WaypointAttributes.setAtIsland, self.startsAtIsland)
     self:setAttributes(#self, #self, cg.WaypointAttributes.setRowEnd)
+    self:setAttributes(#self, #self, cg.WaypointAttributes.setAtIsland, self.endsAtIsland)
     self:setAttributes(nil, nil, cg.WaypointAttributes.setRowNumber, self.rowNumber)
     self:setAttributes(nil, nil, cg.WaypointAttributes.setBlockNumber, self.blockNumber)
 end
@@ -155,6 +168,7 @@ end
 function Row:reverse()
     cg.Polyline.reverse(self)
     self.startHeadlandAngle, self.endHeadlandAngle = self.endHeadlandAngle, self.startHeadlandAngle
+    self.startsAtIsland, self.endsAtIsland = self.endsAtIsland, self.startsAtIsland
 end
 
 --- Adjust the length of this tow for full coverage where it meets the headland or field boundary

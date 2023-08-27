@@ -16,6 +16,7 @@ function WaypointAttributes:setIslandBypass()
     self.islandBypass = true
 end
 
+---@return boolean true if the waypoint is part of a path bypassing a small island.
 function WaypointAttributes:isIslandBypass()
     return self.islandBypass
 end
@@ -73,6 +74,37 @@ end
 ---@return boolean true if this is the first waypoint of an up/down row.
 function WaypointAttributes:isRowStart()
     return self.rowStart
+end
+
+---@param island cg.Island
+function WaypointAttributes:setAtIsland(island)
+    self.atIsland = island
+end
+
+---@return cg.Island if this waypoint is at an island, if it is a row start or end, it means this row ends/starts
+--- at this island (and not the field boundary or headland around the field)
+function WaypointAttributes:isAtIsland()
+    return self.atIsland
+end
+
+function WaypointAttributes:setIslandHeadland()
+    self.islandHeadland = true
+end
+
+---@return boolean true if this waypoint is part of a headland around a (big) island. Small islands are bypassed
+--- and there isIslandBypass is set to true.
+function WaypointAttributes:isIslandHeadland()
+    return self.islandHeadland
+end
+
+function WaypointAttributes:setUsePathfinderToNextWaypoint()
+    self.usePathfinderToNextWaypoint = true
+end
+
+--- if this is true, the driver should use the pathfinder to navigate to the next waypoint. One example of this is
+--- switching from an end of the row to an island headland.
+function WaypointAttributes:shouldUsePathfinderToNextWaypoint()
+    return self.usePathfinderToNextWaypoint
 end
 
 function WaypointAttributes:setOnConnectingPath()

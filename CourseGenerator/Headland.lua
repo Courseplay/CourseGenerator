@@ -2,6 +2,9 @@ local Headland = CpObject()
 
 --- Create a headland from a base polygon. The headland is a new polygon, offset by width, that is, inside
 --- of the base polygon.
+---
+--- This is for headlands around a field boundary. For headlands around and island, use IslandHeadland()
+---
 ---@param basePolygon cg.Polygon
 ---@param clockwise boolean the direction of the headland. We want this explicitly stated and not derived from
 --- basePolygon as on fields with odd shapes (complex polygons) headlands may intersect themselves making
@@ -19,11 +22,8 @@ function Headland:init(basePolygon, clockwise, passNumber, width, outward)
         -- to generate headland inside the polygon we need to offset the polygon to the right if
         -- the polygon is clockwise
         self.offsetVector = cg.Vector(0, -1)
-        -- Dubins path types to use when changing to the next headland
-        self.transitionPathTypes = { DubinsSolver.PathType.RSL, DubinsSolver.PathType.RSR }
     else
         self.offsetVector = cg.Vector(0, 1)
-        self.transitionPathTypes = { DubinsSolver.PathType.LSR, DubinsSolver.PathType.LSL }
     end
     if outward then
         self.offsetVector = -self.offsetVector
@@ -141,17 +141,9 @@ function Headland:connectTo(other, ix, workingWidth, turningRadius, headlandFirs
     local function ignoreIslandBypass(v)
         return not v:getAttributes():isIslandBypass()
     end
-
-    if (self.clockwise and headlandFirst) or (not self.clockwise and not headlandFirst) then
-        -- Dubins path types to use when changing to the next headland
-        self.transitionPathTypes = { DubinsSolver.PathType.RSL, DubinsSolver.PathType.RSR }
-    else
-        self.transitionPathTypes = { DubinsSolver.PathType.LSR, DubinsSolver.PathType.LSL }
-    end
-
-
+    local transitionPathTypes = self:_getTransitionPathTypes(headlandFirst)
     -- determine the theoretical minimum length of the transition (depending on the width and radius)
-    local transitionLength = Headland._getTransitionLength(workingWidth, turningRadius)
+    local transitionLength = cg.HeadlandConnector.getTransitionLength(workingWidth, turningRadius)
     local transition = self:_continueUntilStraightSection(ix, transitionLength)
     -- index on the other polygon closest to the location where the transition will start
     local otherClosest = other:getPolygon():findClosestVertexToPoint(self.polygon:at(ix + #transition), ignoreIslandBypass)
@@ -169,7 +161,7 @@ function Headland:connectTo(other, ix, workingWidth, turningRadius, headlandFirs
                     self.polygon:at(ix + #transition):getExitEdge():getBaseAsState3D(),
                     other.polygon:at(transitionEndIx):getExitEdge():getBaseAsState3D(),
                     -- enable any path type on the very last try
-                    turningRadius, i < tries and self.transitionPathTypes or nil)
+                    turningRadius, i < tries and transitionPathTypes or nil)
             cg.addDebugPolyline(cg.Polyline(connector))
             -- maximum length without loops
             local maxPlausiblePathLength = workingWidth + 4 * turningRadius
@@ -209,7 +201,7 @@ function Headland:_continueUntilStraightSection(ix, straightSectionLength, searc
     while dTotal < searchRange do
         dTotal = dTotal + self.polygon:at(ix):getExitEdge():getLength()
         local r = self.polygon:getSmallestRadiusWithinDistance(ix, straightSectionLength, 0)
-        if r > NewCourseGenerator.headlandChangeMinRadius then
+        if r > self:_getHeadlandChangeMinRadius() then
             self.logger:debug('Added %d waypoint(s) to reach a straight section for the headland change after %.1f m, r = %.1f',
                     count, dTotal, r)
             return waypoints
@@ -223,19 +215,43 @@ function Headland:_continueUntilStraightSection(ix, straightSectionLength, searc
     return waypoints
 end
 
---- determine the theoretical minimum length of the transition from one headland to another
----(depending on the width and radius)
-function Headland._getTransitionLength(workingWidth, turningRadius)
-    local transitionLength
-    if turningRadius - workingWidth / 2 < 0.1 then
-        -- can make two half turns within the working width
-        transitionLength = 2 * turningRadius
+---@param headlandFirst boolean In the context of an island, when headlandFirst is true, we want to
+--- start working on the headlands around the island with the innermost headland, which is right on the
+--- island boundary and work outwards
+function Headland:_getTransitionPathTypes(headlandFirst)
+    if (self.clockwise and headlandFirst) or (not self.clockwise and not headlandFirst) then
+        -- Dubins path types to use when changing to the next headland
+        self.transitionPathTypes = { DubinsSolver.PathType.LSR, DubinsSolver.PathType.LSL }
     else
-        local alpha = math.abs(math.acos((turningRadius - workingWidth / 2) / turningRadius) / 2)
-        transitionLength = 2 * workingWidth / 2 / math.tan(alpha)
+        self.transitionPathTypes = { DubinsSolver.PathType.RSL, DubinsSolver.PathType.RSR }
     end
-    return transitionLength
+end
+
+function Headland:_getHeadlandChangeMinRadius()
+    return NewCourseGenerator.headlandChangeMinRadius
 end
 
 ---@class cg.Headland
 cg.Headland = Headland
+
+--- For headlands around islands, as there everything is backwards, at least the transitions
+---@class IslandHeadland
+local IslandHeadland = CpObject(cg.Headland)
+
+function IslandHeadland:_getTransitionPathTypes(headlandFirst)
+    if (self.clockwise and headlandFirst) or (not self.clockwise and not headlandFirst) then
+        -- Dubins path types to use when changing to the next headland
+        self.transitionPathTypes = { DubinsSolver.PathType.RSL, DubinsSolver.PathType.RSR }
+    else
+        self.transitionPathTypes = { DubinsSolver.PathType.LSR, DubinsSolver.PathType.LSL }
+    end
+end
+
+function IslandHeadland:_getHeadlandChangeMinRadius()
+    -- headlands around are not very long, and as they are generated outwards, usually have no
+    -- very sharp corners, and we don't have the luxury to pick a straight section for a transition
+    return 0
+end
+
+---@class cg.IslandHeadland
+cg.IslandHeadland = IslandHeadland

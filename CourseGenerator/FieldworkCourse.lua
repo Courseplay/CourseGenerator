@@ -13,24 +13,26 @@ function FieldworkCourse:init(context)
     self.logger = cg.Logger('FieldworkCourse')
     self:_setContext(context)
     self.headlandPath = cg.Polyline()
+    self.circledIslands = {}
 
-    self.logger:debug('### Generating headlands around islands ###')
-    self:generateHeadlandsAroundIslands()
+    self.logger:debug('### Setting up islands ###')
+    self:setupAndSortIslands()
     self.logger:debug('### Generating headlands around the field perimeter ###')
     self:generateHeadlands()
     if self.context.headlandFirst then
         self.logger:debug('### Connecting headlands from the outside towards the inside ###')
-        self:connectHeadlandsFromOutside()
+        self.headlandPath = cg.HeadlandConnector.connectHeadlandsFromOutside(self.headlands,
+                context.startLocation, self.context.workingWidth, self.context.turningRadius)
         self.logger:debug('### Generating up/down rows ###')
         self:generateCenter()
     else
         self.logger:debug('### Generating up/down rows ###')
         local endOfLastRow = self:generateCenter()
         self.logger:debug('### Connecting headlands from the inside towards the outside ###')
-        self:connectHeadlandsFromInside(endOfLastRow)
+        self.headlandPath = cg.HeadlandConnector.connectHeadlandsFromInside(self.headlands,
+                endOfLastRow, self.context.workingWidth, self.context.turningRadius)
     end
     if self.context.bypassIslands then
-        self.logger:debug('### Bypass small islands ###')
         self:bypassIslands()
     end
     self.headlandPath:calculateProperties()
@@ -162,47 +164,6 @@ function FieldworkCourse:generateHeadlandsFromInside()
     end
 end
 
-function FieldworkCourse:connectHeadlandsFromOutside()
-    if #self.headlands < 1 then
-        return
-    end
-    self.headlandPath = cg.Polyline()
-    local closestVertex = self.headlands[1]:getPolygon():findClosestVertexToPoint(self.context.startLocation)
-    -- make life easy: make headland polygons always start where the transition to the next headland is.
-    -- In _setContext() we already took care of the direction, so the headland is always worked in the
-    -- increasing indices
-    self.headlands[1].polygon:rebase(closestVertex.ix)
-    for i = 1, #self.headlands - 1 do
-        local transitionEndIx = self.headlands[i]:connectTo(self.headlands[i + 1], 1, self.context.workingWidth,
-                self.context.turningRadius, true)
-        -- rebase to the next vertex so the first waypoint of the next headland is right after the transition
-        self.headlands[i + 1].polygon:rebase(transitionEndIx + 1)
-        self.headlandPath:appendMany(self.headlands[i]:getPath())
-    end
-    self.headlandPath:appendMany(self.headlands[#self.headlands]:getPath())
-end
-
-function FieldworkCourse:connectHeadlandsFromInside(startLocation)
-    if #self.headlands < 1 then
-        return
-    end
-    self.headlandPath = cg.Polyline()
-    local closestVertex = self.headlands[#self.headlands]:getPolygon():findClosestVertexToPoint(startLocation)
-    -- make life easy: make headland polygons always start where the transition to the next headland is.
-    -- In _setContext() we already took care of the direction, so the headland is always worked in the
-    -- increasing indices
-    self.headlands[#self.headlands].polygon:rebase(closestVertex.ix)
-    for i = #self.headlands, 2, -1 do
-        local transitionEndIx = self.headlands[i]:connectTo(self.headlands[i - 1], 1, self.context.workingWidth,
-                self.context.turningRadius, false)
-        -- rebase to the next vertex so the first waypoint of the next headland is right after the transition
-        self.headlands[i - 1].polygon:rebase(transitionEndIx + 1)
-        self.headlandPath:appendMany(self.headlands[i]:getPath())
-    end
-    self.headlandPath:appendMany(self.headlands[1]:getPath())
-    self.headlandPath:calculateProperties()
-end
-
 ------------------------------------------------------------------------------------------------------------------------
 --- Up/down rows
 ------------------------------------------------------------------------------------------------------------------------
@@ -225,11 +186,11 @@ end
 ------------------------------------------------------------------------------------------------------------------------
 --- Islands
 ------------------------------------------------------------------------------------------------------------------------
-function FieldworkCourse:generateHeadlandsAroundIslands()
+function FieldworkCourse:setupAndSortIslands()
     self.bigIslands, self.smallIslands = {}, {}
     for _, island in pairs(self.context.field:getIslands()) do
         island:generateHeadlands(self.context)
-        -- for some wierd cases we may not have been able to generate island headlands, so ignore those islands
+        -- for some weird cases we may not have been able to generate island headlands, so ignore those islands
         if island:getInnermostHeadland() then
             if island:isTooBigToBypass(self.context.workingWidth) then
                 table.insert(self.bigIslands, island)
@@ -243,10 +204,11 @@ function FieldworkCourse:generateHeadlandsAroundIslands()
 end
 
 function FieldworkCourse:bypassIslands()
-    self.circledIslands = {}
+    self.logger:debug('### Bypassing big islands: connecting tracks ###')
     for _, island in pairs(self.bigIslands) do
         self.center:bypassBigIsland(island:getSecondInnermostHeadland():getPolygon())
     end
+    self.logger:debug('### Bypassing small islands ###')
     for _, island in pairs(self.smallIslands) do
         local startIx, circled = 1, false
         while startIx ~= nil do
@@ -257,10 +219,66 @@ function FieldworkCourse:bypassIslands()
                     island:getHeadlands()[1]:getPolygon(), startIx, not self.circledIslands[island])
             self.circledIslands[island] = circled or self.circledIslands[island]
         end
-        self.logger:debug('Bypassing island %d on the center', island:getId())
+        self.logger:debug('Bypassing small island %d on the center', island:getId())
         self.center:bypassSmallIsland(island:getInnermostHeadland():getPolygon(), not self.circledIslands[island])
     end
+    self.logger:debug('### Bypassing big islands: create path around them ###')
+    self:circleBigIslands()
 end
+
+-- Once we have the whole course laid out, we add the headland passes around the big islands
+function FieldworkCourse:circleBigIslands()
+    for _, i in ipairs(self.context.field:getIslands()) do
+        self.logger:debug('Island %d: circled %s, big %s',
+                i:getId(), self.circledIslands[i], i:isTooBigToBypass(self.context.workingWidth))
+    end
+    -- if we are harvesting (headlandFirst = true) we want to take care of the island headlands
+    -- when we first get to them. For other field works it is the opposite, we want all the up/down rows
+    -- done before working on the island headlands.
+    local path = self:getPath()
+    local first = self.context.headlandFirst and 1 or #path
+    local step = self.context.headlandFirst and 1 or -1
+    local last = self.context.headlandFirst and #path or 1
+    local i = first
+    local found = false
+    while i ~= last and not found do
+        local island = path[i]:getAttributes():isAtIsland()
+        if island and not self.circledIslands[island] and path[i]:getAttributes():isRowEnd() then
+            self.logger:debug('Found island %s at %d', island:getId(), i)
+            -- we bumped upon an island which the path does not circle yet and we are at the end of a row.
+            -- so now work on the island's headlands and then continue with the next row.
+            local outermostHeadlandPolygon = island:getOutermostHeadland():getPolygon()
+            -- find a vertex on the outermost headland to start working on the island headlands,
+            -- far enough that we can generate a Dubins path to it
+            local slider = cg.Slider(outermostHeadlandPolygon,
+                    outermostHeadlandPolygon:findClosestVertexToPoint(path[i]).ix, 3 * self.context.turningRadius)
+
+            -- 'inside' since with islands, everything is backwards
+            local headlandPath = cg.HeadlandConnector.connectHeadlandsFromInside(island:getHeadlands(),
+                    slider.ix, self.context.workingWidth, self.context.turningRadius)
+
+            -- from the row end to the start of the headland, we instruct the driver to use
+            -- the pathfinder.
+            path:setAttributes(i, i, cg.WaypointAttributes.setUsePathfinderToNextWaypoint)
+            headlandPath:setAttributes(#headlandPath, #headlandPath, cg.WaypointAttributes.setUsePathfinderToNextWaypoint)
+            headlandPath:setAttributes(nil, nil, cg.WaypointAttributes.setIslandHeadland)
+
+            self.logger:debug('Added headland path around island %d with %d points', island:getId(), #headlandPath)
+            for j = #headlandPath, 1, -1 do
+                table.insert(path, i + 1, headlandPath[j])
+            end
+
+            path:calculateProperties()
+            self.circledIslands[island] = true
+            -- if we are iterating backwards, we still want to stop at the first vertex.
+            last = self.context.headlandFirst and last + #headlandPath or 1
+        end
+        self.logger:debug('%d %s %s', i, island, path[i]:getAttributes():isRowEnd())
+        i = i + step
+    end
+
+end
+
 ------------------------------------------------------------------------------------------------------------------------
 --- Private functions
 ------------------------------------------------------------------------------------------------------------------------

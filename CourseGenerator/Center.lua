@@ -112,16 +112,20 @@ function Center:bypassSmallIsland(islandHeadlandPolygon, circle)
     end
     -- and then we have those connecting paths between the blocks
     for _, connectingPath in ipairs(self.connectingPaths) do
-        thisIslandCircled = cg.FieldworkCourseHelper.bypassIsland(connectingPath, self.context.workingWidth,
-                self.hasHeadland, islandHeadlandPolygon, 1, not thisIslandCircled) or thisIslandCircled
+        if #connectingPath > 1 then
+            thisIslandCircled = cg.FieldworkCourseHelper.bypassIsland(connectingPath, self.context.workingWidth,
+                    self.hasHeadland, islandHeadlandPolygon, 1, not thisIslandCircled) or thisIslandCircled
+        end
     end
 end
 
 --- Connecting paths should also drive around big islands
 function Center:bypassBigIsland(islandHeadlandPolygon)
     for _, connectingPath in ipairs(self.connectingPaths) do
-        cg.FieldworkCourseHelper.bypassIsland(connectingPath, self.context.workingWidth, self.hasHeadland,
-                islandHeadlandPolygon, 1, false)
+        if #connectingPath > 1 then
+            cg.FieldworkCourseHelper.bypassIsland(connectingPath, self.context.workingWidth, self.hasHeadland,
+                    islandHeadlandPolygon, 1, false)
+        end
     end
 end
 
