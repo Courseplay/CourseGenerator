@@ -83,14 +83,15 @@ local startX, startY, baselineX, baselineY = 0, 0, 0, 0
 
 local graphicsTransform, textTransform, statusTransform, mouseTransform, contextTransform
 
-local parameterNameColor = {1, 1, 1}
-local parameterKeyColor = {0, 1, 1}
-local parameterValueColor = {1, 1, 0}
+local parameterNameColor = { 1, 1, 1 }
+local parameterKeyColor = { 0, 1, 1 }
+local parameterValueColor = { 1, 1, 0 }
 
 local startLocationColor = { 0.8, 0.8, 0.8 }
 local fieldBoundaryColor = { 0.5, 0.5, 0.5 }
 local courseColor = { 0, 0.7, 1 }
 local turnColor = { 1, 1, 0, 0.5 }
+local usePathfinderColor = { 0, 1, 0 }
 local islandHeadlandColor = { 1, 1, 1, 0.2 }
 local waypointColor = { 0.7, 0.5, 0.2 }
 local cornerColor = { 1, 1, 0.0, 0.8 }
@@ -234,7 +235,7 @@ end
 local function findVertexForPosition(polygon, rx, ry)
     local vertices = {}
     for _, v in polygon:vertices() do
-        if math.abs(v.x - rx) < 0.5 and math.abs(v.y - ry) < 0.5 then
+        if math.abs(v.x - rx) < 1 and math.abs(v.y - ry) < 1 then
             table.insert(vertices, v)
         end
     end
@@ -276,12 +277,16 @@ end
 
 local function drawPath(p)
     if #p > 1 then
-        love.graphics.setLineWidth(lineWidth)
         for _, v in p:vertices() do
             if v:getExitEdge() then
-                if v:getAttributes():isRowEnd() then
+                if v:getAttributes():shouldUsePathfinderToNextWaypoint() then
+                    love.graphics.setLineWidth(5 * lineWidth)
+                    love.graphics.setColor(usePathfinderColor)
+                elseif v:getAttributes():isRowEnd() then
+                    love.graphics.setLineWidth(lineWidth)
                     love.graphics.setColor(turnColor)
                 else
+                    love.graphics.setLineWidth(lineWidth)
                     love.graphics.setColor(courseColor)
                 end
                 love.graphics.line(v.x, v.y, v:getExitEdge():getEnd().x, v:getExitEdge():getEnd().y)
@@ -492,13 +497,16 @@ local function drawGraphics()
 end
 
 local function drawContext()
-    love.graphics.setColor(1, 1, 1) -- base color for the coloredText is white (love2D can sometimes be strange)
     love.graphics.replaceTransform(contextTransform)
-    love.graphics.print({parameterNameColor, 'To generate, hit ', parameterKeyColor, 'SPACE or right click'}, 0, 0)
-    local y = 24
+    love.graphics.setColor(0.2, 0.2, 0.2, 0.6)
+    local fontsize = 12
+    love.graphics.rectangle('fill', 0, 0, 300, (3 + #parameters) * fontsize)
+    love.graphics.setColor(1, 1, 1) -- base color for the coloredText is white (love2D can sometimes be strange)
+    love.graphics.print({ parameterNameColor, 'To generate, hit ', parameterKeyColor, 'SPACE or right click' }, 0, 0)
+    local y = 2 * fontsize
     for _, p in ipairs(parameters) do
         love.graphics.print(p:toColoredText(parameterNameColor, parameterKeyColor, parameterValueColor), 0, y)
-        y = y + 12
+        y = y + fontsize
     end
 end
 
@@ -555,7 +563,9 @@ end
 ---------------------------------------------------------------------------------------------------------------------------
 function love.textinput(key)
     for _, p in pairs(parameters) do
-        p:onKey(key, function () return true end)
+        p:onKey(key, function()
+            return true
+        end)
     end
     if key == ' ' then
         generate()
