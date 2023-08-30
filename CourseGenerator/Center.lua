@@ -164,6 +164,18 @@ function Center:_generateStraightUpDownRows(rowAngle, suppressLog)
     return rows
 end
 
+function Center:_calculateSmallBlockPenalty(blocks)
+    local nResult = 0
+    -- no penalty if there's only one block
+    if #blocks == 1 then return nResult end
+    for _, b in ipairs(blocks) do
+        if b:getNumberOfRows() < cg.cSmallBlockRowCountLimit then
+            nResult = nResult + cg.cSmallBlockRowCountLimit - #b
+        end
+    end
+    return nResult
+end
+
 function Center:_findBestRowAngle()
     local minScore, minRows, bestAngle = math.huge, math.huge, 0
     local longestEdgeDirection = self.boundary:getLongestEdgeDirection()
@@ -171,7 +183,7 @@ function Center:_findBestRowAngle()
     for a = -90, 90, 1 do
         local rows = self:_generateStraightUpDownRows(math.rad(a), false)
         local blocks = self:_splitIntoBlocks(rows)
-        local score = 10 * #blocks + #rows +
+        local score = 10 * #blocks + #rows + self:_calculateSmallBlockPenalty(blocks) +
                 -- Prefer angles closest to the direction of the longest edge of the field
                 -- sin(a - longestEdgeDirection) will be 0 when angle is the closest.
                 3 * math.abs(math.sin(cg.Math.getDeltaAngle(math.rad(a), longestEdgeDirection)))

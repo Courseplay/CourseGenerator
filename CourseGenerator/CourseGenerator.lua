@@ -27,11 +27,11 @@ NewCourseGenerator.cMaxCrossTrackError = 0.3
 NewCourseGenerator.cMinSmoothingAngle = math.rad(15)
 -- Minimum radius in meters where a change to the next headland is allowed. This is to ensure that
 -- we only change lanes on relatively straight sections of the headland (not around corners)
-NewCourseGenerator.headlandChangeMinRadius = 20
--- No headland change allowed if there is a corner ahead within this distance in meters
-NewCourseGenerator.headlandChangeMinDistanceToCorner = 20
--- No headland change allowed if there is a corner behind within this distance in meters
-NewCourseGenerator.headlandChangeMinDistanceFromCorner = 10
+NewCourseGenerator.cHeadlandChangeMinRadius = 20
+-- When splitting a field into blocks (due to islands or non-convexity)
+-- consider a block 'small' if it has less than smallBlockRowCountLimit rows.
+-- These are not preferred and will get a penalty in the scoring
+NewCourseGenerator.cSmallBlockRowCountLimit = 5
 
 -- Just an arbitrary definition of an island 'too big': wider than s * work width, so
 -- at least x rows would have to drive around the island
@@ -89,11 +89,14 @@ end
 
 --- Add a point to the list of debug points we want to show on the test display
 ---@param v cg.Vector
-function NewCourseGenerator.addDebugPoint(v)
+---@param text|nil optional debug text
+function NewCourseGenerator.addDebugPoint(v, text)
     if not NewCourseGenerator.debugPoints then
         NewCourseGenerator.debugPoints = {}
     end
-    table.insert(NewCourseGenerator.debugPoints, v:clone())
+    local debugPoint = v:clone()
+    debugPoint.debugText = text
+    table.insert(NewCourseGenerator.debugPoints, debugPoint)
 end
 
 --- Add a point to the list of debug points we want to show on the test display
