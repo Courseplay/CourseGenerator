@@ -37,6 +37,12 @@ function Block:addRow(row)
     table.insert(self.rows, row)
 end
 
+---@return number of rows in this block
+function Block:getNumberOfRows()
+    -- we may not have them sequenced when this is called, so can't use self.rowsInWorkSequence
+    return #self.rows
+end
+
 --- Does this row overlap with this block, that is, with the last row of this block.
 ---@param row cg.Row
 ---@return boolean true if row overlaps this block or if the block has no rows
@@ -67,20 +73,22 @@ end
 --- drive on the headland to reach the entry point from the start location.
 ---@param startLocation cg.Vector the location where the vehicle ended its previous path and now must
 --- continue working on this block
----@param headland cg.Polygon the headland, distance between the startLocation and the entry is measured
+---@param headland cg.Headland the headland, distance between the startLocation and the entry is measured
 --- along this polygon.
 ---@return cg.RowPattern.Entry the entry closest to the startLocation, as measured on the headland
 ---@return number distance between the startLocation and the closest entry on the headland
 ---@return cg.Polyline the path on the headland from the start location to the closest entry. Always has at least
 --- one vertex
 function Block:getClosestEntry(startLocation, headland)
-    local startLocationVertex = headland:findClosestVertexToPoint(startLocation)
+    local startLocationVertex = headland:getPolygon():findClosestVertexToPoint(startLocation)
     local entries = self.rowPattern:getPossibleEntries(self.rows)
     local closestEntry, dMin, shortestPath = nil, math.huge, nil
     for _, entry in ipairs(entries) do
-        local entryVertex = headland:findClosestVertexToPoint(entry.position)
-        local pathOnHeadland = headland:getShortestPathBetween(startLocationVertex.ix, entryVertex.ix)
-        if pathOnHeadland:getLength() < dMin then
+        --print(entry)
+        local entryVertex = headland:getPolygon():findClosestVertexToPoint(entry.position)
+        local pathOnHeadland = headland:getPolygon():getShortestPathBetween(startLocationVertex.ix, entryVertex.ix)
+        local entryAtHeadland = entry.position:getAttributes():_getAtHeadland()
+        if pathOnHeadland:getLength() < dMin and headland == entryAtHeadland then
             closestEntry = entry
             dMin = pathOnHeadland:getLength()
             shortestPath = pathOnHeadland

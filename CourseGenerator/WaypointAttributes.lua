@@ -122,6 +122,19 @@ function WaypointAttributes:isOnConnectingPath()
     return self.isOnConnectingPath
 end
 
+---@param headland cg.Headland
+function WaypointAttributes:_setAtHeadland(headland)
+    self.atHeadland = headland
+end
+
+--- For generator internal use only, this is set for row end and start waypoints, storing the Headland object
+--- terminating the row
+---@return cg.Headland
+function WaypointAttributes:_getAtHeadland()
+    return self.atHeadland
+end
+
+
 function WaypointAttributes:__tostring()
     local str = '[ '
     for attribute, value in pairs(self) do

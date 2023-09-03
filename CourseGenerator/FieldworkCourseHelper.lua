@@ -24,13 +24,9 @@ end
 
 --- If polyline is a fieldwork course, intersecting a headland or a field boundary at an angle,
 --- adjust the start of the polyline to make sure that there are no missed spots
-function FieldworkCourseHelper.adjustLengthAtStart(polyline, workingWidth, isHeadland, angle)
+function FieldworkCourseHelper.adjustLengthAtStart(polyline, workingWidth, angle)
     local offsetStart = 0
-    if isHeadland then
-        offsetStart = -getDistanceBetweenRowEndAndHeadland(workingWidth, angle)
-    else
-        offsetStart = getDistanceBetweenRowEndAndFieldBoundary(workingWidth, angle)
-    end
+    offsetStart = -getDistanceBetweenRowEndAndHeadland(workingWidth, angle)
     if offsetStart >= 0 then
         polyline:extendStart(offsetStart)
     else
@@ -40,13 +36,9 @@ end
 
 --- If polyline is a fieldwork course, intersecting a headland or a field boundary at an angle,
 --- adjust the end of the polyline to make sure that there are no missed spots
-function FieldworkCourseHelper.adjustLengthAtEnd(polyline, workingWidth, isHeadland, angle)
+function FieldworkCourseHelper.adjustLengthAtEnd(polyline, workingWidth, angle)
     local offsetEnd = 0
-    if isHeadland then
-        offsetEnd = -getDistanceBetweenRowEndAndHeadland(workingWidth, angle)
-    else
-        offsetEnd = getDistanceBetweenRowEndAndFieldBoundary(workingWidth, angle)
-    end
+    offsetEnd = -getDistanceBetweenRowEndAndHeadland(workingWidth, angle)
     if offsetEnd >= 0 then
         polyline:extendEnd(offsetEnd)
     else
@@ -61,7 +53,7 @@ end
 ---@param circle boolean when true, make a full circle on the other polygon, else just go around and continue
 ---@return boolean, number true if there was an intersection and we actually went around, index of last vertex
 --- after the bypass
-function FieldworkCourseHelper.bypassIsland(polyline, workingWidth, isHeadland, other, startIx, circle)
+function FieldworkCourseHelper.bypassIsland(polyline, workingWidth, other, startIx, circle)
     local intersections = polyline:getIntersections(other, startIx)
     local is1, is2 = intersections[1], intersections[2]
     if is1 and is2 then
@@ -71,17 +63,22 @@ function FieldworkCourseHelper.bypassIsland(polyline, workingWidth, isHeadland, 
         -- there is one intersection only, one of our ends is within other, and there are no more intersections with other
         -- so, the end of the row is on the island, we have to move it out of the island
         if other:isVectorInside(polyline[#polyline]) then
-            polyline.logger:debug('End of row is on an island, removing all vertices after index %d', is1.ixA)
+            polyline.logger:debug('End of row is on an island, removing all vertices after index %d (of %d)',
+                    is1.ixA, #polyline)
+            cg.addDebugPoint(polyline[is1.ixA], tostring(is1.ixA))
+            cg.addDebugPoint(polyline[#polyline], tostring(polyline[#polyline]))
             polyline:cutEndAtIx(is1.ixA)
             polyline:append(is1.is)
             polyline:calculateProperties()
-            FieldworkCourseHelper.adjustLengthAtEnd(polyline, workingWidth, isHeadland, is1:getAngle())
+            FieldworkCourseHelper.adjustLengthAtEnd(polyline, workingWidth, is1:getAngle())
         else
-            polyline.logger:debug('Start of row is on an island, removing all vertices up to index %d', is1.ixA)
+            polyline.logger:debug('Start of row is on an island, removing all vertices up to index %d (of %d)',
+                    is1.ixA, #polyline)
+            cg.addDebugPoint(polyline[is1.ixA], tostring(is1.ixA))
             polyline:cutStartAtIx(is1.ixA + 1)
             polyline:prepend(is1.is)
             polyline:calculateProperties()
-            FieldworkCourseHelper.adjustLengthAtStart(polyline, workingWidth, isHeadland, is1:getAngle())
+            FieldworkCourseHelper.adjustLengthAtStart(polyline, workingWidth, is1:getAngle())
         end
         return false
     end

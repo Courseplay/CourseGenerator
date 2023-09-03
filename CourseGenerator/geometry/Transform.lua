@@ -85,6 +85,18 @@ function Transform:localDirectionToWorld(dx, dy)
     return v.x, v.y
 end
 
+--[[
+
+localToLocal(node2, node1, x2, y2, z2)
+
+Transforms the point (x2, y2, z2) in node2's coordinate system into node1's coordinate system.
+
+localToLocal(node2, node1, x2, y2, z2) is equivalent to:
+wx, wy, wz = localToWorld(node2, x2, y2, y2)
+x, y, z = worldToLocal(node1, wx, wy, wz)
+
+]]--
+
 RootTransform = Transform('root')
 RootTransform:setParent(nil)
 

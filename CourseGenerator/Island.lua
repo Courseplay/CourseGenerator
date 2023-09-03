@@ -41,7 +41,7 @@ end
 
 local function findPointWithinDistance(point, otherPoints, d)
     for i, other in ipairs(otherPoints) do
-        if (point - other ):length() < d then
+        if (point - other):length() < d then
             return i, other
         end
     end
@@ -67,7 +67,9 @@ end
 -- remaining vertices.
 ---@param perimeterPoints cg.Vector[]
 function Island:createFromPerimeterPoints(perimeterPoints)
-    if #perimeterPoints < 1 then return perimeterPoints end
+    if #perimeterPoints < 1 then
+        return perimeterPoints
+    end
     local currentPoint = perimeterPoints[1]
     self.boundary:append(currentPoint)
     table.remove(perimeterPoints, 1)
@@ -75,7 +77,7 @@ function Island:createFromPerimeterPoints(perimeterPoints)
     otherPoint = currentPoint
     while otherPoint do
         -- find the next vertex, try closest first. 3.01 so it is guaranteed to be closer than 3 * gridSpacing
-        for _, d in ipairs({self.gridSpacing * 1.01, 1.5 * self.gridSpacing, 2.3 * self.gridSpacing, 3.01 * self.gridSpacing}) do
+        for _, d in ipairs({ self.gridSpacing * 1.01, 1.5 * self.gridSpacing, 2.3 * self.gridSpacing, 3.01 * self.gridSpacing }) do
             ix, otherPoint = findPointWithinDistance(currentPoint, perimeterPoints, d)
             if ix then
                 self.boundary:append(otherPoint)
@@ -88,7 +90,7 @@ function Island:createFromPerimeterPoints(perimeterPoints)
     end
     self.boundary:calculateProperties()
     self.boundary:ensureMinimumEdgeLength(2)
-    self.logger:debug( "created with %d vertices, area %.0f", self.id, #self.boundary, self.boundary:getArea())
+    self.logger:debug("created with %d vertices, area %.0f", self.id, #self.boundary, self.boundary:getArea())
 end
 
 ---@return cg.Polygon
@@ -96,20 +98,36 @@ function Island:getBoundary()
     return self.boundary
 end
 
-function Island:generateHeadlands(context)
+--- Generate headlands around the island. May generate less than what the context requests if the island headland
+--- would go outside the field boundary
+---@param context cg.FieldworkContext
+---@param boundary cg.Polygon outermost headland of field or field boundary: island headlands must not cross this
+--- otherwise the island headland will be out of the field
+function Island:generateHeadlands(context, boundary)
     self.context = context
     self.logger:debug('generating %d headland(s)', self.context.nIslandHeadlands, self.context.turningRadius)
-    self.headlands = {}
+    local headlands = {}
     self.boundary = cg.FieldworkCourseHelper.createUsableBoundary(self.boundary, self.context.islandHeadlandClockwise)
     -- outermost headland is offset from the field boundary by half width
-    self.headlands[1] = cg.IslandHeadland(self.boundary, self.context.islandHeadlandClockwise, 1, self.context.workingWidth / 2, true)
+    headlands[1] = cg.IslandHeadland(self.boundary, self.context.islandHeadlandClockwise, 1, self.context.workingWidth / 2, true)
     for i = 2, self.context.nIslandHeadlands do
-        if not self.headlands[i - 1]:isValid() then
+        if not headlands[i - 1]:isValid() then
             self.logger:warning('headland %d is invalid, removing', i - 1)
-            self.headlands[i - 1] = nil
+            headlands[i - 1] = nil
             break
         end
-        self.headlands[i] = cg.IslandHeadland(self.headlands[i - 1]:getPolygon(), self.context.islandHeadlandClockwise, i, self.context.workingWidth, true)
+        headlands[i] = cg.IslandHeadland(headlands[i - 1]:getPolygon(), self.context.islandHeadlandClockwise, i, self.context.workingWidth, true)
+    end
+    self.headlands = {}
+    local i = 1
+    -- make sure no headlands are outside of the field
+    while i <= #headlands and not headlands[i]:getPolygon():intersects(boundary) do
+        table.insert(self.headlands, headlands[i])
+        i = i + 1
+    end
+    if #self.headlands < self.context.nIslandHeadlands then
+        self.logger:warning('Only %d headlands of %d could be generated as the rest would intersect the field boundary',
+                #self.headlands, self.context.nIslandHeadlands)
     end
 end
 
@@ -121,7 +139,7 @@ function Island:getOutermostHeadland()
     return self.headlands[#self.headlands]
 end
 
-function Island:getSecondInnermostHeadland()
+function Island:getBestHeadlandToBypass()
     return self.headlands[math.min(2, #self.headlands)]
 end
 
@@ -136,7 +154,7 @@ function Island:isTooBigToBypass(width)
     if self.headlands[1] and self.headlands[1]:isValid() then
         local area = self.headlands[1]:getPolygon():getArea() and self.headlands[1]:getPolygon():getArea() or 0
         local isTooBig = area > NewCourseGenerator.maxRowsToBypassIsland * width * NewCourseGenerator.maxRowsToBypassIsland * width
-        self.logger:debug( "isTooBigToBypass = %s (area = %.0f, width = %.1f", tostring( isTooBig ), area, width )
+        self.logger:debug("isTooBigToBypass = %s (area = %.0f, width = %.1f", tostring(isTooBig), area, width)
         return isTooBig
     else
         return false
@@ -146,7 +164,7 @@ end
 ------------------------------------------------------------------------------------------------------------------------
 -- TODO: Find islands in the game.
 ------------------------------------------------------------------------------------------------------------------------
-local function generateGridForPolygon( polygon, gridSpacingHint )
+local function generateGridForPolygon(polygon, gridSpacingHint)
     local grid = {}
     -- map[ row ][ column ] maps the row/column address of the grid to a linear
     -- array index in the grid.
@@ -159,28 +177,30 @@ local function generateGridForPolygon( polygon, gridSpacingHint )
     -- But don't go below a certain limit as that would drive too close to the fruit
     -- for this limit, use a fraction to reduce the chance of ending up right on the field edge (assuming fields
     -- are drawn using integer sizes) as that may result in a row or two missing in the grid
-    local gridSpacing = gridSpacingHint or math.max( 4.071, math.sqrt( polygon.area ) / 64 )
-    local horizontalLines = CourseGenerator.generateParallelTracks( polygon, {}, gridSpacing, gridSpacing / 2 )
-    if not horizontalLines then return grid end
+    local gridSpacing = gridSpacingHint or math.max(4.071, math.sqrt(polygon.area) / 64)
+    local horizontalLines = CourseGenerator.generateParallelTracks(polygon, {}, gridSpacing, gridSpacing / 2)
+    if not horizontalLines then
+        return grid
+    end
     -- we'll need this when trying to find the array index from the
     -- grid coordinates. All of these lines are the same length and start
     -- at the same x
-    grid.width = math.floor( horizontalLines[ 1 ].from.x / gridSpacing )
+    grid.width = math.floor(horizontalLines[1].from.x / gridSpacing)
     grid.height = #horizontalLines
     -- now, add the grid points
     local margin = gridSpacing / 2
-    for row, line in ipairs( horizontalLines ) do
+    for row, line in ipairs(horizontalLines) do
         local column = 0
-        grid.map[ row ] = {}
+        grid.map[row] = {}
         for x = line.from.x, line.to.x, gridSpacing do
             column = column + 1
             for j = 1, #line.intersections, 2 do
-                if line.intersections[ j + 1 ] then
-                    if x > line.intersections[ j ].x + margin and x < line.intersections[ j + 1 ].x - margin then
+                if line.intersections[j + 1] then
+                    if x > line.intersections[j].x + margin and x < line.intersections[j + 1].x - margin then
                         local y = line.from.y
                         -- check an area bigger than the self.gridSpacing to make sure the path is not too close to the fruit
-                        table.insert( grid, { x = x, y = y, column = column, row = row })
-                        grid.map[ row ][ column ] = #grid
+                        table.insert(grid, { x = x, y = y, column = column, row = row })
+                        grid.map[row][column] = #grid
                     end
                 end
             end
@@ -189,8 +209,8 @@ local function generateGridForPolygon( polygon, gridSpacingHint )
     return grid, gridSpacing
 end
 
-function Island.findIslands( polygon )
-    local grid, _ = generateGridForPolygon( polygon, Island.gridSpacing )
+function Island.findIslands(polygon)
+    local grid, _ = generateGridForPolygon(polygon, Island.gridSpacing)
     local islandVertices = {}
     for _, row in ipairs(grid.map) do
         for _, index in pairs(row) do

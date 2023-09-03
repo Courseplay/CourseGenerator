@@ -13,12 +13,12 @@ dofile('include.lua')
 
 local parameters = {}
 -- working width of the equipment
-local workingWidth = AdjustableParameter(6, 'width', 'W', 'w', 0.2, 0, 100)
+local workingWidth = AdjustableParameter(10, 'width', 'W', 'w', 0.2, 0, 100)
 table.insert(parameters, workingWidth)
 local turningRadius = AdjustableParameter(5.8, 'radius', 'T', 't', 0.2, 0, 20)
 table.insert(parameters, turningRadius)
 -- number of headland passes around the field boundary
-local nHeadlandPasses = AdjustableParameter(5, 'headlands', 'P', 'p', 1, 0, 100)
+local nHeadlandPasses = AdjustableParameter(4, 'headlands', 'P', 'p', 1, 0, 100)
 table.insert(parameters, nHeadlandPasses)
 local nHeadlandsWithRoundCorners = AdjustableParameter(0, 'headlands with round corners', 'R', 'r', 1, 0, 100)
 table.insert(parameters, nHeadlandsWithRoundCorners)
@@ -27,7 +27,7 @@ table.insert(parameters, headlandClockwise)
 local headlandFirst = ToggleParameter('headlands first', true, 'h')
 table.insert(parameters, headlandFirst)
 -- number of headland passes around the field islands
-local nIslandHeadlandPasses = AdjustableParameter(2, 'island headlands', 'I', 'i', 1, 1, 10)
+local nIslandHeadlandPasses = AdjustableParameter(1, 'island headlands', 'I', 'i', 1, 1, 10)
 table.insert(parameters, nIslandHeadlandPasses)
 local fieldCornerRadius = AdjustableParameter(6, 'field corner radius', 'F', 'f', 1, 0, 30)
 table.insert(parameters, fieldCornerRadius)
@@ -97,6 +97,7 @@ local waypointColor = { 0.7, 0.5, 0.2 }
 local cornerColor = { 1, 1, 0.0, 0.8 }
 local islandBypassColor = { 0, 0.2, 1.0 }
 local debugColor = { 0.8, 0, 0, 0.5 }
+local debugTextColor = { 0.8, 0, 0, 1 }
 local highlightedWaypointColor = { 0.7, 0.7, 0.7, 1 }
 local highlightedWaypointColorForward = { 0, 0.7, 0, 1 }
 local highlightedWaypointColorBackward = { 0.7, 0, 0, 1 }
@@ -524,11 +525,14 @@ end
 
 local function drawDebugPoints()
     if cg.debugPoints then
-        love.graphics.replaceTransform(graphicsTransform)
-        love.graphics.setColor(debugColor)
         love.graphics.setPointSize(pointSize * 3)
         for _, p in ipairs(cg.debugPoints) do
+            love.graphics.setColor(debugColor)
+            love.graphics.replaceTransform(graphicsTransform)
             love.graphics.points(p.x, p.y)
+            if p.debugText then
+                drawText(p.x + 1, p.y + 1, debugTextColor, 1, p.debugText)
+            end
         end
     end
 end

@@ -1,20 +1,21 @@
 --- Generate the up/down rows covering the center part of the field,
---- within the headlands (or the field boundary if there are no headlands)
+--- within the headlands (or a virtual headland if there no headlands are needed, the
+--- virtual headland half working width wider than the field, so the Center does not
+--- have to know if this is a field boundary or a real headland)
 --- Split the center area into blocks if needed and connect the headland with first block
 --- and the blocks with each other
 ---@class Center
 local Center = CpObject()
 
 ---@param context cg.FieldworkContext
----@param boundary cg.Polygon
----@param hasHeadland boolean
+---@param headland cg.Headland the headland (or virtual headland)
 ---@param startLocation cg.Vector location of the vehicle before it starts working on the center.
 ---@param bigIslands cg.Island[] islands too big to circle
-function Center:init(context, boundary, hasHeadland, startLocation, bigIslands)
+function Center:init(context, headland, startLocation, bigIslands)
     self.logger = cg.Logger('Center', cg.Logger.level.debug)
-    self.boundary = boundary
+    self.boundary = headland:getPolygon()
+    self.headland = headland
     self.context = context
-    self.hasHeadland = hasHeadland
     self.startLocation = startLocation
     self.bigIslands = bigIslands
     -- All the blocks we divided the center into
@@ -76,8 +77,10 @@ function Center:generate()
     self.connectingPaths = {}
     while #self.blocks < #blocks do
         local closestBlock, closestEntry, dMin, pathToClosestEntry = nil, nil, math.huge, nil
+        local headland = currentLocation:is_a(cg.Vertex) and currentLocation:getAttributes():_getAtHeadland() or
+                self.headland
         for _, b in ipairs(blocks) do
-            local entry, d, path = b:getClosestEntry(currentLocation, self.boundary)
+            local entry, d, path = b:getClosestEntry(currentLocation, headland)
             if not doneBlockIds[b.id] and d < dMin then
                 closestBlock, closestEntry, dMin, pathToClosestEntry = b, entry, d, path
             end
@@ -114,7 +117,7 @@ function Center:bypassSmallIsland(islandHeadlandPolygon, circle)
     for _, connectingPath in ipairs(self.connectingPaths) do
         if #connectingPath > 1 then
             thisIslandCircled = cg.FieldworkCourseHelper.bypassIsland(connectingPath, self.context.workingWidth,
-                    self.hasHeadland, islandHeadlandPolygon, 1, not thisIslandCircled) or thisIslandCircled
+                    islandHeadlandPolygon, 1, not thisIslandCircled) or thisIslandCircled
         end
     end
 end
@@ -123,7 +126,7 @@ end
 function Center:bypassBigIsland(islandHeadlandPolygon)
     for _, connectingPath in ipairs(self.connectingPaths) do
         if #connectingPath > 1 then
-            cg.FieldworkCourseHelper.bypassIsland(connectingPath, self.context.workingWidth, self.hasHeadland,
+            cg.FieldworkCourseHelper.bypassIsland(connectingPath, self.context.workingWidth,
                     islandHeadlandPolygon, 1, false)
         end
     end
@@ -138,8 +141,7 @@ function Center:_generateStraightUpDownRows(rowAngle, suppressLog)
     -- move the baseline to the edge of the area we want to cover
     baseline = baseline:createNext(dMin)
     local nRows, firstRowOffset, width, lastRowOffset = self:_calculateRowDistribution(
-            self.context.workingWidth, dMax - dMin,
-            self.hasHeadland, self.context.evenRowDistribution, true)
+            self.context.workingWidth, dMax - dMin, self.context.evenRowDistribution, true)
 
     local rows = {}
     -- first row
@@ -158,8 +160,7 @@ function Center:_generateStraightUpDownRows(rowAngle, suppressLog)
     if not suppressLog then
         self.logger:debug('Created %d rows at %.0f° to cover an area %.1f wide, width %.1f/%.1f/%.1f m',
                 nRows, math.deg(rowAngle), dMax - dMin, firstRowOffset, width or 0, lastRowOffset or 0)
-        self.logger:debug('    has headland %s, even distribution %s, remainder last %s',
-                self.hasHeadland, self.context.evenRowDistribution, true)
+        self.logger:debug('    even distribution %s, remainder last %s', self.context.evenRowDistribution, true)
     end
     return rows
 end
@@ -167,7 +168,9 @@ end
 function Center:_calculateSmallBlockPenalty(blocks)
     local nResult = 0
     -- no penalty if there's only one block
-    if #blocks == 1 then return nResult end
+    if #blocks == 1 then
+        return nResult
+    end
     for _, b in ipairs(blocks) do
         if b:getNumberOfRows() < cg.cSmallBlockRowCountLimit then
             nResult = nResult + cg.cSmallBlockRowCountLimit - #b
@@ -216,7 +219,7 @@ function Center:_createStraightBaseline(rowAngle)
         baselineStart = lowerRight - cg.Vector(w * math.cos(rowAngle), 0):setHeading(-rowAngle)
         baselineEnd = lowerRight + cg.Vector(h * math.sin(rowAngle), 0):setHeading(-rowAngle)
     end
-    return cg.Row(self.context.workingWidth, {baselineStart, baselineEnd})
+    return cg.Row(self.context.workingWidth, { baselineStart, baselineEnd })
 end
 
 --- Calculate how many rows we need with a given work width to fully cover a field and how far apart those
@@ -232,7 +235,7 @@ end
 ---      remainder may have obstacles like fences or trees as it is outside of the field.
 ---@return number, number, number, number number of rows, offset of first row from the field edge, offset of
 --- rows from the previous row for the next rows, offset of last row from the next to last row.
-function Center:_calculateRowDistribution(workingWidth, fieldWidth, hasHeadland, sameWidth, remainderLast)
+function Center:_calculateRowDistribution(workingWidth, fieldWidth, sameWidth, remainderLast)
     local nRows = math.floor(fieldWidth / workingWidth) + 1
     if nRows == 1 then
         if remainderLast then
@@ -250,7 +253,7 @@ function Center:_calculateRowDistribution(workingWidth, fieldWidth, hasHeadland,
             width = workingWidth
         end
         local firstRowOffset, lastRowOffset
-        if hasHeadland then
+        if self.context.nHeadlands then
             -- #3
             firstRowOffset = workingWidth
             lastRowOffset = width
@@ -357,7 +360,7 @@ function Center:_splitIntoBlocks(rows)
     local blockId = 1
 
     for i, row in ipairs(rows) do
-        local sections = row:split(self.boundary, self.hasHeadland, self.bigIslands)
+        local sections = row:split(self.headland, self.bigIslands)
         self.logger:trace('Row %d has %d section(s)', i, #sections)
         for j, section in ipairs(sections) do
             -- with how many existing blocks does this row overlap?

@@ -7,7 +7,7 @@ local Row = CpObject(cg.Polyline)
 function Row:init(workingWidth, vertices)
     cg.Polyline.init(self, vertices)
     self.workingWidth = workingWidth
-    self.logger = cg.Logger('Row', cg.Logger.level.debug)
+    self.logger = cg.Logger('Row' , cg.Logger.level.debug)
 end
 
 --- Create a row parallel to this one at offset distance.
@@ -49,36 +49,35 @@ end
 --- Big islands in the field also split a row which intersects them. We just drive around
 --- smaller islands but at bigger ones it is better to end the row and turn around into the next.
 ---
----@param boundary cg.Polygon the field boundary (or innermost headland)
----@param boundaryIsHeadland boolean true if the boundary is a headland
+---@param boundary cg.Headland the field boundary (or innermost headland)
 ---@return cg.Row[]
-function Row:split(boundary, boundaryIsHeadland, bigIslands)
-
+function Row:split(headland, bigIslands)
     -- get all the intersections with the field boundary
-    local intersections = self:getIntersections(boundary, 1,
+    local intersections = self:getIntersections(headland:getPolygon(), 1,
             {
                 isEnteringField = function(is)
                     -- when entering a field boundary polygon, we move on to the field
-                    return self:isEntering(boundary, is)
-                end
+                    return self:isEntering(headland:getPolygon(), is)
+                end,
+                headland = headland
             }
     )
 
     if #intersections < 2 then
-        self.logger:warning('Row has only %d intersection with boundary', #intersections)
+        self.logger:warning('Row has only %d intersection with headland %d', #intersections, headland:getPassNumber())
         return cg.Row(self.workingWidth)
     end
 
     -- then get all the intersections with big islands
     for _, island in ipairs(bigIslands) do
-        local outermostIslandHeadland = island:getOutermostHeadland():getPolygon()
-        local islandIntersections = self:getIntersections(outermostIslandHeadland, 1,
+        local outermostIslandHeadland = island:getOutermostHeadland()
+        local islandIntersections = self:getIntersections(outermostIslandHeadland:getPolygon(), 1,
                 {
                     isEnteringField = function(is)
                         -- when entering an island headland, we move off the field
-                        return not self:isEntering(outermostIslandHeadland, is)
+                        return not self:isEntering(outermostIslandHeadland:getPolygon(), is)
                     end,
-                    atIsland = island
+                    headland = outermostIslandHeadland
                 }
         )
 
@@ -104,18 +103,22 @@ function Row:split(boundary, boundaryIsHeadland, bigIslands)
     for i = 1, #intersections do
         -- getUserData() depends on if this is a field boundary or an island
         local isEnteringField = intersections[i]:getUserData().isEnteringField(intersections[i])
-        outside = outside + (isEnteringField and -1 or 1)
+        -- For the case when the row begins on a big island and the headland is bypassing that big island,
+        -- meaning that there will be two intersections, at the exact same position, one with the island,
+        -- and another with the headland, we'd enter the field twice (outside == -1). Don't let the inside
+        -- counter go below 0 here
+        outside = math.max(0, outside + (isEnteringField and -1 or 1))
         if not isEnteringField and outside == 1 then
             -- exiting the polygon and we were inside before (outside was 0)
             -- create a section here
             local section = self:_cutAtIntersections(intersections[lastInsideIx], intersections[i])
             -- remember the angle we met the headland so we can adjust the length of the row to have 100% coverage
             section.startHeadlandAngle = intersections[lastInsideIx]:getAngle()
-            -- remember if the row ends at an island headland so we know where switch to the island headland
-            section.startsAtIsland = intersections[lastInsideIx]:getUserData().atIsland
+            -- remember at what headland the row ends
+            section.startsAtHeadland = intersections[lastInsideIx]:getUserData().headland
             section.endHeadlandAngle = intersections[i]:getAngle()
-            section.endsAtIsland = intersections[i]:getUserData().atIsland
-            section.boundaryIsHeadland = boundaryIsHeadland
+            section.endsAtHeadland = intersections[i]:getUserData().headland
+            section:setEndAttributes()
             table.insert(sections, section)
         elseif isEnteringField then
             lastInsideIx = i
@@ -156,11 +159,19 @@ function Row:getSequenceNumber()
     return self.sequenceNumber
 end
 
-function Row:setAllAttributes()
+--- Update the attributes of the first and last vertex of the row based on the row's properties.
+--- We use these attributes when finding an entry to a block, to see if the entry is on an island headland
+--- or not. The attributes are set when the row is split at headlands but may need to be reapplied when
+--- we adjust the end of the row as we may remove the first/last vertex.
+function Row:setEndAttributes()
     self:setAttributes(1, 1, cg.WaypointAttributes.setRowStart)
-    self:setAttributes(1, 1, cg.WaypointAttributes.setAtIsland, self.startsAtIsland)
+    self:setAttributes(1, 1, cg.WaypointAttributes._setAtHeadland, self.startsAtHeadland)
     self:setAttributes(#self, #self, cg.WaypointAttributes.setRowEnd)
-    self:setAttributes(#self, #self, cg.WaypointAttributes.setAtIsland, self.endsAtIsland)
+    self:setAttributes(#self, #self, cg.WaypointAttributes._setAtHeadland, self.endsAtHeadland)
+end
+
+function Row:setAllAttributes()
+    self:setEndAttributes()
     self:setAttributes(nil, nil, cg.WaypointAttributes.setRowNumber, self.rowNumber)
     self:setAttributes(nil, nil, cg.WaypointAttributes.setBlockNumber, self.blockNumber)
 end
@@ -168,7 +179,7 @@ end
 function Row:reverse()
     cg.Polyline.reverse(self)
     self.startHeadlandAngle, self.endHeadlandAngle = self.endHeadlandAngle, self.startHeadlandAngle
-    self.startsAtIsland, self.endsAtIsland = self.endsAtIsland, self.startsAtIsland
+    self.startsAtHeadland, self.endsAtHeadland = self.endsAtHeadland, self.startsAtHeadland
 end
 
 --- Adjust the length of this tow for full coverage where it meets the headland or field boundary
@@ -178,8 +189,8 @@ end
 --- In case of a field boundary we have to drive up all the way to the boundary.
 --- The value obviously depends on the angle.
 function Row:adjustLength()
-    cg.FieldworkCourseHelper.adjustLengthAtStart(self, self.workingWidth, self.boundaryIsHeadland, self.startHeadlandAngle)
-    cg.FieldworkCourseHelper.adjustLengthAtEnd(self, self.workingWidth, self.boundaryIsHeadland, self.endHeadlandAngle)
+    cg.FieldworkCourseHelper.adjustLengthAtStart(self, self.workingWidth, self.startHeadlandAngle)
+    cg.FieldworkCourseHelper.adjustLengthAtEnd(self, self.workingWidth, self.endHeadlandAngle)
 end
 
 --- Find the first two intersections with another polyline or polygon and replace the section
@@ -190,7 +201,7 @@ end
 ---@return boolean, number true if there was an intersection and we actually went around, index of last vertex
 --- after the bypass
 function Row:bypassIsland(other, startIx, circle)
-    cg.FieldworkCourseHelper.bypassIsland(self, self.workingWidth, self.boundaryIsHeadland, other, startIx, circle)
+    cg.FieldworkCourseHelper.bypassIsland(self, self.workingWidth, other, startIx, circle)
 end
 
 ------------------------------------------------------------------------------------------------------------------------

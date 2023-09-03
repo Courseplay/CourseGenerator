@@ -11,10 +11,10 @@ local HeadlandConnector = {}
 ---@param turningRadius
 ---@return cg.Polyline a continuous path covering all headland passes, starting with the outermost (fields)/innermost (islands)
 function HeadlandConnector.connectHeadlandsFromOutside(headlands, startLocation, workingWidth, turningRadius)
-    if #headlands < 1 then
-        return
-    end
     local headlandPath = cg.Polyline()
+    if #headlands < 1 then
+        return headlandPath
+    end
     local startIx = type(startLocation) == 'table' and
             headlands[1]:getPolygon():findClosestVertexToPoint(startLocation).ix or
             startLocation
@@ -41,10 +41,10 @@ end
 ---@param turningRadius
 ---@return cg.Polyline a continuous path covering all headland passes, starting with the innermost (fields)/outermost (islands)
 function HeadlandConnector.connectHeadlandsFromInside(headlands, startLocation, workingWidth, turningRadius)
-    if #headlands < 1 then
-        return
-    end
     local headlandPath = cg.Polyline()
+    if #headlands < 1 then
+        return headlandPath
+    end
     local startIx = type(startLocation) == 'table' and
             headlands[#headlands]:getPolygon():findClosestVertexToPoint(startLocation).ix or
             startLocation

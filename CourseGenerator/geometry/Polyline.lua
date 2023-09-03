@@ -255,10 +255,10 @@ end
 --- Cut all vertices from ix (not including) to the last vertex, shortening the polyline at the end
 ---@param ix number
 function Polyline:cutEndAtIx(ix)
-    for _ = #self, ix + 2, -1 do
+    for _ = #self, ix + 1, -1 do
         table.remove(self)
     end
-    self:calculateProperties(ix, ix + 1)
+    self:calculateProperties(ix - 1, ix)
 end
 
 --- Calculate all interesting properties we may need later for more advanced functions

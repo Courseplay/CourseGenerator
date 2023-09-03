@@ -96,6 +96,9 @@ function Headland:getUnpackedVertices()
     return self.unpackedVertices
 end
 
+--- We route headlands around small islands on the first island headland. Each island has to be
+--- circled completely once by the headland first bypassing it, subsequent bypasses just pick the
+--- shortest way around it.
 function Headland:bypassSmallIslands(smallIslands)
     for _, island in pairs(smallIslands) do
             local startIx, circled = 1, false
@@ -108,10 +111,15 @@ function Headland:bypassSmallIslands(smallIslands)
         end
 end
 
+--- Bypassing big island differs from small ones as:
+--- 1. no circling is needed as the big islands will have real headlands, so we always drive around them on the
+---    shortest path
+--- 2. if the headland starts or ends on the island, we move the headland start out of the island so we don't
+---    have tricky situations when connecting headlands
 function Headland:bypassBigIslands(bigIslands)
     for _, island in pairs(bigIslands) do
         self.logger:debug('Bypassing big island %d', island:getId())
-        local islandHeadlandPolygon = island:getSecondInnermostHeadland():getPolygon()
+        local islandHeadlandPolygon = island:getBestHeadlandToBypass():getPolygon()
         local intersections = self.polygon:getIntersections(islandHeadlandPolygon, 1)
         local is1, is2 = intersections[1], intersections[2]
         if #intersections > 0 then
@@ -201,7 +209,7 @@ function Headland:_continueUntilStraightSection(ix, straightSectionLength, searc
     while dTotal < searchRange do
         dTotal = dTotal + self.polygon:at(ix):getExitEdge():getLength()
         local r = self.polygon:getSmallestRadiusWithinDistance(ix, straightSectionLength, 0)
-        if r > self:_getHeadlandChangeMinRadius() then
+        if r > self:_getcHeadlandChangeMinRadius() then
             self.logger:debug('Added %d waypoint(s) to reach a straight section for the headland change after %.1f m, r = %.1f',
                     count, dTotal, r)
             return waypoints
@@ -227,8 +235,8 @@ function Headland:_getTransitionPathTypes(headlandFirst)
     end
 end
 
-function Headland:_getHeadlandChangeMinRadius()
-    return NewCourseGenerator.headlandChangeMinRadius
+function Headland:_getcHeadlandChangeMinRadius()
+    return NewCourseGenerator.cHeadlandChangeMinRadius
 end
 
 ---@class cg.Headland
