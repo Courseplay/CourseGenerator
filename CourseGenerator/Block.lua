@@ -82,20 +82,27 @@ end
 function Block:getClosestEntry(startLocation, headland)
     local startLocationVertex = headland:getPolygon():findClosestVertexToPoint(startLocation)
     local entries = self.rowPattern:getPossibleEntries(self.rows)
-    local closestEntry, dMin, shortestPath = nil, math.huge, nil
+    local closestEntry, closestDistance, closestPath = nil, math.huge, nil
+    local bestEntry, bestDistance, bestPath = nil, math.huge, nil
     for _, entry in ipairs(entries) do
         --print(entry)
         local entryVertex = headland:getPolygon():findClosestVertexToPoint(entry.position)
         local pathOnHeadland = headland:getPolygon():getShortestPathBetween(startLocationVertex.ix, entryVertex.ix)
         local entryAtHeadland = entry.position:getAttributes():_getAtHeadland()
-        if pathOnHeadland:getLength() < dMin and headland == entryAtHeadland then
-            closestEntry = entry
-            dMin = pathOnHeadland:getLength()
-            shortestPath = pathOnHeadland
+        if pathOnHeadland:getLength() < closestDistance then
+            closestEntry, closestDistance, closestPath = entry, pathOnHeadland:getLength(), pathOnHeadland
+            if headland == entryAtHeadland then
+                bestEntry, bestDistance, bestPath = entry, pathOnHeadland:getLength(), pathOnHeadland
+            end
         end
     end
-    self.logger:debug('Closest entry: %s at %.1f m', closestEntry, dMin)
-    return closestEntry, dMin, shortestPath
+    if bestEntry then
+        self.logger:debug('Best entry: %s at %.1f m', bestEntry, bestDistance)
+        return bestEntry, bestDistance, bestPath
+    else
+        self.logger:debug('No entry on the same headland found, closest entry: %s at %.1f m', closestEntry, closestDistance)
+        return closestEntry, closestDistance, closestPath
+    end
 end
 
 --- Finalize this block, set the entry we will be using, rearrange rows accordingly, set all row attributes and create
@@ -104,15 +111,14 @@ end
 ---@return cg.Vertex the last vertex of the last row, the exit point from this block (to be used to find the entry
 --- to the next one.
 function Block:finalize(entry)
-    self.logger:debug('Setting entry %s', entry)
-    if entry.reverseRowOrderBefore then
-        cg.reverseArray(self.rows)
-    end
+    self.logger:debug('Finalizing, entry %s', entry)
     self.logger:debug('Generating row sequence for %d rows, pattern: %s', #self.rows, self.rowPattern)
+    local sequence, exit = self.rowPattern:getWorkSequenceAndExit(self.rows, entry)
     self.rowsInWorkSequence = {}
-    for i, row in self.rowPattern:iterator(self.rows) do
+    for i, rowInfo in ipairs(sequence) do
+        local row = self.rows[rowInfo.rowIx]
         self.logger:debug('row %d is now at position %d', row:getSequenceNumber(), i)
-        if i % 2 == (entry.reverseOddRows and 1 or 0) then
+        if rowInfo.reverse then
             row:reverse()
         end
         -- need vertices close enough so the smoothing in goAround() only starts close to the island
@@ -122,11 +128,7 @@ function Block:finalize(entry)
         row:setAllAttributes()
         table.insert(self.rowsInWorkSequence, row)
     end
-    if entry.reverseRowOrderAfter then
-        cg.reverseArray(self.rowsInWorkSequence)
-    end
-    local lastRow = self.rowsInWorkSequence[#self.rowsInWorkSequence]
-    return lastRow[#lastRow]
+    return exit
 end
 
 function Block:getPath()

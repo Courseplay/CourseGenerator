@@ -97,8 +97,8 @@ function Center:generate()
             pathToClosestEntry:setAttributes(nil, nil, cg.WaypointAttributes.setOnConnectingPath)
             table.insert(self.connectingPaths, pathToClosestEntry)
         end
-        self.logger:debug('Block %d, connecting path %d with %d waypoints',
-                #self.blocks, #self.connectingPaths, #pathToClosestEntry)
+        self.logger:debug('Next (%d.) block is block %d, connecting path %d with %d waypoints',
+                #self.blocks, self.blocks[#self.blocks].id, #self.connectingPaths, #pathToClosestEntry)
     end
     self.logger:debug('Found %d block(s), %d connecting path(s).', #self.blocks, #self.connectingPaths)
     return currentLocation

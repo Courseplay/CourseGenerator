@@ -1,6 +1,6 @@
 require('include')
 lu.EPS = 0.01
-function testRowPattern()
+function testRowPatternSkip()
     local rows = {}
     local row = cg.Row(5, { cg.Vector(0, 1), cg.Vector(20, 1) })
     for _ = 1, 10 do
@@ -41,6 +41,21 @@ function testRowPattern()
     entries[6].position:assertAlmostEquals(cg.Vector(20, 9))
     entries[7].position:assertAlmostEquals(cg.Vector(0, 2))
     entries[8].position:assertAlmostEquals(cg.Vector(20, 2))
+
+    local sequence, exit = p:getWorkSequenceAndExit(rows, entries[5])
+    lu.assertEquals(sequence[1].rowIx, 9)
+    lu.assertNil(sequence[1].reverse)
+    lu.assertEquals(sequence[2].rowIx, 7)
+    lu.assertTrue(sequence[2].reverse)
+    lu.assertEquals(sequence[3].rowIx, 5)
+    lu.assertEquals(sequence[4].rowIx, 3)
+    lu.assertEquals(sequence[5].rowIx, 1)
+    lu.assertEquals(sequence[6].rowIx, 2)
+    lu.assertEquals(sequence[7].rowIx, 4)
+    lu.assertEquals(sequence[8].rowIx, 6)
+    lu.assertEquals(sequence[9].rowIx, 8)
+    lu.assertEquals(sequence[10].rowIx, 10)
+    exit:assertAlmostEquals(cg.Vector(0, 10))
 
     -----------------------------------------------------------------------------------
 
@@ -136,4 +151,25 @@ function testRowPattern()
     entries[7].position:assertAlmostEquals(cg.Vector(0, 9))
     entries[8].position:assertAlmostEquals(cg.Vector(20, 9))
 end
+
+function testRowPatternExit()
+    local rows = {}
+    local row = cg.Row(5, { cg.Vector(0, 1), cg.Vector(20, 1) })
+    for _ = 1, 10 do
+        table.insert(rows, row)
+        row = row:createNext(1)
+    end
+    local p = cg.RowPatternAlternating()
+    local entries = p:getPossibleEntries(rows)
+    entries[1].position:assertAlmostEquals(cg.Vector(0, 1))
+    local _, exit = p:getWorkSequenceAndExit(rows, entries[1])
+    exit:assertAlmostEquals(cg.Vector(0, 10))
+    entries[2].position:assertAlmostEquals(cg.Vector(20, 1))
+    _, exit = p:getWorkSequenceAndExit(rows, entries[2])
+    exit:assertAlmostEquals(cg.Vector(20, 10))
+    entries[3].position:assertAlmostEquals(cg.Vector(0, 10))
+    _, exit = p:getWorkSequenceAndExit(rows, entries[3])
+    exit:assertAlmostEquals(cg.Vector(0, 1))
+end
+
 os.exit(lu.LuaUnit.run())

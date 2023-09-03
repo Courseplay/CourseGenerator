@@ -209,7 +209,7 @@ function Headland:_continueUntilStraightSection(ix, straightSectionLength, searc
     while dTotal < searchRange do
         dTotal = dTotal + self.polygon:at(ix):getExitEdge():getLength()
         local r = self.polygon:getSmallestRadiusWithinDistance(ix, straightSectionLength, 0)
-        if r > self:_getcHeadlandChangeMinRadius() then
+        if r > self:_getHeadlandChangeMinRadius() then
             self.logger:debug('Added %d waypoint(s) to reach a straight section for the headland change after %.1f m, r = %.1f',
                     count, dTotal, r)
             return waypoints
@@ -235,8 +235,12 @@ function Headland:_getTransitionPathTypes(headlandFirst)
     end
 end
 
-function Headland:_getcHeadlandChangeMinRadius()
+function Headland:_getHeadlandChangeMinRadius()
     return NewCourseGenerator.cHeadlandChangeMinRadius
+end
+
+function Headland:__tostring()
+    return 'Headland ' .. self.passNumber
 end
 
 ---@class cg.Headland
@@ -259,6 +263,10 @@ function IslandHeadland:_getHeadlandChangeMinRadius()
     -- headlands around are not very long, and as they are generated outwards, usually have no
     -- very sharp corners, and we don't have the luxury to pick a straight section for a transition
     return 0
+end
+
+function IslandHeadland:__tostring()
+    return 'Island headland ' .. self.passNumber
 end
 
 ---@class cg.IslandHeadland

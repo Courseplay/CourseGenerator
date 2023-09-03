@@ -25,7 +25,7 @@ end
 
 --- Generate a sequence in which the rows must be worked on. It is just an array
 --- with the original row numbers, first element of the array is the index of the
---- row the works starts with, last element is the index of the row to finish the
+--- row the work starts with, last element is the index of the row to finish the
 --- work with.
 --- We assume that in iterator() we receive a contiguous list of rows.
 --- this default implementation leaves them in the original order (which is what
@@ -67,6 +67,44 @@ end
 ---@return cg.RowPattern.Entry[] list of entries that can be used to enter this pattern
 function RowPattern:getPossibleEntries(rows)
     return {}
+end
+
+--- In what sequence the rows should be worked on when entering this pattern at entry? Use the returned array
+--- to build a sequence, and to reverse rows when needed.
+---@return [{number, boolean|nil}], cg.Vertex  array of tables {index of row in rows, reverse}, the exit vertex
+---   The array defines the order the rows should be worked on, first element of the array points to the index of the
+---     first row to be worked on in rows[], and if the boolean is true, that row should be reversed.
+---   The exit vertex is the position where the vehicle exits this pattern when using the entry passed in.
+function RowPattern:getWorkSequenceAndExit(rows, entry)
+    -- each entry of the rowInfos array is a table:
+    --  rowIx: index of the row in rows
+    --  reverse: should this row be reversed?
+    local rowInfos = {}
+    if entry.reverseRowOrderBefore then
+        for i = #rows, 1, -1 do
+            table.insert(rowInfos, { rowIx = i })
+        end
+    else
+        for i = 1, #rows, 1 do
+            table.insert(rowInfos, { rowIx = i })
+        end
+    end
+    local rowInfosInWorkSequence = {}
+    local reverseOddRows = entry.reverseRowOrderAfter and not entry.reverseOddRows or entry.reverseOddRows
+    for i, rowInfo in self:iterator(rowInfos) do
+        if i % 2 == (reverseOddRows and 1 or 0) then
+            rowInfo.reverse = true
+        end
+        table.insert(rowInfosInWorkSequence, rowInfo)
+    end
+    if entry.reverseRowOrderAfter then
+        cg.reverseArray(rowInfosInWorkSequence)
+    end
+    -- rowInfosInWorkSequence now contains the row indices in the order they should be worked on
+    -- and if they should be reversed
+    local lastRowInfo = rowInfosInWorkSequence[#rowInfosInWorkSequence]
+    local lastRow = rows[lastRowInfo.rowIx]
+    return rowInfosInWorkSequence, lastRow[lastRowInfo.reverse and 1 or #lastRow]
 end
 
 ---@class cg.RowPattern
@@ -156,7 +194,7 @@ function RowPatternSkip:getPossibleEntries(rows)
         -- as opposed to the alternating pattern, where all four entry points are also
         -- exits (on the diagonally opposite corner), where do we exit when using one of the
         -- above entries, depends on the total number of rows and the number of rows skipped
-        -- now, we can also drive the whole patern in the opposite direction, that is what
+        -- now, we can also drive the whole pattern in the opposite direction, that is what
         -- these entries are for.
         cg.RowPattern.Entry(lastRowAfterReversed[1], true, true, false),
         cg.RowPattern.Entry(lastRowAfterReversed[#lastRowAfterReversed], true, true, true),
@@ -275,7 +313,6 @@ function RowPatternSpiral:getPossibleEntries(rows)
             if odd then
                 return {
                     cg.RowPattern.Entry(firstRow[#firstRow], false, false, true)
---                    cg.RowPattern.Entry(firstRow[1], false, false, false),
                 }
             else
                 return {
@@ -333,59 +370,57 @@ end
 function RowPatternLands:_generateSequence(nRows)
     self.sequence = {}
     -- I know this could be generated but it is more readable and easy to visualize this way.
-    local rowOrderInLandsCounterclockwise =
-    {
-        {1},
-        {2, 1},
-        {2, 3, 1},
-        {2, 3, 1, 4},
-        {3, 4, 2, 5, 1},
-        {3, 4, 2, 5, 1, 6},
-        {4, 5, 3, 6, 2, 7, 1},
-        {4, 5, 3, 6, 2, 7, 1, 8},
-        {5, 6, 4, 7, 3, 8, 2, 9, 1},
-        {5, 6, 4, 7, 3, 8, 2, 9, 1, 10},
-        {6, 7, 5, 8, 4, 9, 3, 10, 2, 11, 1},
-        {6, 7, 5, 8, 4, 9, 3, 10, 2, 11, 1, 12},
-        {7, 8, 6, 9, 5, 10, 4, 11, 3, 12, 2, 13, 1},
-        {7, 8, 6, 9, 5, 10, 4, 11, 3, 12, 2, 13, 1, 14},
-        {8, 9, 7, 10, 6, 11, 5, 12, 4, 13, 3, 14, 2, 15, 1},
-        {8, 9, 7, 10, 6, 11, 5, 12, 4, 13, 3, 14, 2, 15, 1, 16},
-        {9, 10, 8, 11, 7, 12, 6, 13, 5, 14, 4, 15, 3, 16, 2, 17, 1},
-        {9, 10, 8, 11, 7, 12, 6, 13, 5, 14, 4, 15, 3, 16, 2, 17, 1, 18},
-        {10, 11, 9, 12, 8, 13, 7, 14, 6, 15, 5, 16, 4, 17, 3 , 18, 2, 19, 1},
-        {10, 11, 9, 12, 8, 13, 7, 14, 6, 15, 5, 16, 4, 17, 3 , 18, 2, 19, 1, 20},
-        {11, 12, 10, 13, 9, 14, 8, 15, 7, 16, 6, 17, 5, 18, 4, 19, 3, 20, 2, 21, 1},
-        {11, 12, 10, 13, 9, 14, 8, 15, 7, 16, 6, 17, 5, 18, 4, 19, 3, 20, 2, 21, 1, 22},
-        {12, 13, 11, 14, 10, 15, 9, 16, 8, 17, 7, 18, 6, 19, 5, 20, 4, 21, 3, 22, 2, 23, 1},
-        {12, 13, 11, 14, 10, 15, 9, 16, 8, 17, 7, 18, 6, 19, 5, 20, 4, 21, 3, 22, 2, 23, 1, 24}
+    local rowOrderInLandsCounterclockwise = {
+        { 1 },
+        { 2, 1 },
+        { 2, 3, 1 },
+        { 2, 3, 1, 4 },
+        { 3, 4, 2, 5, 1 },
+        { 3, 4, 2, 5, 1, 6 },
+        { 4, 5, 3, 6, 2, 7, 1 },
+        { 4, 5, 3, 6, 2, 7, 1, 8 },
+        { 5, 6, 4, 7, 3, 8, 2, 9, 1 },
+        { 5, 6, 4, 7, 3, 8, 2, 9, 1, 10 },
+        { 6, 7, 5, 8, 4, 9, 3, 10, 2, 11, 1 },
+        { 6, 7, 5, 8, 4, 9, 3, 10, 2, 11, 1, 12 },
+        { 7, 8, 6, 9, 5, 10, 4, 11, 3, 12, 2, 13, 1 },
+        { 7, 8, 6, 9, 5, 10, 4, 11, 3, 12, 2, 13, 1, 14 },
+        { 8, 9, 7, 10, 6, 11, 5, 12, 4, 13, 3, 14, 2, 15, 1 },
+        { 8, 9, 7, 10, 6, 11, 5, 12, 4, 13, 3, 14, 2, 15, 1, 16 },
+        { 9, 10, 8, 11, 7, 12, 6, 13, 5, 14, 4, 15, 3, 16, 2, 17, 1 },
+        { 9, 10, 8, 11, 7, 12, 6, 13, 5, 14, 4, 15, 3, 16, 2, 17, 1, 18 },
+        { 10, 11, 9, 12, 8, 13, 7, 14, 6, 15, 5, 16, 4, 17, 3, 18, 2, 19, 1 },
+        { 10, 11, 9, 12, 8, 13, 7, 14, 6, 15, 5, 16, 4, 17, 3, 18, 2, 19, 1, 20 },
+        { 11, 12, 10, 13, 9, 14, 8, 15, 7, 16, 6, 17, 5, 18, 4, 19, 3, 20, 2, 21, 1 },
+        { 11, 12, 10, 13, 9, 14, 8, 15, 7, 16, 6, 17, 5, 18, 4, 19, 3, 20, 2, 21, 1, 22 },
+        { 12, 13, 11, 14, 10, 15, 9, 16, 8, 17, 7, 18, 6, 19, 5, 20, 4, 21, 3, 22, 2, 23, 1 },
+        { 12, 13, 11, 14, 10, 15, 9, 16, 8, 17, 7, 18, 6, 19, 5, 20, 4, 21, 3, 22, 2, 23, 1, 24 }
     }
-    local rowOrderInLandsClockwise =
-    {
-        {1},
-        {1, 2},
-        {2, 1, 3},
-        {3, 2, 4, 1},
-        {3, 2, 4, 1, 5},
-        {4, 3, 5, 2, 6, 1},
-        {4, 3, 5, 2, 6, 1, 7},
-        {5, 4, 6, 3, 7, 2, 8, 1},
-        {5, 4, 6, 3, 7, 2, 8, 1, 9},
-        {6, 5, 7, 4, 8, 3, 9, 2, 10, 1},
-        {6, 5, 7, 4, 8, 3, 9, 2, 10, 1, 11},
-        {7, 6, 8, 5, 9, 4, 10, 3, 11, 2, 12, 1},
-        {7, 6, 8, 5, 9, 4, 10, 3, 11, 2, 12, 1, 13},
-        {8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1},
-        {8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15},
-        {9, 8, 10, 7, 11, 6, 12, 5, 13, 4, 14, 3, 15, 2, 16, 1},
-        {9, 8, 10, 7, 11, 6, 12, 5, 13, 4, 14, 3, 15, 2, 16, 1, 17},
-        {10, 9, 11, 8, 12, 7, 13, 6, 14, 5, 15, 4, 16, 3, 17, 2, 18, 1},
-        {10, 9, 11, 8, 12, 7, 13, 6, 14, 5, 15, 4, 16, 3, 17, 2, 18, 1, 19},
-        {11, 10, 12, 9, 13, 8, 14, 7, 15, 6, 16, 5, 17, 4, 18, 3, 19, 2, 20, 1},
-        {11, 10, 12, 9, 13, 8, 14, 7, 15, 6, 16, 5, 17, 4, 18, 3, 19, 2, 20, 1, 21},
-        {12, 11, 13, 10, 14, 9, 15, 8, 16, 7, 17, 6, 18, 5, 19, 4, 20, 3, 21, 2, 22, 1},
-        {12, 11, 13, 10, 14, 9, 15, 8, 16, 7, 17, 6, 18, 5, 19, 4, 20, 3, 21, 2, 22, 1, 23},
-        {13, 12, 14, 11, 15, 10, 16, 9, 17, 8, 18, 7, 19, 6, 20, 5, 21, 4, 22, 3, 23, 2, 24, 1}
+    local rowOrderInLandsClockwise = {
+        { 1 },
+        { 1, 2 },
+        { 2, 1, 3 },
+        { 3, 2, 4, 1 },
+        { 3, 2, 4, 1, 5 },
+        { 4, 3, 5, 2, 6, 1 },
+        { 4, 3, 5, 2, 6, 1, 7 },
+        { 5, 4, 6, 3, 7, 2, 8, 1 },
+        { 5, 4, 6, 3, 7, 2, 8, 1, 9 },
+        { 6, 5, 7, 4, 8, 3, 9, 2, 10, 1 },
+        { 6, 5, 7, 4, 8, 3, 9, 2, 10, 1, 11 },
+        { 7, 6, 8, 5, 9, 4, 10, 3, 11, 2, 12, 1 },
+        { 7, 6, 8, 5, 9, 4, 10, 3, 11, 2, 12, 1, 13 },
+        { 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1 },
+        { 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15 },
+        { 9, 8, 10, 7, 11, 6, 12, 5, 13, 4, 14, 3, 15, 2, 16, 1 },
+        { 9, 8, 10, 7, 11, 6, 12, 5, 13, 4, 14, 3, 15, 2, 16, 1, 17 },
+        { 10, 9, 11, 8, 12, 7, 13, 6, 14, 5, 15, 4, 16, 3, 17, 2, 18, 1 },
+        { 10, 9, 11, 8, 12, 7, 13, 6, 14, 5, 15, 4, 16, 3, 17, 2, 18, 1, 19 },
+        { 11, 10, 12, 9, 13, 8, 14, 7, 15, 6, 16, 5, 17, 4, 18, 3, 19, 2, 20, 1 },
+        { 11, 10, 12, 9, 13, 8, 14, 7, 15, 6, 16, 5, 17, 4, 18, 3, 19, 2, 20, 1, 21 },
+        { 12, 11, 13, 10, 14, 9, 15, 8, 16, 7, 17, 6, 18, 5, 19, 4, 20, 3, 21, 2, 22, 1 },
+        { 12, 11, 13, 10, 14, 9, 15, 8, 16, 7, 17, 6, 18, 5, 19, 4, 20, 3, 21, 2, 22, 1, 23 },
+        { 13, 12, 14, 11, 15, 10, 16, 9, 17, 8, 18, 7, 19, 6, 20, 5, 21, 4, 22, 3, 23, 2, 24, 1 }
     }
 
     -- if we have an even number of rows per land, then we'll finish the land on the same side where we
