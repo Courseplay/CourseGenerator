@@ -40,7 +40,7 @@ jobs:
           lua TransformTest.lua
           lua PolylineTest.lua
           lua PolygonTest.lua
-          lua HeadlandTest.lua
           lua FieldTest.lua
           lua FieldworkCourseTest.lua
           lua RowPatternTest.lua
+          lua HeadlandTest.lua
