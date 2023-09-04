@@ -13,7 +13,7 @@ on:
 # The list of jobs this workflow executes
 jobs:
   test:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout this repository
         uses: actions/checkout@v3
@@ -23,8 +23,6 @@ jobs:
         with:
           repository: Courseplay/Courseplay_FS22
           path: Courseplay_FS22
-      - name: Build Environment
-        uses: ilammy/msvc-dev-cmd@v1
       - name: Lua Setup
         uses: leafo/gh-actions-lua@v10
         with:
@@ -40,7 +38,7 @@ jobs:
           lua TransformTest.lua
           lua PolylineTest.lua
           lua PolygonTest.lua
+          lua HeadlandTest.lua
           lua FieldTest.lua
           lua FieldworkCourseTest.lua
           lua RowPatternTest.lua
-          lua HeadlandTest.lua
