@@ -63,6 +63,8 @@ end
 
 ---@return cg.Vertex the location of the last waypoint of the last row worked in the middle.
 function Center:generate()
+    -- first, we split the field into blocks. Simple convex fields have just one block only,
+    -- but odd shaped, concave fields or fields with island may have more blocks
     if self.context.useBaselineEdge then
         self.rows = self:_generateCurvedUpDownRows()
     else
@@ -70,38 +72,72 @@ function Center:generate()
         self.rows = self:_generateStraightUpDownRows(angle)
     end
     local blocks = self:_splitIntoBlocks(self.rows)
+
     -- now connect all blocks
-    local currentLocation = self.startLocation
-    local doneBlockIds = {}
-    self.blocks = {}
-    self.connectingPaths = {}
-    while #self.blocks < #blocks do
-        local closestBlock, closestEntry, dMin, pathToClosestEntry = nil, nil, math.huge, nil
-        local headland = currentLocation:is_a(cg.Vertex) and currentLocation:getAttributes():_getAtHeadland() or
-                self.headland
-        for _, b in ipairs(blocks) do
-            local entry, d, path = b:getClosestEntry(currentLocation, headland)
-            if not doneBlockIds[b.id] and d < dMin then
-                closestBlock, closestEntry, dMin, pathToClosestEntry = b, entry, d, path
+    -- if there are more than one block, we need to figure out in what sequence those blocks
+    -- should be worked on and where to enter each block, to minimize the idle driving on the
+    -- headland from one block to the other
+
+    -- clear cache for the block sequencer
+    self.closestVertexCache, self.pathCache = {}, {}
+
+    ---@param sequencedBlocks cg.Block[] an array of blocks in the sequence they should be worked on
+    ---@param entries cg.RowPattern.Entry[] entries for each block are in the entries table, indexed by
+    --- the block itself
+    ---@return number, Polyline[] total distance to travel on the headland (from the start location to the
+    --- entry of the first block, then from the exit of the first block to the entry of the second block, etc.)
+    --- The array of polylines represent the path on the headland, again, first element is the path to the entry
+    --- of the first block, the second between the first and second block, and so on)
+    local function calculateDistanceAndConnectingPaths(sequencedBlocks, entries)
+        -- check if we can get from the start position to the first entry
+        local firstEntry = entries[sequencedBlocks[1]].position
+        local distance, path = 0, {}
+        if firstEntry:getAttributes():_getAtHeadland() ~= self.headland then
+            -- first entry not on headland, this isn't a valid entry
+            return math.huge
+        else
+            -- entry is on the headland, now figure out the distance to travel on the headland
+            -- from the start position to the entry
+            local pathOnHeadland = self:_findShortestPathOnHeadland(self.headland, self.startLocation, firstEntry)
+            distance = pathOnHeadland:getLength()
+            table.insert(path, pathOnHeadland)
+        end
+        -- now we are ready to work on the blocks
+        for i = 1, #sequencedBlocks - 1 do
+            local currentBlock, nextBlock = sequencedBlocks[i], sequencedBlocks[i + 1]
+            local exit = currentBlock:getExit(entries[currentBlock])
+            local entryToNextBlock = entries[nextBlock].position
+            local entryHeadland = entryToNextBlock:getAttributes():_getAtHeadland()
+            if exit:getAttributes():_getAtHeadland() ~= entryHeadland then
+                -- the entry to the next block is not on the same headland as the exit from the previous,
+                -- this is an invalid solution
+                return math.huge
+            else
+                local pathOnHeadland = self:_findShortestPathOnHeadland(entryHeadland, exit, entryToNextBlock)
+                distance = distance + pathOnHeadland:getLength()
+                table.insert(path, pathOnHeadland)
             end
         end
-        currentLocation = closestBlock:finalize(closestEntry)
-        doneBlockIds[closestBlock.id] = true
-        table.insert(self.blocks, closestBlock)
-        if not self.context.headlandFirst and #self.blocks == 1 then
-            -- we need a connecting path to the block when we start on the headland, or, when we start in
-            -- the middle and this is not the first block. There's no need for a connecting path to the first
-            -- block when we start in the middle.
-            table.insert(self.connectingPaths, {})
-        else
-            pathToClosestEntry:setAttributes(nil, nil, cg.WaypointAttributes.setOnConnectingPath)
-            table.insert(self.connectingPaths, pathToClosestEntry)
-        end
-        self.logger:debug('Next (%d.) block is block %d, connecting path %d with %d waypoints',
-                #self.blocks, self.blocks[#self.blocks].id, #self.connectingPaths, #pathToClosestEntry)
+        return distance, path
+    end
+
+    local function calculateFitness(chromosome)
+        local sequencedBlocks, entries = chromosome:getBlockSequenceAndEntries()
+        local distance, _ = calculateDistanceAndConnectingPaths(sequencedBlocks, entries)
+        chromosome:setDistance(distance)
+        chromosome:setFitness(10000 / distance)
+    end
+
+    local blockSequencer = cg.BlockSequencer(blocks)
+    local blocksInSequence, entries, distance = blockSequencer:findBlockSequence(calculateFitness)
+    _, self.connectingPaths = calculateDistanceAndConnectingPaths(blocksInSequence, entries)
+    self.blocks = blocksInSequence
+    local lastLocation = self.startLocation
+    for _, b in ipairs(self.blocks) do
+        lastLocation = b:finalize(entries[b])
     end
     self.logger:debug('Found %d block(s), %d connecting path(s).', #self.blocks, #self.connectingPaths)
-    return currentLocation
+    return lastLocation
 end
 
 --- We drive around small islands, making sure to drive a complete circle around them when the course first
@@ -392,6 +428,41 @@ function Center:_splitIntoBlocks(rows)
     end
     closeBlocks()
     return blocks
+end
+
+
+--- Find the shortest path on the headland between two positions (between the headland vertices
+--- closest to v1 and v2).
+--- This is used by the genetic algorithm and called thousands of times when the fitness of new
+--- generations are calculated. As the population consists of the same blocks and same entry/exit
+--- points (and thus, same paths), just in different order, we cache the entries/exits/paths for
+--- a better performance, otherwise calculating a concave field
+---@param headland cg.Headland
+---@param v1 cg.Vector
+---@param v2 cg.Vector
+---@return Polyline always has at least one vertex
+function Center:_findShortestPathOnHeadland(headland, v1, v2)
+    if not self.closestVertexCache[headland] then
+        self.closestVertexCache[headland] = {}
+    end
+    local cvc = self.closestVertexCache[headland]
+    if not cvc[v1] then
+        cvc[v1] = headland:getPolygon():findClosestVertexToPoint(v1)
+    end
+    if not cvc[v2] then
+        cvc[v2] = headland:getPolygon():findClosestVertexToPoint(v2)
+    end
+    if not self.pathCache[headland] then
+        self.pathCache[headland] = {}
+    end
+    local pc = self.pathCache[headland]
+    if not pc[v1] then
+        pc[v1] = {}
+    end
+    if not pc[v1][v2] then
+        pc[v1][v2] = headland:getPolygon():getShortestPathBetween(cvc[v1].ix, cvc[v2].ix)
+    end
+    return pc[v1][v2]
 end
 
 ---@class cg.Center

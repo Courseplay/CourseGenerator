@@ -1,5 +1,5 @@
 lu = require("luaunit")
-package.path = package.path .. ";../../?.lua;../?.lua;../geometry/?.lua;..?.lua;../../Courseplay_FS22/scripts/?.lua;../../Courseplay_FS22/scripts/pathfinder/?.lua;../../Courseplay_FS22/scripts/util/?.lua"
+package.path = package.path .. ";../../?.lua;../?.lua;../Geometry/?.lua;../Genetic/?.lua;..?.lua;../../Courseplay_FS22/scripts/?.lua;../../Courseplay_FS22/scripts/pathfinder/?.lua;../../Courseplay_FS22/scripts/util/?.lua"
 require('profile')
 require('CourseGenerator')
 require('Util')
@@ -33,3 +33,5 @@ require('Center')
 require('Island')
 require('SplineHelper')
 require('AnalyticHelper')
+require('Genetic')
+require('BlockSequencer')

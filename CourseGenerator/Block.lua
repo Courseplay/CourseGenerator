@@ -31,6 +31,14 @@ function Block:init(rowPattern, id)
     self.rowPattern = rowPattern or cg.RowPatternAlternating()
 end
 
+function Block:getId()
+    return self.id
+end
+
+function Block:__tostring()
+    return self.id
+end
+
 function Block:addRow(row)
     row:setSequenceNumber(#self.rows + 1)
     row:setBlockNumber(self.id)
@@ -66,6 +74,16 @@ function Block:getRows()
     return self.rowsInWorkSequence
 end
 
+---@return cg.RowPattern.Entry[]
+function Block:getPossibleEntries()
+    if not self.possibleEntries then
+        -- cache this as the genetic algorithm needs it frequently, also, this way
+        -- a block always returns the same Entry instances so they key be used as keys in further caching
+        self.possibleEntries = self.rowPattern:getPossibleEntries(self.rows)
+    end
+    return self.possibleEntries
+end
+
 --- Find the entry to this block closest to start location, distance measured on the headland.
 --- The purpose of this is to figure out where the vehicle should enter this block if it is currently
 --- located at startLocation. The block, consisting of a series of rows, may have multiple possible
@@ -85,7 +103,6 @@ function Block:getClosestEntry(startLocation, headland)
     local closestEntry, closestDistance, closestPath = nil, math.huge, nil
     local bestEntry, bestDistance, bestPath = nil, math.huge, nil
     for _, entry in ipairs(entries) do
-        --print(entry)
         local entryVertex = headland:getPolygon():findClosestVertexToPoint(entry.position)
         local pathOnHeadland = headland:getPolygon():getShortestPathBetween(startLocationVertex.ix, entryVertex.ix)
         local entryAtHeadland = entry.position:getAttributes():_getAtHeadland()
@@ -128,6 +145,12 @@ function Block:finalize(entry)
         row:setAllAttributes()
         table.insert(self.rowsInWorkSequence, row)
     end
+    return exit
+end
+
+---@return cg.Vertex
+function Block:getExit(entry)
+    local _, exit = self.rowPattern:getWorkSequenceAndExit(self.rows, entry)
     return exit
 end
 
