@@ -54,6 +54,11 @@ function Headland:init(basePolygon, clockwise, passNumber, width, outward)
     end
 end
 
+---@return boolean true if this headland is around an island (and not around the field boundary)
+function Headland:isIslandHeadland()
+    return false
+end
+
 ---@return cg.Polyline Headland vertices with waypoint attributes
 function Headland:getPath()
     -- make sure all attributes are set correctly
@@ -249,6 +254,27 @@ cg.Headland = Headland
 --- For headlands around islands, as there everything is backwards, at least the transitions
 ---@class IslandHeadland
 local IslandHeadland = CpObject(cg.Headland)
+
+--- Create an island headland around a base polygon. The headland is a new polygon, offset by width, that is, outside
+--- of the base polygon.
+---
+---@param basePolygon cg.Polygon
+---@param clockwise boolean This is the required direction for all headlands.
+---@param passNumber number of the headland pass, the innermost (directly around the island) is 1
+---@param width number
+function IslandHeadland:init(island, basePolygon, clockwise, passNumber, width)
+    self.island = island
+    cg.Headland.init(self, basePolygon, clockwise, passNumber, width, true)
+end
+---@return boolean true if this headland is around an island
+function IslandHeadland:isIslandHeadland()
+    return true
+end
+
+---@return cg.Island the island this headland is around
+function IslandHeadland:getIsland()
+    return self.island
+end
 
 function IslandHeadland:_getTransitionPathTypes(headlandFirst)
     if (self.clockwise and headlandFirst) or (not self.clockwise and not headlandFirst) then

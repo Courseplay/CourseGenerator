@@ -27,7 +27,7 @@ table.insert(parameters, headlandClockwise)
 local headlandFirst = ToggleParameter('headlands first', true, 'h')
 table.insert(parameters, headlandFirst)
 -- number of headland passes around the field islands
-local nIslandHeadlandPasses = AdjustableParameter(1, 'island headlands', 'I', 'i', 1, 1, 10)
+local nIslandHeadlandPasses = AdjustableParameter(2, 'island headlands', 'I', 'i', 1, 1, 10)
 table.insert(parameters, nIslandHeadlandPasses)
 local fieldCornerRadius = AdjustableParameter(6, 'field corner radius', 'F', 'f', 1, 0, 30)
 table.insert(parameters, fieldCornerRadius)

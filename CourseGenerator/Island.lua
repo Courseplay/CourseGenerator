@@ -108,15 +108,15 @@ function Island:generateHeadlands(context, boundary)
     self.logger:debug('generating %d headland(s)', self.context.nIslandHeadlands, self.context.turningRadius)
     local headlands = {}
     self.boundary = cg.FieldworkCourseHelper.createUsableBoundary(self.boundary, self.context.islandHeadlandClockwise)
-    -- outermost headland is offset from the field boundary by half width
-    headlands[1] = cg.IslandHeadland(self.boundary, self.context.islandHeadlandClockwise, 1, self.context.workingWidth / 2, true)
+    -- innermost headland is offset from the island by half width
+    headlands[1] = cg.IslandHeadland(self, self.boundary, self.context.islandHeadlandClockwise, 1, self.context.workingWidth / 2)
     for i = 2, self.context.nIslandHeadlands do
         if not headlands[i - 1]:isValid() then
             self.logger:warning('headland %d is invalid, removing', i - 1)
             headlands[i - 1] = nil
             break
         end
-        headlands[i] = cg.IslandHeadland(headlands[i - 1]:getPolygon(), self.context.islandHeadlandClockwise, i, self.context.workingWidth, true)
+        headlands[i] = cg.IslandHeadland(self, headlands[i - 1]:getPolygon(), self.context.islandHeadlandClockwise, i, self.context.workingWidth)
     end
     self.headlands = {}
     local i = 1

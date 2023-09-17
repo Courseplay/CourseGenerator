@@ -76,17 +76,6 @@ function WaypointAttributes:isRowStart()
     return self.rowStart
 end
 
----@param island cg.Island
-function WaypointAttributes:setAtIsland(island)
-    self.atIsland = island
-end
-
----@return cg.Island if this waypoint is at an island, if it is a row start or end, it means this row ends/starts
---- at this island (and not the field boundary or headland around the field)
-function WaypointAttributes:isAtIsland()
-    return self.atIsland
-end
-
 function WaypointAttributes:setIslandHeadland()
     self.islandHeadland = true
 end
@@ -134,6 +123,12 @@ function WaypointAttributes:_getAtHeadland()
     return self.atHeadland
 end
 
+--- For generator internal use only, this is set for row end and start waypoints, storing the Island object
+--- terminating the row
+---@return cg.Island|nil
+function WaypointAttributes:_getAtIsland()
+    return self.atHeadland and self.atHeadland:isIslandHeadland() and self.atHeadland:getIsland()
+end
 
 function WaypointAttributes:__tostring()
     local str = '[ '

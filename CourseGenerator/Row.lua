@@ -7,7 +7,7 @@ local Row = CpObject(cg.Polyline)
 function Row:init(workingWidth, vertices)
     cg.Polyline.init(self, vertices)
     self.workingWidth = workingWidth
-    self.logger = cg.Logger('Row' , cg.Logger.level.debug)
+    self.logger = cg.Logger('Row', cg.Logger.level.debug)
 end
 
 --- Create a row parallel to this one at offset distance.
@@ -113,13 +113,19 @@ function Row:split(headland, bigIslands)
             -- create a section here
             local section = self:_cutAtIntersections(intersections[lastInsideIx], intersections[i])
             -- remember the angle we met the headland so we can adjust the length of the row to have 100% coverage
-            section.startHeadlandAngle = intersections[lastInsideIx]:getAngle()
-            -- remember at what headland the row ends
-            section.startsAtHeadland = intersections[lastInsideIx]:getUserData().headland
-            section.endHeadlandAngle = intersections[i]:getAngle()
-            section.endsAtHeadland = intersections[i]:getUserData().headland
-            section:setEndAttributes()
-            table.insert(sections, section)
+            -- skip very short rows, if it is shorter than the working width then the area will
+            -- be covered anyway by the headland passes
+            if section:getLength() < self.workingWidth then
+                self.logger:trace('ROW TOO SHORT %.1f, %s', section:getLength(), intersections[i])
+            else
+                section.startHeadlandAngle = intersections[lastInsideIx]:getAngle()
+                -- remember at what headland the row ends
+                section.startsAtHeadland = intersections[lastInsideIx]:getUserData().headland
+                section.endHeadlandAngle = intersections[i]:getAngle()
+                section.endsAtHeadland = intersections[i]:getUserData().headland
+                section:setEndAttributes()
+                table.insert(sections, section)
+            end
         elseif isEnteringField then
             lastInsideIx = i
         end

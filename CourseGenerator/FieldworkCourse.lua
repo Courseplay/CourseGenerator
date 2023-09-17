@@ -39,6 +39,9 @@ function FieldworkCourse:init(context)
                 endOfLastRow, self.context.workingWidth, self.context.turningRadius)
         self:routeHeadlandsAroundSmallIslands()
     end
+    if self.context.bypassIslands then
+        self:bypassIslands()
+    end
 end
 
 --- Returns a continuous Polyline covering the entire field. This is the
@@ -239,28 +242,13 @@ end
 
 
 function FieldworkCourse:bypassIslands()
-
-    self.logger:debug('### Bypassing big islands: connecting tracks ###')
-    for _, island in pairs(self.bigIslands) do
-        self.center:bypassBigIsland(island:getBestHeadlandToBypass():getPolygon())
-    end
-
     self.logger:debug('### Bypassing small islands ###')
     for _, island in pairs(self.smallIslands) do
-        local startIx, circled = 1, false
-        while startIx ~= nil do
-            self.logger:debug('Bypassing island %d on the headland, at %d', island:getId(), startIx)
-            --- Remember the islands we circled already, as even if multiple tracks cross it, we only want to
-            --- circle once.
-            circled, startIx = self.headlandPath:goAround(
-                    island:getHeadlands()[1]:getPolygon(), startIx, not self.circledIslands[island])
-            self.circledIslands[island] = circled or self.circledIslands[island]
-        end
         self.logger:debug('Bypassing small island %d on the center', island:getId())
---        self.center:bypassSmallIsland(island:getInnermostHeadland():getPolygon(), not self.circledIslands[island])
+        self.center:bypassSmallIsland(island:getInnermostHeadland():getPolygon(), not self.circledIslands[island])
     end
     self.logger:debug('### Bypassing big islands: create path around them ###')
---    self:circleBigIslands()
+    self:circleBigIslands()
 end
 
 -- Once we have the whole course laid out, we add the headland passes around the big islands
@@ -279,7 +267,7 @@ function FieldworkCourse:circleBigIslands()
     local i = first
     local found = false
     while i ~= last and not found do
-        local island = path[i]:getAttributes():isAtIsland()
+        local island = path[i]:getAttributes():_getAtIsland()
         if island and not self.circledIslands[island] and path[i]:getAttributes():isRowEnd() then
             self.logger:debug('Found island %s at %d', island:getId(), i)
             -- we bumped upon an island which the path does not circle yet and we are at the end of a row.
