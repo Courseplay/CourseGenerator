@@ -7,7 +7,7 @@ NewCourseGenerator = {}
 -- It is important that this is greater than the field boundary detection algorithm's
 -- vertex spacing, otherwise ensureMaximumEdgeLength() will double the number of vertices
 -- of each headland polygon which results in performance loss, especially because of
--- _removeInvalidHeadlands which is O(nm) complexity
+-- functions checking the intersections of two polygons have O(nm) complexity
 NewCourseGenerator.cMaxEdgeLength = 5.5
 -- The minimum length of a polyline/polygon edge. No waypoints will be closer than this.
 -- If a vertex is closer than cMinEdgeLength to the next, it is removed
@@ -28,10 +28,11 @@ NewCourseGenerator.cMinSmoothingAngle = math.rad(15)
 -- Minimum radius in meters where a change to the next headland is allowed. This is to ensure that
 -- we only change lanes on relatively straight sections of the headland (not around corners)
 NewCourseGenerator.cHeadlandChangeMinRadius = 20
+
 -- When splitting a field into blocks (due to islands or non-convexity)
--- consider a block 'small' if it has less than smallBlockRowCountLimit rows.
+-- consider a block 'small' if it has less than cSmallBlockRowPercentageLimit percentage of the total rows.
 -- These are not preferred and will get a penalty in the scoring
-NewCourseGenerator.cSmallBlockRowCountLimit = 5
+NewCourseGenerator.cSmallBlockRowPercentageLimit = 5
 
 -- Just an arbitrary definition of an island 'too big': wider than s * work width, so
 -- at least x rows would have to drive around the island
@@ -90,21 +91,30 @@ end
 --- Add a point to the list of debug points we want to show on the test display
 ---@param v cg.Vector
 ---@param text|nil optional debug text
-function NewCourseGenerator.addDebugPoint(v, text)
+---@param color table|nil color in form of {r, g, b}, each in the 0..1 range
+function NewCourseGenerator.addDebugPoint(v, text, color)
     if not NewCourseGenerator.debugPoints then
         NewCourseGenerator.debugPoints = {}
     end
     local debugPoint = v:clone()
+    debugPoint.debugColor = color
     debugPoint.debugText = text
     table.insert(NewCourseGenerator.debugPoints, debugPoint)
 end
 
+function NewCourseGenerator.addSmallDebugPoint(v, text, color)
+    cg.addDebugPoint(v, text, color)
+    NewCourseGenerator.debugPoints[#NewCourseGenerator.debugPoints].small = true
+end
+
 --- Add a point to the list of debug points we want to show on the test display
 ---@param p cg.Polyline
-function NewCourseGenerator.addDebugPolyline(p)
+---@param color table|nil color in form of {r, g, b}, each in the 0..1 range
+function NewCourseGenerator.addDebugPolyline(p, color)
     if not NewCourseGenerator.debugPolylines then
         NewCourseGenerator.debugPolylines = {}
     end
+    p.debugColor = color
     table.insert(NewCourseGenerator.debugPolylines, p)
 end
 

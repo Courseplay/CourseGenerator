@@ -101,9 +101,9 @@ end
 --- Generate headlands around the island. May generate less than what the context requests if the island headland
 --- would go outside the field boundary
 ---@param context cg.FieldworkContext
----@param boundary cg.Polygon outermost headland of field or field boundary: island headlands must not cross this
+---@param mustNotCross cg.Polygon outermost headland of field or field boundary: island headlands must not cross this
 --- otherwise the island headland will be out of the field
-function Island:generateHeadlands(context, boundary)
+function Island:generateHeadlands(context, mustNotCross)
     self.context = context
     self.logger:debug('generating %d headland(s)', self.context.nIslandHeadlands, self.context.turningRadius)
     local headlands = {}
@@ -121,7 +121,7 @@ function Island:generateHeadlands(context, boundary)
     self.headlands = {}
     local i = 1
     -- make sure no headlands are outside of the field
-    while i <= #headlands and not headlands[i]:getPolygon():intersects(boundary) do
+    while i <= #headlands and not headlands[i]:getPolygon():intersects(mustNotCross) do
         table.insert(self.headlands, headlands[i])
         i = i + 1
     end

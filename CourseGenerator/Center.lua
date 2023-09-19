@@ -73,6 +73,11 @@ function Center:generate()
     end
     local blocks = self:_splitIntoBlocks(self.rows)
 
+    if #blocks < 1 then
+        self.logger:debug('No blocks could be generated')
+        return
+    end
+
     -- now connect all blocks
     -- if there are more than one block, we need to figure out in what sequence those blocks
     -- should be worked on and where to enter each block, to minimize the idle driving on the
@@ -201,15 +206,16 @@ function Center:_generateStraightUpDownRows(rowAngle, suppressLog)
     return rows
 end
 
-function Center:_calculateSmallBlockPenalty(blocks)
+function Center:_calculateSmallBlockPenalty(blocks, nTotalRows)
     local nResult = 0
     -- no penalty if there's only one block
     if #blocks == 1 then
         return nResult
     end
     for _, b in ipairs(blocks) do
-        if b:getNumberOfRows() < cg.cSmallBlockRowCountLimit then
-            nResult = nResult + cg.cSmallBlockRowCountLimit - #b
+        local percentageOfRowsInBlock = 100 * (b:getNumberOfRows() / nTotalRows)
+        if percentageOfRowsInBlock < cg.cSmallBlockRowPercentageLimit then
+            nResult = nResult + cg.cSmallBlockRowPercentageLimit - percentageOfRowsInBlock
         end
     end
     return nResult
@@ -220,12 +226,13 @@ function Center:_findBestRowAngle()
     local longestEdgeDirection = self.boundary:getLongestEdgeDirection()
     self.logger:debug('  longest edge direction %.1f', math.deg(longestEdgeDirection))
     for a = -90, 90, 1 do
-        local rows = self:_generateStraightUpDownRows(math.rad(a), false)
+        local rows = self:_generateStraightUpDownRows(math.rad(a), true)
         local blocks = self:_splitIntoBlocks(rows)
-        local score = 10 * #blocks + #rows + self:_calculateSmallBlockPenalty(blocks) +
+        local score = 6 * #blocks + #rows + self:_calculateSmallBlockPenalty(blocks, #rows) +
                 -- Prefer angles closest to the direction of the longest edge of the field
                 -- sin(a - longestEdgeDirection) will be 0 when angle is the closest.
                 3 * math.abs(math.sin(cg.Math.getDeltaAngle(math.rad(a), longestEdgeDirection)))
+        self.logger:debug('  rows: %d blocks: %d score: %.1f', #rows, #blocks, score)
         if score < minScore then
             minScore = score
             bestAngle = math.rad(a)

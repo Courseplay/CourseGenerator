@@ -106,7 +106,6 @@ function FieldworkCourse:generateHeadlands(context)
     elseif self.nHeadlands > 0 then
         self:generateHeadlandsFromOutside(self.boundary, self.context.workingWidth / 2, 1)
     end
-    self:_removeInvalidHeadlands()
 end
 
 --- Generate headlands around the field, starting with the outermost one.
@@ -119,9 +118,8 @@ function FieldworkCourse:generateHeadlandsFromOutside(boundary, firstHeadlandWid
     self.logger:debug('generating %d sharp headlands from the outside, min radius %.1f',
             self.nHeadlands - startIx + 1, self.context.turningRadius)
     -- outermost headland is offset from the field boundary by half width
-    self.headlands[startIx] = cg.Headland(boundary, self.context.headlandClockwise, startIx, firstHeadlandWidth, false,
-            self.context.turningRadius)
-    if not self:isValidHeadland(self.headlands[startIx]) then
+    self.headlands[startIx] = cg.Headland(boundary, self.context.headlandClockwise, startIx, firstHeadlandWidth, false, nil)
+    if not self.headlands[startIx]:isValid() then
         self:_removeHeadland(startIx)
         return
     end
@@ -130,8 +128,8 @@ function FieldworkCourse:generateHeadlandsFromOutside(boundary, firstHeadlandWid
     end
     for i = startIx + 1, self.nHeadlands do
         self.headlands[i] = cg.Headland(self.headlands[i - 1]:getPolygon(), self.context.headlandClockwise, i,
-                self.context.workingWidth, false, self.context.turningRadius)
-        if self:isValidHeadland(self.headlands[i]) then
+                self.context.workingWidth, false, self.headlands[1]:getPolygon())
+        if self.headlands[i]:isValid() then
             if self.context.sharpenCorners then
                 self.headlands[i]:sharpenCorners(self.context.turningRadius)
             end
@@ -153,8 +151,9 @@ function FieldworkCourse:generateHeadlandsFromInside()
     -- headlands may be more than what actually fits into the field)
     while self.nHeadlandsWithRoundCorners > 0 do
         self.headlands[self.nHeadlandsWithRoundCorners] = cg.Headland(self.boundary, self.context.headlandClockwise,
-                self.nHeadlandsWithRoundCorners, (self.nHeadlandsWithRoundCorners - 0.5) * self.context.workingWidth, false)
-        if self:isValidHeadland(self.headlands[self.nHeadlandsWithRoundCorners]) then
+                self.nHeadlandsWithRoundCorners, (self.nHeadlandsWithRoundCorners - 0.5) * self.context.workingWidth,
+                false, self.boundary)
+        if self.headlands[self.nHeadlandsWithRoundCorners]:isValid() then
             self.headlands[self.nHeadlandsWithRoundCorners]:roundCorners(self.context.turningRadius)
             break
         else
@@ -165,7 +164,7 @@ function FieldworkCourse:generateHeadlandsFromInside()
     end
     for i = self.nHeadlandsWithRoundCorners - 1, 1, -1 do
         self.headlands[i] = cg.Headland(self.headlands[i + 1]:getPolygon(), self.context.headlandClockwise, i,
-                self.context.workingWidth, true)
+                self.context.workingWidth, true, self.boundary)
         self.headlands[i]:roundCorners(self.context.turningRadius)
     end
 end
@@ -331,28 +330,6 @@ function FieldworkCourse:_removeHeadland(n)
             n, self.nHeadlands, self.nHeadlandsWithRoundCorners)
 end
 
---- If a headland intersects the outermost headland then part of the swath will be outside of the field.
---- These headlands have to be removed
-function FieldworkCourse:_removeInvalidHeadlands()
-    for i = #self.headlands, 2, -1 do
-        if self.headlands[i]:getPolygon():intersects(self.headlands[1]:getPolygon()) then
-            self.logger:error('Headland %d intersects outermost headland, removing it.', i)
-            self:_removeHeadland(i)
-        end
-    end
-end
-
-function FieldworkCourse:isValidHeadland(headland)
-    if not headland:isValid() then
-        return false
-    elseif self.headlands[1] and headland ~= self.headlands[1] and
-            headland:getPolygon():intersects(self.headlands[1]:getPolygon()) then
-        self.logger:debug('Headland %d intersects the outermost headland, discarding.', headland:getPassNumber())
-        return false
-    else
-        return true
-    end
-end
 
 ---@class cg.FieldworkCourse
 cg.FieldworkCourse = FieldworkCourse

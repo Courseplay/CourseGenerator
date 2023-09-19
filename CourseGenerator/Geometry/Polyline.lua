@@ -720,6 +720,7 @@ end
 function Polyline:_createOffset(result, offsetVector, minEdgeLength, preserveCorners)
     local offsetEdges = self:generateOffsetEdges(offsetVector)
     local cleanOffsetEdges = self:cleanEdges(offsetEdges, minEdgeLength, preserveCorners)
+
     for _, e in ipairs(cleanOffsetEdges) do
         result:append(e:getBase())
     end

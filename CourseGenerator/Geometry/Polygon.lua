@@ -158,6 +158,7 @@ end
 --- Returns nil if it is not possible to determine, for instance an 8 shape.
 ---@return boolean or nil
 function Polygon:isClockwise()
+    local newCalculation = self.deltaAngle == nil
     self:_getDeltaAngle()
     if self.deltaAngle > 6.2 and self.deltaAngle < 6.4 then
         return true
@@ -165,8 +166,12 @@ function Polygon:isClockwise()
         return false
     else
         -- delta angle must be around 2*pi, otherwise there are multiple loops or knots
-        -- (2*pi isn't a guarantee that there are no knots
-        self.logger:warning('Can\'t tell if polygon is clockwise or not, delta angle is %.0fº', math.deg(self.deltaAngle))
+        -- (2*pi isn't a guarantee that there are no knots)
+        if newCalculation then
+            -- log only when the delta angle has been newly calculated, otherwise the million entries every
+            -- time isClockwise() called would spam the log
+            self.logger:warning('Can\'t tell if polygon is clockwise or not, delta angle is %.0fº', math.deg(self.deltaAngle))
+        end
         return nil
     end
 end
@@ -317,39 +322,67 @@ end
 
 --- Try cleaning up unwanted loops in the generated offset polygon.
 --- With concave polygons (you know, the ones you can hide in) the offset polygon may end up
---- intersecting it self at multiple points. This is a simple
---- NOTE: this works correctly only if there is exactly one loop (one intersecting edge)
----@return boolean loop found and removed.
-function Polygon:removeLoops(baseClockwise, startIx)
-    self.logger:debug('Removing loops')
-    local exitIx, entryIx
+--- intersecting itself at multiple points. This is really only a problem if there is a loop (like in a
+--- nook of the field), in other words, the polygon is like a figure 8, as that breaks the chirality
+--- and we can't tell if it is a clockwise or counterclockwise polygon (which, in turn, makes it difficult
+--- to tell if intersecting the polygon is entering or exiting it)
+--- This function fixes these loops by flipping the vertices in the loop, so the polygon looks like a figure 8
+--- but no edges intersect each other, only they are very close at the neck of the 8.
+--- In addition to flipping the loop, this also moves the outermost vertex of the loop a bit further out,
+--- because typically, these loops are in narrow corner of the field, surrounded by the next headland and moving
+--- this vertex a bit outwards may help with coverage.
+--- This should be called until it returns false to fix all loops.
+---@return boolean, number true if a loop was found and fixed, the index to continue to search for loops.
+function Polygon:fixLoops(baseClockwise, startIx, width)
+    self.logger:debug('Fixing loops from %d', startIx or 1)
+    local forwardExitIx, backwardExitIx
     for i, this, _, _ in self:vertices(startIx or 1) do
         for j = 1, i > 1 and #self or (#self - 1) do
             if j ~= self:getRawIndex(i - 1) and j ~= i and j ~= self:getRawIndex(i + 1) then
                 local is = this:getExitEdge():intersects(self:at(j):getExitEdge())
                 if is then
                     if this:getExitEdge():isEntering(baseClockwise, self:at(j):getExitEdge()) then
-                        -- entering back into the polygon
-                        if exitIx and exitIx == j then
-                            self.logger:debug('Removing loop between %d and %d', exitIx, i)
-                            local pathFromExitToEntry, pathFromEntryToExit = self:_getPathBetween(exitIx, i)
-                            self:_reset()
-                            self:init(pathFromEntryToExit)
-                            -- make sure the end remains pointy
-                            self:append(cg.Vertex.fromVector(is))
-                            self:reverse()
-                            self:calculateProperties()
-                            return true
-                        elseif not exitIx then
-                            self.logger:debug('Entering polygon at %d but have not exited, restart', i)
-                            return true, i + 1
+                        if forwardExitIx then
+                            self.logger:debug('Fixing loops: reentering at %d/%d, exited at %d/%d (fwd/bwd)', i, j,
+                                    forwardExitIx, backwardExitIx)
+                            local nVerticesToFlatten
+                            if forwardExitIx == j then
+                                -- this is a loop, we are now entering the polygon exactly where we exited it
+                                nVerticesToFlatten = (i - forwardExitIx) / 2
+                                self.logger:debug('Fixing a loop, %d vertices between %d and %d', nVerticesToFlatten,
+                                        forwardExitIx, backwardExitIx)
+                                local furthestVertexIx = i
+                                -- flipping the loop here, walk both directions from the intersection towards
+                                -- the end of the loop, vertex by vertex, swapping them, turning the loop from
+                                -- clockwise to counterclockwise or vica versa
+                                for k = 0, nVerticesToFlatten    do
+                                    local fwdIx, bwdIx = forwardExitIx + k, backwardExitIx + 1 - k
+                                    cg.addDebugPoint(self:at(fwdIx), k)
+                                    cg.addDebugPoint(self:at(bwdIx), k)
+                                    local fwdVertex = self:at(fwdIx):clone()
+                                    self:set(fwdIx, self:at(bwdIx):clone())
+                                    self:set(bwdIx, fwdVertex)
+                                    -- find the furthest vertex
+                                    if (is - self:at(fwdIx)):length() > (is - self:at(furthestVertexIx)):length() then
+                                        furthestVertexIx = fwdIx
+                                    end
+                                    if (is - self:at(bwdIx)):length() > (is - self:at(furthestVertexIx)):length() then
+                                        furthestVertexIx = bwdIx
+                                    end
+                                end
+                                local furthestVertex = self:at(furthestVertexIx)
+                                cg.addDebugPoint(furthestVertex, 'furthest', {1, 1, 0})
+                                -- move the furthest vertex of the loop outwards for better coverage of narrow corners
+                                self:set(furthestVertexIx, cg.Vertex.fromVector(furthestVertex + (furthestVertex - is):setLength(width / 2)))
+                                cg.addDebugPoint(furthestVertex + (furthestVertex - is):setLength(width / 2), 'extended', {1, 1, 0})
+                                self:calculateProperties()
+                                return true, i + 1
+                            end
                         end
-                        entryIx = i
                     else
-                        -- exiting, meaning that now we are outside of the area normally surrounded by
-                        -- the polygon
-
-                        exitIx = i
+                        -- by forward we mean the leg where the indices are increasing, backward is the other
+                        -- leg we just crossed, coming in the other direction, with indices decreasing
+                        forwardExitIx, backwardExitIx = i, j
                     end
                 end
             end
@@ -357,6 +390,7 @@ function Polygon:removeLoops(baseClockwise, startIx)
     end
     return false
 end
+
 
 --- Get the shortest path between the vertices fromIx and toIx
 ---@return Polyline always has at least one vertex

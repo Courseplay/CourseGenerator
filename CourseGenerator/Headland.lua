@@ -12,7 +12,9 @@ local Headland = CpObject()
 ---@param passNumber number of the headland pass, the outermost is 1
 ---@param width number
 ---@param outward boolean if true, the generated headland will be outside of the basePolygon, inside otherwise
-function Headland:init(basePolygon, clockwise, passNumber, width, outward)
+---@param mustNotCross|nil cg.Polygon the headland must not cross this polygon, if it does, it is invalid. This is usually
+--- the outermost headland around the field, as when anything crosses that, it'll be at least partly outside of the field.
+function Headland:init(basePolygon, clockwise, passNumber, width, outward, mustNotCross)
     self.logger = cg.Logger('Headland ' .. passNumber or '')
     self.clockwise = clockwise
     self.passNumber = passNumber
@@ -34,20 +36,25 @@ function Headland:init(basePolygon, clockwise, passNumber, width, outward)
         self.polygon:calculateProperties()
         self.polygon:ensureMaximumEdgeLength(cg.cMaxEdgeLength, cg.cMaxDeltaAngleForMaxEdgeLength)
         self.polygon:calculateProperties()
-        -- TODO: when removing loops, we may end up not covering the entire field on complex polygons
-        -- consider making the headland invalid if it has loops, instead of removing them
-        local removed, startIx = true, 1
-        repeat
-            removed, startIx = self.polygon:removeLoops(clockwise, startIx)
-        until not removed
-        self.logger:debug('polygon with %d vertices generated, area %.1f, cw %s, desired cw %s',
-                #self.polygon, self.polygon:getArea(), self.polygon:isClockwise(), clockwise)
-        if #self.polygon < 3 then
-            self.logger:warning('invalid headland, polygon too small (%d vertices)', #self.polygon)
+        if mustNotCross and self.polygon:intersects(mustNotCross) then
             self.polygon = nil
-        elseif self.polygon:isClockwise() ~= nil and self.polygon:isClockwise() ~= clockwise and clockwise ~= nil then
-            self.polygon = nil
-            self.logger:warning('no room left for this headland')
+            self.logger:warning('would intersect outermost headland, discarding.')
+        else
+            -- TODO: when removing loops, we may end up not covering the entire field on complex polygons
+            -- consider making the headland invalid if it has loops, instead of removing them
+            local removed, startIx = true, 1
+            repeat
+                removed, startIx = self.polygon:fixLoops(clockwise, startIx, width)
+            until not removed
+            self.logger:debug('polygon with %d vertices generated, area %.1f, cw %s, desired cw %s',
+                    #self.polygon, self.polygon:getArea(), self.polygon:isClockwise(), clockwise)
+            if #self.polygon < 3 then
+                self.logger:warning('invalid headland, polygon too small (%d vertices)', #self.polygon)
+                self.polygon = nil
+            elseif self.polygon:isClockwise() ~= nil and self.polygon:isClockwise() ~= clockwise and clockwise ~= nil then
+                self.polygon = nil
+                self.logger:warning('no room left for this headland')
+            end
         end
     else
         self.logger:error('could not generate headland')
@@ -106,14 +113,14 @@ end
 --- shortest way around it.
 function Headland:bypassSmallIslands(smallIslands)
     for _, island in pairs(smallIslands) do
-            local startIx, circled = 1, false
-            while startIx ~= nil do
-                self.logger:debug('Bypassing island %d, at %d', island:getId(), startIx)
-                circled, startIx = self.polygon:goAround(
-                        island:getHeadlands()[1]:getPolygon(), startIx, not self.circledIslands[island])
-                self.circledIslands[island] = circled or self.circledIslands[island]
-            end
+        local startIx, circled = 1, false
+        while startIx ~= nil do
+            self.logger:debug('Bypassing island %d, at %d', island:getId(), startIx)
+            circled, startIx = self.polygon:goAround(
+                    island:getHeadlands()[1]:getPolygon(), startIx, not self.circledIslands[island])
+            self.circledIslands[island] = circled or self.circledIslands[island]
         end
+    end
 end
 
 --- Bypassing big island differs from small ones as:
@@ -262,9 +269,11 @@ local IslandHeadland = CpObject(cg.Headland)
 ---@param clockwise boolean This is the required direction for all headlands.
 ---@param passNumber number of the headland pass, the innermost (directly around the island) is 1
 ---@param width number
-function IslandHeadland:init(island, basePolygon, clockwise, passNumber, width)
+---@param mustNotCross cg.Polygon the headland must not cross this polygon, if it does, it is invalid. This is usually
+--- the outermost headland around the field, as when anything crosses that, it'll be at least partly outside of the field.
+function IslandHeadland:init(island, basePolygon, clockwise, passNumber, width, mustNotCross)
     self.island = island
-    cg.Headland.init(self, basePolygon, clockwise, passNumber, width, true)
+    cg.Headland.init(self, basePolygon, clockwise, passNumber, width, true, mustNotCross)
 end
 ---@return boolean true if this headland is around an island
 function IslandHeadland:isIslandHeadland()
