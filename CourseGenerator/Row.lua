@@ -57,7 +57,9 @@ function Row:split(headland, bigIslands)
             {
                 isEnteringField = function(is)
                     -- when entering a field boundary polygon, we move on to the field
-                    return self:isEntering(headland:getPolygon(), is)
+                    -- use the requested chirality of the headland as it may have loops in there which
+                    -- will fool the isEntering functions
+                    return self:isEntering(headland:getPolygon(), is, headland:getRequestedClockwise())
                 end,
                 headland = headland
             }

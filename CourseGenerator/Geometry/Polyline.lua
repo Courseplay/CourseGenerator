@@ -627,11 +627,12 @@ end
 --- Is this polyline entering the other polygon at intersection point is?
 ---@param other cg.Polygon
 ---@param is cg.Intersection
+---@param clockwiseOverride boolean use this clockwise setting instead of other's isClockwise() function
 ---@return boolean true if self is entering the other polygon, false when exiting, when moving in
 --- the direction of increasing indexes
-function Polyline:isEntering(other, is)
+function Polyline:isEntering(other, is, clockwiseOverride)
     local otherEdge = other:at(is.ixB):getExitEdge()
-    return self:at(is.ixA):getExitEdge():isEntering(other:isClockwise(), otherEdge)
+    return self:at(is.ixA):getExitEdge():isEntering(clockwiseOverride or other:isClockwise(), otherEdge)
 end
 
 --- Replace all vertices between fromIx and toIx (excluding) with the entries in vertices

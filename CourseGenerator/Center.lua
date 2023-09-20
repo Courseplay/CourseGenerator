@@ -405,6 +405,24 @@ function Center:_splitIntoBlocks(rows)
     for i, row in ipairs(rows) do
         local sections = row:split(self.headland, self.bigIslands)
         self.logger:trace('Row %d has %d section(s)', i, #sections)
+        -- first check if there is a block which overlaps with more than one section
+        -- if that's the case, close the open blocks. This forces the creation of new blocks
+        -- for these sections, to make sure that if there
+        -- is an island or peninsula in the field, we do not end up with an L shaped block
+        -- (the island being between the L's legs) so that 180º turns would go through the island.
+        for block, _ in pairs(openBlocks) do
+            local nSectionsOverlapThisBlock = 0
+            for _, section in ipairs(sections) do
+                if block:overlaps(section) then
+                    nSectionsOverlapThisBlock = nSectionsOverlapThisBlock + 1
+                end
+            end
+            if nSectionsOverlapThisBlock > 1 then
+                self.logger:trace('%d sections overlap the same block, closing open blocks', nSectionsOverlapThisBlock)
+                closeBlocks()
+                break
+            end
+        end
         for j, section in ipairs(sections) do
             -- with how many existing blocks does this row overlap?
             local overlappedBlocks = {}

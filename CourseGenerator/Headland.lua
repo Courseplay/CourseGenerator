@@ -42,10 +42,6 @@ function Headland:init(basePolygon, clockwise, passNumber, width, outward, mustN
         else
             -- TODO: when removing loops, we may end up not covering the entire field on complex polygons
             -- consider making the headland invalid if it has loops, instead of removing them
-            local removed, startIx = true, 1
-            repeat
-                removed, startIx = self.polygon:fixLoops(clockwise, startIx, width)
-            until not removed
             self.logger:debug('polygon with %d vertices generated, area %.1f, cw %s, desired cw %s',
                     #self.polygon, self.polygon:getArea(), self.polygon:isClockwise(), clockwise)
             if #self.polygon < 3 then
@@ -64,6 +60,12 @@ end
 ---@return boolean true if this headland is around an island (and not around the field boundary)
 function Headland:isIslandHeadland()
     return false
+end
+
+---@return boolean true if this headland was requested to be created clockwise (the actual polygon
+--- may be undetermined if it has loops0
+function Headland:getRequestedClockwise()
+    return self.clockwise
 end
 
 ---@return cg.Polyline Headland vertices with waypoint attributes

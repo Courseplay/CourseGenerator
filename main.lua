@@ -13,16 +13,16 @@ dofile('include.lua')
 
 local parameters = {}
 -- working width of the equipment
-local workingWidth = AdjustableParameter(10, 'width', 'W', 'w', 0.2, 0, 100)
+local workingWidth = AdjustableParameter(13.2, 'width', 'W', 'w', 0.2, 0, 100)
 table.insert(parameters, workingWidth)
-local turningRadius = AdjustableParameter(5.8, 'radius', 'T', 't', 0.2, 0, 20)
+local turningRadius = AdjustableParameter(7, 'radius', 'T', 't', 0.2, 0, 20)
 table.insert(parameters, turningRadius)
 -- number of headland passes around the field boundary
 local nHeadlandPasses = AdjustableParameter(4, 'headlands', 'P', 'p', 1, 0, 100)
 table.insert(parameters, nHeadlandPasses)
 local nHeadlandsWithRoundCorners = AdjustableParameter(0, 'headlands with round corners', 'R', 'r', 1, 0, 100)
 table.insert(parameters, nHeadlandsWithRoundCorners)
-local headlandClockwise = ToggleParameter('headlands clockwise', false, 'c')
+local headlandClockwise = ToggleParameter('headlands clockwise', true, 'c')
 table.insert(parameters, headlandClockwise)
 local headlandFirst = ToggleParameter('headlands first', true, 'h')
 table.insert(parameters, headlandFirst)
@@ -525,10 +525,10 @@ end
 
 local function drawDebugPoints()
     if cg.debugPoints then
-        love.graphics.setPointSize(pointSize * 3)
         for _, p in ipairs(cg.debugPoints) do
-            love.graphics.setColor(debugColor)
+            love.graphics.setColor(p.debugColor or debugColor)
             love.graphics.replaceTransform(graphicsTransform)
+            love.graphics.setPointSize(p.small and pointSize * 0.3 or pointSize * 3)
             love.graphics.points(p.x, p.y)
             if p.debugText then
                 drawText(p.x + 1, p.y + 1, debugTextColor, 1, p.debugText)
@@ -541,10 +541,10 @@ local function drawDebugPolylines()
     if cg.debugPolylines then
         love.graphics.push()
         love.graphics.replaceTransform(graphicsTransform)
-        love.graphics.setColor(debugColor)
         love.graphics.setLineWidth(pointSize * 3)
         for _, p in ipairs(cg.debugPolylines) do
             if #p > 1 then
+                love.graphics.setColor(p.debugColor or debugColor)
                 love.graphics.line(p:getUnpackedVertices())
             end
         end
