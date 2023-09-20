@@ -182,7 +182,6 @@ function Population:new(fitnessFunc, tournamentSize, mutationRate)
 end
 
 function Population:initialize(size, chromosomeFactory)
-	--math.randomseed(CourseGenerator.getCurrentTime())
 	for i = 1, size do
 		local c = chromosomeFactory()
 		self[ i ] = c

@@ -29,6 +29,7 @@ function FieldworkContext:init(field, workingWidth, turningRadius, nHeadlands)
     self.evenRowDistribution = false
     self.useBaselineEdge = false
     self.logger = cg.Logger('FieldworkContext')
+    self.errors = {}
 end
 
 function FieldworkContext:log()
@@ -38,6 +39,14 @@ function FieldworkContext:log()
             self.fieldCornerRadius, self.sharpenCorners, self.bypassIslands, self.nIslandHeadlands, self.islandHeadlandClockwise)
     self.logger:debug('row pattern: %s, row angle auto: %s, %.1fº, even row distribution: %s, use baseline edge: %s',
             self.rowPattern, self.autoRowAngle, math.deg(self.rowAngle), self.evenRowDistribution, self.useBaselineEdge)
+end
+
+function FieldworkContext:addError(text)
+    table.insert(self.errors, text)
+end
+
+function FieldworkContext:getErrors()
+    return self.errors
 end
 
 ---@param nHeadlands number of headlands total.
@@ -88,6 +97,13 @@ function FieldworkContext:setHeadlandClockwise(clockwise)
     self.headlandClockwise = clockwise
     return self
 end
+
+---@param clockwise boolean generate headlands around islands in the clockwise direction if true, counterclockwise if false
+function FieldworkContext:setIslandHeadlandClockwise(clockwise)
+    self.islandHeadlandClockwise = clockwise
+    return self
+end
+
 
 ---@param headlandFirst boolean start working on the headland first and switch to the center when done (harvesting),
 --- If false, start on the up/down rows in the middle and do the headlands last (for instance sowing)

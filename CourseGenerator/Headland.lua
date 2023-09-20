@@ -303,7 +303,7 @@ function IslandHeadland:_getHeadlandChangeMinRadius()
 end
 
 function IslandHeadland:__tostring()
-    return 'Island headland ' .. self.passNumber
+    return 'Island ' .. self.island:getId() .. ' headland ' .. self.passNumber
 end
 
 ---@class cg.IslandHeadland

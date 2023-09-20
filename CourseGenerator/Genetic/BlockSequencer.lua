@@ -174,8 +174,13 @@ function BlockSequencer:findBlockSequence(fitnessFunction)
         self.logger:debug('generation %d %s', generation, tostring(population.bestChromosome))
     end
     self.logger:debug(tostring(population.bestChromosome))
-    local blocks, entries = population.bestChromosome:getBlockSequenceAndEntries()
-    return blocks, entries, population.bestChromosome:getDistance()
+    if population.bestChromosome:getFitness() == 0 then
+        self.logger:error('no solution found!')
+        return nil
+    else
+        local blocks, entries = population.bestChromosome:getBlockSequenceAndEntries()
+        return blocks, entries, population.bestChromosome:getDistance()
+    end
 end
 
 ---@class cg.BlockSequencer

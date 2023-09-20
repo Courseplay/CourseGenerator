@@ -86,6 +86,15 @@ function Center:generate()
     -- clear cache for the block sequencer
     self.closestVertexCache, self.pathCache = {}, {}
 
+    -- first run of the genetic search will restrict connecting path between blocks to the same
+    -- headland, that is, the entry to the next block must be adjacent to the headland where the
+    -- exit of the previous block is.
+    -- Sometimes there may be no solution (or the genetic algorithm can't deliver one, probably because
+    -- of converging some other local minimum, no idea why), then we relax this constraint and allow
+    -- connecting paths switching between headlands, just to deliver some solution. This solution may
+    -- or may not work, but most likely won't be a pretty one.
+    local strict = true
+
     ---@param sequencedBlocks cg.Block[] an array of blocks in the sequence they should be worked on
     ---@param entries cg.RowPattern.Entry[] entries for each block are in the entries table, indexed by
     --- the block itself
@@ -116,7 +125,12 @@ function Center:generate()
             if exit:getAttributes():_getAtHeadland() ~= entryHeadland then
                 -- the entry to the next block is not on the same headland as the exit from the previous,
                 -- this is an invalid solution
-                return math.huge
+                if strict then
+                    return math.huge
+                else
+                    distance = distance + 1000
+                    table.insert(path, cg.Polyline())
+                end
             else
                 local pathOnHeadland = self:_findShortestPathOnHeadland(entryHeadland, exit, entryToNextBlock)
                 distance = distance + pathOnHeadland:getLength()
@@ -133,8 +147,12 @@ function Center:generate()
         chromosome:setFitness(10000 / distance)
     end
 
-    local blockSequencer = cg.BlockSequencer(blocks)
-    local blocksInSequence, entries, distance = blockSequencer:findBlockSequence(calculateFitness)
+    local blocksInSequence, entries, _ = cg.BlockSequencer(blocks):findBlockSequence(calculateFitness)
+    if blocksInSequence == nil then
+        self.logger:warning('Could not find a valid path on headland between blocks, retry with allowing connections between different headland')
+        strict = false
+        blocksInSequence, entries, _ = cg.BlockSequencer(blocks):findBlockSequence(calculateFitness)
+    end
     _, self.connectingPaths = calculateDistanceAndConnectingPaths(blocksInSequence, entries)
     self.blocks = blocksInSequence
     local lastLocation = self.startLocation
@@ -142,6 +160,11 @@ function Center:generate()
         lastLocation = b:finalize(entries[b])
     end
     self.logger:debug('Found %d block(s), %d connecting path(s).', #self.blocks, #self.connectingPaths)
+    if not strict then
+        local errorText = 'Could not find the shortest path on headland between blocks'
+        self.logger:error(errorText)
+        self.context:addError(errorText)
+    end
     return lastLocation
 end
 
