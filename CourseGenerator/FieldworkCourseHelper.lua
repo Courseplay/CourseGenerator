@@ -53,7 +53,7 @@ end
 ---@param circle boolean when true, make a full circle on the other polygon, else just go around and continue
 ---@return boolean, number true if there was an intersection and we actually went around, index of last vertex
 --- after the bypass
-function FieldworkCourseHelper.bypassIsland(polyline, workingWidth, other, startIx, circle)
+function FieldworkCourseHelper.bypassSmallIsland(polyline, workingWidth, other, startIx, circle)
     local intersections = polyline:getIntersections(other, startIx)
     local is1, is2 = intersections[1], intersections[2]
     if is1 and is2 then
@@ -71,6 +71,7 @@ function FieldworkCourseHelper.bypassIsland(polyline, workingWidth, other, start
             polyline:append(is1.is)
             polyline:calculateProperties()
             FieldworkCourseHelper.adjustLengthAtEnd(polyline, workingWidth, is1:getAngle())
+            polyline:setAttributes(#polyline, #polyline, cg.WaypointAttributes.setUsePathfinderToNextWaypoint)
         else
             polyline.logger:debug('Start of row is on an island, removing all vertices up to index %d (of %d)',
                     is1.ixA, #polyline)
@@ -79,6 +80,7 @@ function FieldworkCourseHelper.bypassIsland(polyline, workingWidth, other, start
             polyline:prepend(is1.is)
             polyline:calculateProperties()
             FieldworkCourseHelper.adjustLengthAtStart(polyline, workingWidth, is1:getAngle())
+            polyline:setAttributes(1, 1, cg.WaypointAttributes.setUsePathfinderToThisWaypoint)
         end
         return false
     end

@@ -127,10 +127,10 @@ function Block:getPath()
 end
 
 ---@param circle boolean when true, make a full circle on the other polygon, else just go around and continue
-function Block:bypassIsland(islandHeadlandPolygon, circle)
+function Block:bypassSmallIsland(islandHeadlandPolygon, circle)
     local thisIslandCircled = circle
     for _, row in ipairs(self.rowsInWorkSequence) do
-        thisIslandCircled = row:bypassIsland(islandHeadlandPolygon, 1, not thisIslandCircled) or thisIslandCircled
+        thisIslandCircled = row:bypassSmallIsland(islandHeadlandPolygon, 1, not thisIslandCircled) or thisIslandCircled
         -- make sure all new bypass waypoints have the proper attributes
         row:setAllAttributes()
     end

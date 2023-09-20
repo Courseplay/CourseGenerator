@@ -152,12 +152,12 @@ function Center:bypassSmallIsland(islandHeadlandPolygon, circle)
     local thisIslandCircled = circle
     -- first the up/down rows in each block ...
     for _, block in ipairs(self.blocks) do
-        thisIslandCircled = block:bypassIsland(islandHeadlandPolygon, not thisIslandCircled) or thisIslandCircled
+        thisIslandCircled = block:bypassSmallIsland(islandHeadlandPolygon, not thisIslandCircled) or thisIslandCircled
     end
     -- and then we have those connecting paths between the blocks
     for _, connectingPath in ipairs(self.connectingPaths) do
         if #connectingPath > 1 then
-            thisIslandCircled = cg.FieldworkCourseHelper.bypassIsland(connectingPath, self.context.workingWidth,
+            thisIslandCircled = cg.FieldworkCourseHelper.bypassSmallIsland(connectingPath, self.context.workingWidth,
                     islandHeadlandPolygon, 1, not thisIslandCircled) or thisIslandCircled
         end
     end
@@ -167,7 +167,7 @@ end
 function Center:bypassBigIsland(islandHeadlandPolygon)
     for _, connectingPath in ipairs(self.connectingPaths) do
         if #connectingPath > 1 then
-            cg.FieldworkCourseHelper.bypassIsland(connectingPath, self.context.workingWidth,
+            cg.FieldworkCourseHelper.bypassSmallIsland(connectingPath, self.context.workingWidth,
                     islandHeadlandPolygon, 1, false)
         end
     end
