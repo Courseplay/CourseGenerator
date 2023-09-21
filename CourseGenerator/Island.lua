@@ -118,8 +118,11 @@ function Island:generateHeadlands(context, mustNotCross)
         end
         headlands[i] = cg.IslandHeadland(self, headlands[i - 1]:getPolygon(), self.context.islandHeadlandClockwise, i, self.context.workingWidth)
     end
-    self.headlands = {}
-    local i = 1
+    if headlands[1]:getPolygon():intersects(mustNotCross) then
+        self.logger:error('First headland intersects field boundary!')
+    end
+    self.headlands = {headlands[1]}
+    local i = 2
     -- make sure no headlands are outside of the field
     while i <= #headlands and not headlands[i]:getPolygon():intersects(mustNotCross) do
         table.insert(self.headlands, headlands[i])
@@ -149,7 +152,7 @@ end
 
 
 --- Is this island too big to just bypass? If so, we can't just drive
--- around it, we actually have to end and turn the up/down rows
+--- around it, we actually have to end and turn the up/down rows
 function Island:isTooBigToBypass(width)
     if self.headlands[1] and self.headlands[1]:isValid() then
         local area = self.headlands[1]:getPolygon():getArea() and self.headlands[1]:getPolygon():getArea() or 0

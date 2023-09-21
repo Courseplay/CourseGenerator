@@ -13,12 +13,12 @@ dofile('include.lua')
 
 local parameters = {}
 -- working width of the equipment
-local workingWidth = AdjustableParameter(13.2, 'width', 'W', 'w', 0.2, 0, 100)
+local workingWidth = AdjustableParameter(16.6, 'width', 'W', 'w', 0.2, 0, 100)
 table.insert(parameters, workingWidth)
 local turningRadius = AdjustableParameter(7, 'radius', 'T', 't', 0.2, 0, 20)
 table.insert(parameters, turningRadius)
 -- number of headland passes around the field boundary
-local nHeadlandPasses = AdjustableParameter(4, 'headlands', 'P', 'p', 1, 0, 100)
+local nHeadlandPasses = AdjustableParameter(2, 'headlands', 'P', 'p', 1, 0, 100)
 table.insert(parameters, nHeadlandPasses)
 local nHeadlandsWithRoundCorners = AdjustableParameter(0, 'headlands with round corners', 'R', 'r', 1, 0, 100)
 table.insert(parameters, nHeadlandsWithRoundCorners)
@@ -26,15 +26,16 @@ local headlandClockwise = ToggleParameter('headlands clockwise', true, 'c')
 table.insert(parameters, headlandClockwise)
 local headlandFirst = ToggleParameter('headlands first', true, 'h')
 table.insert(parameters, headlandFirst)
--- number of headland passes around the field islands
-local nIslandHeadlandPasses = AdjustableParameter(2, 'island headlands', 'I', 'i', 1, 1, 10)
-table.insert(parameters, nIslandHeadlandPasses)
 local fieldCornerRadius = AdjustableParameter(6, 'field corner radius', 'F', 'f', 1, 0, 30)
 table.insert(parameters, fieldCornerRadius)
 local sharpenCorners = ToggleParameter('sharpen corners', true, 's')
 table.insert(parameters, sharpenCorners)
-local bypassIslands = ToggleParameter('bypass islands', true, 'b')
+local bypassIslands = ToggleParameter('island bypass', true, 'b')
 table.insert(parameters, bypassIslands)
+local nIslandHeadlandPasses = AdjustableParameter(2, 'island headlands', 'I', 'i', 1, 1, 10)
+table.insert(parameters, nIslandHeadlandPasses)
+local islandHeadlandClockwise = ToggleParameter('island headlands clockwise', false, 'C')
+table.insert(parameters, islandHeadlandClockwise)
 local autoRowAngle = ToggleParameter('auto row angle', true, '6')
 table.insert(parameters, autoRowAngle)
 local rowAngleDeg = AdjustableParameter(-90, 'row angle', 'A', 'a', 10, -90, 90)
@@ -81,7 +82,7 @@ local xOffset, yOffset = 0, 0
 -- starting position
 local startX, startY, baselineX, baselineY = 0, 0, 0, 0
 
-local graphicsTransform, textTransform, statusTransform, mouseTransform, contextTransform
+local graphicsTransform, textTransform, statusTransform, mouseTransform, contextTransform, errorTransform
 
 local parameterNameColor = { 1, 1, 1 }
 local parameterKeyColor = { 0, 1, 1 }
@@ -123,6 +124,7 @@ local selectedField
 local course
 local savedFields
 local currentVertices
+local errors = {}
 
 ------------------------------------------------------------------------------------------------------------------------
 --- Generate the fieldwork course
@@ -132,6 +134,7 @@ local function generate()
     local context = cg.FieldworkContext(selectedField, workingWidth:get(), turningRadius:get(), nHeadlandPasses:get())
     context:setHeadlandsWithRoundCorners(nHeadlandsWithRoundCorners:get())
     context:setHeadlandClockwise(headlandClockwise:get())
+    context:setIslandHeadlandClockwise(islandHeadlandClockwise:get())
     context:setHeadlandFirst(headlandFirst:get())
     context:setIslandHeadlands(nIslandHeadlandPasses:get())
     context:setFieldCornerRadius(fieldCornerRadius:get())
@@ -162,6 +165,7 @@ local function generate()
     end
     -- make sure all logs are now visible
     io.stdout:flush()
+    errors = context:getErrors()
 end
 
 local function updateTransform()
@@ -206,6 +210,7 @@ function love.load(arg)
     statusTransform = love.math.newTransform(0, 0, 0, 1, 1, -windowWidth + 200, -windowHeight + 30)
     mouseTransform = love.math.newTransform()
     contextTransform = love.math.newTransform(10, 10, 0, 1, 1, 0, 0)
+    errorTransform = love.math.newTransform(300, 0, 0, 1, 1, 0, 0)
     love.graphics.setPointSize(pointSize)
     love.graphics.setLineWidth(lineWidth)
     love.window.setMode(windowWidth, windowHeight, { highdpi = true })
@@ -292,6 +297,11 @@ local function drawPath(p)
                 end
                 love.graphics.line(v.x, v.y, v:getExitEdge():getEnd().x, v:getExitEdge():getEnd().y)
             end
+            if v:getEntryEdge() and v:getAttributes():shouldUsePathfinderToThisWaypoint() then
+                love.graphics.setLineWidth(5 * lineWidth)
+                love.graphics.setColor(usePathfinderColor)
+                love.graphics.line(v.x, v.y, v:getEntryEdge():getBase().x, v:getEntryEdge():getBase().y)
+            end
             drawVertex(v)
         end
     end
@@ -349,6 +359,7 @@ end
 
 ---@param block cg.Center
 local function drawConnectingPaths(center)
+    if center:getConnectingPaths() == nil then return end
     for i, p in ipairs(center:getConnectingPaths()) do
         love.graphics.setLineWidth(10 * lineWidth)
         if #p > 0 then
@@ -511,6 +522,22 @@ local function drawContext()
     end
 end
 
+local function drawErrors()
+    if #errors > 0 then
+        love.graphics.replaceTransform(errorTransform)
+        love.graphics.setColor(1, 0, 0)
+        local fontsize = 12
+        love.graphics.rectangle('fill', 0, 0, 600, (3 + #errors) * fontsize)
+        love.graphics.setColor(1, 1, 1) -- base color for the coloredText is white (love2D can sometimes be strange)
+        local y = 2 * fontsize
+        for _, e in ipairs(errors) do
+            love.graphics.print(e, 0, y)
+            y = y + fontsize
+        end
+    end
+end
+
+
 local function drawStatus()
     love.graphics.setColor(1, 1, 0)
     love.graphics.replaceTransform(statusTransform)
@@ -556,6 +583,7 @@ function love.draw()
     drawGraphics()
     drawStatus()
     drawContext()
+    drawErrors()
     if showDebugInfo:get() then
         drawDebugPoints()
         drawDebugPolylines()
