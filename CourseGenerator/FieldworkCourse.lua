@@ -181,7 +181,7 @@ function FieldworkCourse:generateCenter()
         -- width wider than the field boundary so the rows in the center cover the area between the original
         -- field boundaries.
         local virtualHeadland = cg.Headland(self.boundary, self.context.headlandClockwise, 0,
-                self.context.workingWidth / 2, true, self.context.turningRadius)
+                self.context.workingWidth / 2, true)
         self.center = cg.Center(self.context, virtualHeadland, self.context.startLocation, self.bigIslands)
     else
         local innerMostHeadlandPolygon = self.headlands[#self.headlands]:getPolygon()

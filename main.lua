@@ -13,7 +13,7 @@ dofile('include.lua')
 
 local parameters = {}
 -- working width of the equipment
-local workingWidth = AdjustableParameter(16.6, 'width', 'W', 'w', 0.2, 0, 100)
+local workingWidth = AdjustableParameter(6, 'width', 'W', 'w', 0.2, 0, 100)
 table.insert(parameters, workingWidth)
 local turningRadius = AdjustableParameter(7, 'radius', 'T', 't', 0.2, 0, 20)
 table.insert(parameters, turningRadius)
@@ -57,9 +57,9 @@ local nRows = AdjustableParameter(4, 'rows to skip/rows per land', 'K', 'k', 1, 
 table.insert(parameters, nRows)
 local leaveSkippedRowsUnworked = ToggleParameter('leave skipped rows unworked', false, 'u')
 table.insert(parameters, leaveSkippedRowsUnworked)
-local centerClockwise = ToggleParameter('spiral/lands clockwise', true, '1')
+local centerClockwise = ToggleParameter('spiral/lands clockwise', true, 'l')
 table.insert(parameters, centerClockwise)
-local spiralFromInside = ToggleParameter('spiral from inside', true, '!')
+local spiralFromInside = ToggleParameter('spiral from inside', true, 'L')
 table.insert(parameters, spiralFromInside)
 local evenRowDistribution = ToggleParameter('even row width', false, 'e')
 table.insert(parameters, evenRowDistribution)

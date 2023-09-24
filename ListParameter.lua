@@ -32,7 +32,7 @@ end
 ---@return table to use with love.graphics.print()
 function ListParameter:toColoredText(nameColor, keyColor, valueColor)
 	return {nameColor, self.name, keyColor, string.format(' (%s/%s): ', self.down, self.up),
-			valueColor, self.values[self.current]}
+			valueColor, self.names[self.current]}
 end
 
 function ListParameter:__tostring()

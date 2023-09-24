@@ -202,29 +202,31 @@ end
 function Center:_generateStraightUpDownRows(rowAngle, suppressLog)
     local baseline = self:_createStraightBaseline(rowAngle)
     local _, dMin, _, dMax = self.boundary:findClosestAndFarthestVertexToLineSegment(baseline[1]:getExitEdge())
+
+    -- make the best effort to have the row that overlaps the headland (or the last row when there is no headland)
+    -- the last row we work on. This usually works for the alternating/skip pattern, no guarantee for other patterns.
+    local startLocationDistance = baseline[1]:getExitEdge():getDistanceFrom(self.context.startLocation)
+    local overlapLast = startLocationDistance < (dMin + dMax) / 2
+    if self.context.nHeadlands > 0 and not self.context.headlandFirst then
+        overlapLast = not overlapLast
+    end
     -- move the baseline to the edge of the area we want to cover
     baseline = baseline:createNext(dMin)
-    local nRows, firstRowOffset, width, lastRowOffset = self:_calculateRowDistribution(
-            self.context.workingWidth, dMax - dMin, self.context.evenRowDistribution, true)
+    local rowOffsets = self:_calculateRowDistribution(
+            self.context.workingWidth, dMax - dMin, self.context.evenRowDistribution, overlapLast)
 
     local rows = {}
-    -- first row
-    local row = baseline:createNext(firstRowOffset)
+    local row = baseline:createNext(rowOffsets[1])
     table.insert(rows, row)
-    if nRows > 1 then
-        -- more rows
-        for _ = 2, nRows - 1 do
-            row = row:createNext(width)
-            table.insert(rows, row)
-        end
-        -- last row
-        row = row:createNext(lastRowOffset)
+    for i = 2, #rowOffsets do
+        row = row:createNext(rowOffsets[i])
         table.insert(rows, row)
     end
     if not suppressLog then
-        self.logger:debug('Created %d rows at %.0f° to cover an area %.1f wide, width %.1f/%.1f/%.1f m',
-                nRows, math.deg(rowAngle), dMax - dMin, firstRowOffset, width or 0, lastRowOffset or 0)
-        self.logger:debug('    even distribution %s, remainder last %s', self.context.evenRowDistribution, true)
+        self.logger:debug('Created %d rows at %.0f° to cover an area %.1f wide, %.1f/%.1f m',
+                #rowOffsets, math.deg(rowAngle), dMax - dMin, rowOffsets[1], rowOffsets[#rowOffsets] or 0)
+        self.logger:debug('    even distribution %s, remainder last %s', self.context.evenRowDistribution, overlapLast)
+        self.logger:debug('    dMin: %1.f, dMax: %.1f, startLocationDistance: %.1f', dMin, dMax, startLocationDistance)
     end
     return rows
 end
@@ -293,21 +295,29 @@ end
 --- There are several ways to deal with the remainder:
 ---   1. reduce the width of each row so they all have the same width. This results in overlap in every row
 ---      and if multiple vehicles work with the same course they may collide anywhere
----   2. reduce the width of one row (usually the first or last) only, others remain same as working width.
----      There is no overlap here except in the one remainder row.
+---   2. reduce the width of one row (the second or second last) only, others remain same as working width.
+---      We must do this if there is no headland, as the very first and the very last row must be of working
+---      width, in order to remain on the field. Can be combined with #1.
 ---   3. leave the width of all rows the same working width. Here, part of the first or last row will be
----      outside of the field (work width * number of rows > field width) which may be the preferred solution
----      if there is a headland, as the remainder will overlap with the headland. With no headland the
----      remainder may have obstacles like fences or trees as it is outside of the field.
+---      outside of the field (work width * number of rows > field width). We always do this if there is a headland,
+---      as the remainder will overlap with the headland.
+---@param workingWidth
+---@param fieldWidth number distance between the headland centerlines we need to fill with rows. If there is no
+--- headland, this is the distance between the virtual headland centerlines, which is half working width wider than
+--- the actual field boundary.
+---@param sameWidth boolean make all rows of the same width (#1 above)
+---@param overlapLast boolean where should the overlapping row be in the sequence we create, true if at the end,
+--- false at the beginning
 ---@return number, number, number, number number of rows, offset of first row from the field edge, offset of
 --- rows from the previous row for the next rows, offset of last row from the next to last row.
-function Center:_calculateRowDistribution(workingWidth, fieldWidth, sameWidth, remainderLast)
-    local nRows = math.floor(fieldWidth / workingWidth) + 1
-    if nRows == 1 then
-        if remainderLast then
-            return nRows, workingWidth / 2, nil, nil
+function Center:_calculateRowDistribution(workingWidth, fieldWidth, sameWidth, overlapLast)
+    local nRows = math.floor(fieldWidth / workingWidth)
+    if nRows == 0 then
+        -- only one row fits between the headlands
+        if overlapLast then
+            return { workingWidth / 2 }
         else
-            return nRows, fieldWidth - workingWidth / 2, nil, nil
+            return { fieldWidth - workingWidth / 2 }
         end
     else
         local width
@@ -315,26 +325,36 @@ function Center:_calculateRowDistribution(workingWidth, fieldWidth, sameWidth, r
             -- #1
             width = (fieldWidth - workingWidth) / (nRows - 1)
         else
-            -- #2
+            -- #2 and #3
             width = workingWidth
         end
-        local firstRowOffset, lastRowOffset
-        if self.context.nHeadlands then
-            -- #3
-            firstRowOffset = workingWidth
-            lastRowOffset = width
-            -- if we have a headland, we can stay a full working width away from it and still
-            -- cover everything, so we need one row less
-            nRows = nRows - 1
+        local firstRowOffset
+        local rowOffsets = {}
+        if self.context.nHeadlands > 0 then
+            -- #3 we have headlands
+            if overlapLast then
+                firstRowOffset = workingWidth
+            else
+                firstRowOffset = fieldWidth - (workingWidth + width * (nRows - 1))
+            end
+            rowOffsets = { firstRowOffset }
+            for _ = firstRowOffset, fieldWidth, width do
+                table.insert(rowOffsets, width)
+            end
         else
-            -- #1 and #2
-            firstRowOffset = workingWidth / 2
-            lastRowOffset = fieldWidth - firstRowOffset - width * (nRows - 2) - workingWidth / 2
+            -- #2, no headlands
+            for _ = workingWidth, fieldWidth - workingWidth, width do
+                table.insert(rowOffsets, width)
+            end
+            if overlapLast then
+                table.insert(rowOffsets, fieldWidth - (workingWidth + width * #rowOffsets))
+            else
+                rowOffsets[2] = fieldWidth - (workingWidth + width * #rowOffsets)
+                table.insert(rowOffsets, width)
+            end
+
         end
-        if not remainderLast then
-            firstRowOffset, lastRowOffset = lastRowOffset, firstRowOffset
-        end
-        return nRows, firstRowOffset, width, lastRowOffset
+        return rowOffsets
     end
 end
 
@@ -477,7 +497,6 @@ function Center:_splitIntoBlocks(rows)
     closeBlocks()
     return blocks
 end
-
 
 --- Find the shortest path on the headland between two positions (between the headland vertices
 --- closest to v1 and v2).

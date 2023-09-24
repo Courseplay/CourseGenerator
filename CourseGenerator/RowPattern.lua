@@ -21,6 +21,18 @@ end
 
 function RowPattern:init()
     self.logger = cg.Logger('RowPattern')
+    self.sequence = {}
+end
+
+--- For a given number of rows, the same pattern always result in the same sequence. Therefore,
+--- before calling _generateSequence() we always check if we have already generated it for this number of rows.
+function RowPattern:_getSequence(nRows)
+    if #self.sequence == nRows  then
+        return self.sequence
+    else
+        self.sequence = {}
+        return self:_generateSequence(nRows)
+    end
 end
 
 --- Generate a sequence in which the rows must be worked on. It is just an array
@@ -31,7 +43,6 @@ end
 --- this default implementation leaves them in the original order (which is what
 --- the alternating pattern uses)
 function RowPattern:_generateSequence(nRows)
-    self.sequence = {}
     for i = 1, nRows do
         table.insert(self.sequence, i)
     end
@@ -42,7 +53,7 @@ end
 ---@param rows cg.Row[] rows to work on
 function RowPattern:iterator(rows)
     local i = 0
-    local sequence = self:_generateSequence(#rows)
+    local sequence = self:_getSequence(#rows)
     return function()
         i = i + 1
         if i <= #rows then
@@ -114,6 +125,7 @@ cg.RowPattern = RowPattern
 --- case this entry is selected.
 --- Entries are always generated from a list of rows, the same list of rows what RowPattern:getPossibleEntries() or
 --- RowPattern:iterator() expects.
+---@class RowPattern.Entry
 RowPattern.Entry = CpObject()
 
 ---@param position cg.Vector the position of this entry point
@@ -178,7 +190,7 @@ end
 ---@param rows cg.Row[]
 ---@return cg.RowPattern.Entry[] list of entries usable for this pattern
 function RowPatternSkip:getPossibleEntries(rows)
-    local sequence = self:_generateSequence(#rows)
+    local sequence = self:_getSequence(#rows)
     self.logger:debug('%d rows, first row is %d, last %d', #rows, sequence[1], sequence[#sequence])
     local firstRowBefore, lastRowBefore = rows[1], rows[#rows]
     -- last row when we start at either end of rows[1]
@@ -209,7 +221,6 @@ function RowPatternSkip:__tostring()
 end
 
 function RowPatternSkip:_generateSequence(nRows)
-    self.sequence = {}
     local workedRows = {}
     local lastWorkedRow
     local done = false
@@ -263,7 +274,6 @@ function RowPatternSpiral:__tostring()
 end
 
 function RowPatternSpiral:_generateSequence(nRows)
-    self.sequence = {}
     -- sequence from outside
     for i = 1, math.floor(nRows / 2) do
         table.insert(self.sequence, i)
@@ -282,7 +292,7 @@ end
 ---@param rows cg.Row[]
 ---@return cg.RowPattern.Entry[] list of entries usable for this pattern
 function RowPatternSpiral:getPossibleEntries(rows)
-    local sequence = self:_generateSequence(#rows)
+    local sequence = self:_getSequence(#rows)
     local odd = #rows % 2 ~= 0
     local firstRow = rows[sequence[1]]
     local secondRow = rows[sequence[2]]
@@ -368,7 +378,6 @@ function RowPatternLands:__tostring()
 end
 
 function RowPatternLands:_generateSequence(nRows)
-    self.sequence = {}
     -- I know this could be generated but it is more readable and easy to visualize this way.
     local rowOrderInLandsCounterclockwise = {
         { 1 },
@@ -454,7 +463,7 @@ end
 ---@param rows cg.Row[]
 ---@return cg.RowPattern.Entry[] list of entries usable for this pattern
 function RowPatternLands:getPossibleEntries(rows)
-    local sequence = self:_generateSequence(#rows)
+    local sequence = self:_getSequence(#rows)
     local firstRow = rows[sequence[1]]
     local lastRow = rows[#rows - sequence[1] + 1]
     return {
