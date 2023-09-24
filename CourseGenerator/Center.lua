@@ -159,6 +159,10 @@ function Center:generate()
     for _, b in ipairs(self.blocks) do
         lastLocation = b:finalize(entries[b])
     end
+    if self.context.nHeadlands == 0 then
+        self.logger:debug('There is no headland, remove connecting path to first block.')
+        self.connectingPaths[1] = {}
+    end
     self.logger:debug('Found %d block(s), %d connecting path(s).', #self.blocks, #self.connectingPaths)
     if not strict then
         local errorText = 'Could not find the shortest path on headland between blocks'
