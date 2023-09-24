@@ -40,17 +40,19 @@ local autoRowAngle = ToggleParameter('auto row angle', true, '6')
 table.insert(parameters, autoRowAngle)
 local rowAngleDeg = AdjustableParameter(-90, 'row angle', 'A', 'a', 10, -90, 90)
 table.insert(parameters, rowAngleDeg)
-local rowPattern = ListParameter(cg.RowPattern.ALTERNATING, 'row pattern', 'O', 'o',
+local rowPattern = ListParameter(cg.RowPattern.RACETRACK, 'row pattern', 'O', 'o',
         { cg.RowPattern.ALTERNATING,
           cg.RowPattern.SKIP,
           cg.RowPattern.SPIRAL,
-          cg.RowPattern.LANDS
+          cg.RowPattern.LANDS,
+          cg.RowPattern.RACETRACK
         },
         {
             'alternating',
             'skip',
             'spiral',
-            'lands'
+            'lands',
+            'racetrack'
         })
 table.insert(parameters, rowPattern)
 local nRows = AdjustableParameter(4, 'rows to skip/rows per land', 'K', 'k', 1, 0, 10)

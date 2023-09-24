@@ -6,6 +6,7 @@ RowPattern.ALTERNATING = 1
 RowPattern.SKIP = 2
 RowPattern.SPIRAL = 3
 RowPattern.LANDS = 4
+RowPattern.RACETRACK = 5
 
 function RowPattern.create(pattern, ...)
     if pattern == cg.RowPattern.ALTERNATING then
@@ -16,6 +17,8 @@ function RowPattern.create(pattern, ...)
         return cg.RowPatternSpiral(...)
     elseif pattern == cg.RowPattern.LANDS then
         return cg.RowPatternLands(...)
+    elseif pattern == cg.RowPattern.RACETRACK then
+        return cg.RowPatternRacetrack(...)
     end
 end
 
@@ -474,3 +477,103 @@ end
 
 ---@class cg.RowPatternLands : RowPattern
 cg.RowPatternLands = RowPatternLands
+
+--- A racetrack (circular) pattern
+-- Circular mode: the area is split into multiple blocks which are then worked one by one. Work in each
+-- block starts around the middle, skipping a maximum of four rows to avoid 180 turns and working the block in
+-- a circular, racetrack like pattern.
+-- Depending on the number of rows, there may be a few of them left at the end which will need to be worked in a
+-- regular up/down pattern
+--  ----- 2 ---- > -------     \
+--  ----- 4 ---- > -------     |
+--  ----- 6 ---- > -------     |
+--  ----- 8 ---- > -------     | Block 1
+--  ----- 1 ---- < -------     |
+--  ----- 3 ---- < -------     |
+--  ----- 5 ---- < ------      |
+--  ----- 7 ---- < -------     /
+--  -----10 ---- > -------    \
+--  -----12 ---- > -------     |
+--  ----- 9 ---- < -------     | Block 2
+--  -----11 ---- < -------     /
+---@class RowPatternRacetrack
+local RowPatternRacetrack = CpObject(RowPattern)
+
+function RowPatternRacetrack:init()
+    cg.RowPattern.init(self)
+    -- by default we skip the first four rows when starting
+    self.nSkip = 4
+end
+
+function RowPatternRacetrack:__tostring()
+    return 'Racetrack'
+end
+
+function RowPatternRacetrack:_generateSequence(nRows)
+    local SKIP_FWD = {} -- skipping rows towards the end of field
+    local SKIP_BACK = {} -- skipping rows towards the beginning of the field
+    local FILL_IN = {} -- filling in whatever is left after skipping
+    local nSkip = self.nSkip
+    local rowsDone = {}
+    -- start in the middle
+    local i = nSkip + 1
+    table.insert(self.sequence, i)
+    rowsDone[i] = true
+    local nDone = 1
+    local mode = SKIP_BACK
+    -- start circling
+    while nDone < nRows do
+        local nextI
+        if mode == SKIP_FWD then
+            nextI = i + nSkip + 1
+            mode = SKIP_BACK
+        elseif mode == SKIP_BACK then
+            nextI = i - nSkip
+            mode = SKIP_FWD
+        elseif mode == FILL_IN then
+            nextI = i + 1
+        end
+        if rowsDone[nextI] then
+            -- this has been done already, so skip forward to the next block
+            nextI = i + nSkip + 1
+            mode = SKIP_BACK
+        end
+        if nextI > nRows then
+            -- reached the end of the field with the current skip, start skipping less, but keep skipping rows
+            -- as long as we can to prevent backing up in turn maneuvers
+            nSkip = math.floor((nRows - nDone) / 2)
+            if nSkip > 0 then
+                nextI = i + nSkip + 1
+                mode = SKIP_BACK
+            else
+                -- no room to skip anymore
+                mode = FILL_IN
+                nextI = i + 1
+            end
+        end
+        i = nextI
+        rowsDone[i] = true
+        table.insert(self.sequence, i)
+        nDone = nDone + 1
+    end
+    return self.sequence
+end
+
+--- We start the racetrack by skipping nSkip rows from either the first or the last row. Each of these two rows can
+--- be started at either end.
+---@param rows cg.Row[]
+---@return cg.RowPattern.Entry[] list of entries usable for this pattern
+function RowPatternRacetrack:getPossibleEntries(rows)
+    local firstRow, lastRow = rows[self.nSkip + 1], rows[#rows - (self.nSkip + 1)]
+    local entries = {
+        -- reverseRowOrderBefore, reverseRowOrderAfter, reverseOddRows
+        cg.RowPattern.Entry(firstRow[1], false, false, false),
+        cg.RowPattern.Entry(firstRow[#firstRow], false, false, true),
+        cg.RowPattern.Entry(lastRow[1], true, false, false),
+        cg.RowPattern.Entry(lastRow[#lastRow], true, false, true),
+    }
+    return entries
+end
+
+---@class cg.RowPatternRacetrack : cg.RowPattern
+cg.RowPatternRacetrack = RowPatternRacetrack
