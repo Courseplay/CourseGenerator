@@ -211,6 +211,12 @@ function Headland:connectTo(other, ix, workingWidth, turningRadius, headlandFirs
     return nil
 end
 
+--- If there is a single headland only, so there are no transitions, make the polygon overlap itself so
+--- the path does not end at the last vertex, it must continue and reach the first for full coverage
+function Headland:overlap()
+    self.polygon:append(self.polygon[1]:clone())
+end
+
 ---@param ix number the vertex to start the search
 ---@param straightSectionLength number how long at the minimum the straight section should be
 ---@param searchRange number how far should the search for the straight section should go

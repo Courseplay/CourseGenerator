@@ -29,7 +29,11 @@ function HeadlandConnector.connectHeadlandsFromOutside(headlands, startLocation,
         headlands[i + 1].polygon:rebase(transitionEndIx + 1)
         headlandPath:appendMany(headlands[i]:getPath())
     end
+    if #headlands == 1 then
+        headlands[1]:overlap()
+    end
     headlandPath:appendMany(headlands[#headlands]:getPath())
+    headlandPath:calculateProperties()
     return headlandPath
 end
 
@@ -58,6 +62,9 @@ function HeadlandConnector.connectHeadlandsFromInside(headlands, startLocation, 
         -- rebase to the next vertex so the first waypoint of the next headland is right after the transition
         headlands[i - 1].polygon:rebase(transitionEndIx + 1)
         headlandPath:appendMany(headlands[i]:getPath())
+    end
+    if #headlands == 1 then
+        headlands[1]:overlap()
     end
     headlandPath:appendMany(headlands[1]:getPath())
     headlandPath:calculateProperties()

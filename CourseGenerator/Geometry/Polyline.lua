@@ -520,7 +520,7 @@ function Polyline:goAround(other, startIx, circle)
 end
 
 function Polyline:goAroundBetweenIntersections(other, circle, is1, is2)
-    local pathA, pathB = other:_getPathBetween(is1.ixB, is2.ixB)
+    local pathA, pathB = other:_getPathBetweenIntersections(is1.ixB, is2.ixB)
     local path
     if pathA and pathB then
         local shortPath = pathA:getLength() < pathB:getLength() and pathA or pathB
@@ -679,20 +679,33 @@ end
 
 --- Get a reference to a contiguous segment of vertices of a polyline. Note that
 --- these are references of the original vertices, not copies!
----@param fromIx number index of first vertex in the segment, not including
----@param toIx number index of last vertex in the segment, not including
+---@param fromIx number index of first vertex in the segment, not including? or is it?
+---@param toIx number index of last vertex in the segment, not including? or is it?
 ---@return Polyline
 function Polyline:_getPathBetween(fromIx, toIx)
     local segment = Polyline()
-    local first = fromIx < toIx and fromIx + 1 or fromIx
-    local last = fromIx < toIx and toIx or toIx + 1
-    local step = fromIx < toIx and 1 or -1
-    for i = first, last, step do
+    local step = fromIx <= toIx and 1 or -1
+    for i = fromIx, toIx, step do
         table.insert(segment, self:at(i))
     end
     return segment
 end
 
+--- If fromIx and toIx are the vertex indices where edges intersecting another polyline _start_,
+--- get the vertices between the two intersection points.
+---@param fromIx number
+---@param toIx number
+function Polyline:_getPathBetweenIntersections(fromIx, toIx)
+    local from, to
+    if fromIx <= toIx then
+        -- toIx is the start of an edge, add the end of that edge too
+        from, to = fromIx + 1, toIx
+    else
+        -- fromIx is the start of an edge, add the end of that edge too
+        from, to = fromIx, toIx + 1
+    end
+    return self:_getPathBetween(from, to)
+end
 --- Set an attribute for a series of vertices
 ---@param first number | nil index of first vertex to set the attribute
 ---@param last number | nil index of last vertex
