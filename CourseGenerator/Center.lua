@@ -542,6 +542,10 @@ function Center:_wrapUpConnectingPaths()
             self.blocks[i]:getEntryVertex():getAttributes():setUsePathfinderToThisWaypoint()
             self.blocks[i]:getExitVertex():getAttributes():setUsePathfinderToNextWaypoint()
         end
+    else
+        for _, c in ipairs(self.connectingPaths) do
+            c:setAttributes(nil, nil, cg.WaypointAttributes.setOnConnectingPath)
+        end
     end
 end
 

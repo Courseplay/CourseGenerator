@@ -18,7 +18,7 @@ table.insert(parameters, workingWidth)
 local turningRadius = AdjustableParameter(7, 'radius', 'T', 't', 0.2, 0, 20)
 table.insert(parameters, turningRadius)
 -- number of headland passes around the field boundary
-local nHeadlandPasses = AdjustableParameter(0, 'headlands', 'P', 'p', 1, 0, 100)
+local nHeadlandPasses = AdjustableParameter(2, 'headlands', 'P', 'p', 1, 0, 100)
 table.insert(parameters, nHeadlandPasses)
 local nHeadlandsWithRoundCorners = AdjustableParameter(0, 'headlands with round corners', 'R', 'r', 1, 0, 100)
 table.insert(parameters, nHeadlandsWithRoundCorners)
