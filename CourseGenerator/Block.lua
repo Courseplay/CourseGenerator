@@ -137,5 +137,14 @@ function Block:bypassSmallIsland(islandHeadlandPolygon, circle)
     return thisIslandCircled
 end
 
+function Block:getEntryVertex()
+    return self.rowsInWorkSequence[1][1]
+end
+
+function Block:getExitVertex()
+    local lastRow = self.rowsInWorkSequence[#self.rowsInWorkSequence]
+    return lastRow[#lastRow]
+end
+
 ---@class cg.Block
 cg.Block = Block

@@ -204,7 +204,7 @@ function Polygon:getLongestEdgeDirection()
         for _, e in self:edges() do
             -- normalize angle of the edges, two edges with 180 degrees difference count the same
             local a = math.deg(e:getHeading())
-            a = a < 0 and ( a + 180 ) or a
+            a = a < 0 and (a + 180) or a
             a = a % 180
             a = math.floor(a + 0.5)
             totalEdgeLength[a] = (totalEdgeLength[a] or 0) + e:getLength()
@@ -335,24 +335,35 @@ end
 --- Private functions
 ------------------------------------------------------------------------------------------------------------------------
 
---- Get all vertices between fromIx and toIx (non inclusive), in form of two polylines/polygons,
+--- Get all vertices between fromIx and toIx (inclusive), in form of two polylines,
 --- one in each direction (cw/ccw)
----@param fromIx number index of first vertex in the segment, not including
----@param toIx number index of last vertex in the segment, not including
+---@param fromIx number index of first vertex in the segment
+---@param toIx number index of last vertex in the segment
 ---@return Polyline, Polyline
-function Polygon:_getPathBetween(fromIx, toIx, asPolygon)
-    local forward = asPolygon and cg.Polygon() or cg.Polyline()
+function Polygon:_getPathBetween(fromIx, toIx)
+    local forward = cg.Polyline({ self:at(fromIx) })
     local fwdIx = cg.WrapAroundIndex(self, fromIx)
     while fwdIx:get() ~= toIx do
         fwdIx = fwdIx + 1
         forward:append(self:at(fwdIx:get()))
     end
-    local backward = asPolygon and cg.Polygon() or cg.Polyline()
+    local backward = cg.Polyline({ self:at(fromIx) })
     local bwdIx = cg.WrapAroundIndex(self, fromIx)
     while bwdIx:get() ~= toIx do
-        backward:append(self:at(bwdIx:get()))
         bwdIx = bwdIx - 1
+        backward:append(self:at(bwdIx:get()))
     end
+    return forward, backward
+end
+
+--- If fromIx and toIx are the vertex indices where edges intersecting another polyline _start_,
+--- get the vertices between the two intersection points.
+---@param fromIx number
+---@param toIx number
+function Polygon:_getPathBetweenIntersections(fromIx, toIx)
+    local forward, backward = self:_getPathBetween(fromIx, toIx)
+    table.remove(forward, 1)
+    table.remove(backward)
     return forward, backward
 end
 
@@ -365,7 +376,6 @@ function Polygon:_getDeltaAngle()
     end
     return self.deltaAngle
 end
-
 
 ---@class cg.Polygon:cg.Polyline
 cg.Polygon = Polygon

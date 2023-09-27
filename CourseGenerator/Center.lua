@@ -159,10 +159,7 @@ function Center:generate()
     for _, b in ipairs(self.blocks) do
         lastLocation = b:finalize(entries[b])
     end
-    if self.context.nHeadlands == 0 then
-        self.logger:debug('There is no headland, remove connecting path to first block.')
-        self.connectingPaths[1] = {}
-    end
+    self:_wrapUpConnectingPaths()
     self.logger:debug('Found %d block(s), %d connecting path(s).', #self.blocks, #self.connectingPaths)
     if not strict then
         local errorText = 'Could not find the shortest path on headland between blocks'
@@ -507,7 +504,7 @@ end
 --- This is used by the genetic algorithm and called thousands of times when the fitness of new
 --- generations are calculated. As the population consists of the same blocks and same entry/exit
 --- points (and thus, same paths), just in different order, we cache the entries/exits/paths for
---- a better performance, otherwise calculating a concave field
+--- a better performance.
 ---@param headland cg.Headland
 ---@param v1 cg.Vector
 ---@param v2 cg.Vector
@@ -534,6 +531,18 @@ function Center:_findShortestPathOnHeadland(headland, v1, v2)
         pc[v1][v2] = headland:getPolygon():getShortestPathBetween(cvc[v1].ix, cvc[v2].ix)
     end
     return pc[v1][v2]
+end
+
+function Center:_wrapUpConnectingPaths()
+    if self.context.nHeadlands == 0 then
+        self.logger:debug('There is no headland, remove connecting path(s).')
+        for i = 1, #self.blocks do
+            -- instead of the connecting track use pathfinder to the entry of the next block
+            self.connectingPaths[i] = {}
+            self.blocks[i]:getEntryVertex():getAttributes():setUsePathfinderToThisWaypoint()
+            self.blocks[i]:getExitVertex():getAttributes():setUsePathfinderToNextWaypoint()
+        end
+    end
 end
 
 ---@class cg.Center

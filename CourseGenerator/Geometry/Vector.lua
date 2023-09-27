@@ -237,7 +237,7 @@ end
 -- for tests only
 function Vector:almostEquals(other)
     -- if luaunit is used, use the epsilon defined there
-    local margin = (lu and lu.EPS) or 0.0001
+    local margin = (lu and lu.EPS) or 0.001
     return math.abs(self.x - other.x) <= margin and math.abs(self.y - other.y) <= margin
 end
 

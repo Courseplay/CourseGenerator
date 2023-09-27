@@ -93,7 +93,7 @@ end
 --- if this is true, the driver should use the pathfinder to navigate to the next waypoint. One example of this is
 --- switching from an end of the row to an island headland.
 function WaypointAttributes:shouldUsePathfinderToNextWaypoint()
-    return self.usePathfinderToNextWaypoint
+        return self.usePathfinderToNextWaypoint
 end
 
 

@@ -18,7 +18,7 @@ table.insert(parameters, workingWidth)
 local turningRadius = AdjustableParameter(7, 'radius', 'T', 't', 0.2, 0, 20)
 table.insert(parameters, turningRadius)
 -- number of headland passes around the field boundary
-local nHeadlandPasses = AdjustableParameter(2, 'headlands', 'P', 'p', 1, 0, 100)
+local nHeadlandPasses = AdjustableParameter(0, 'headlands', 'P', 'p', 1, 0, 100)
 table.insert(parameters, nHeadlandPasses)
 local nHeadlandsWithRoundCorners = AdjustableParameter(0, 'headlands with round corners', 'R', 'r', 1, 0, 100)
 table.insert(parameters, nHeadlandsWithRoundCorners)
@@ -101,6 +101,7 @@ local cornerColor = { 1, 1, 0.0, 0.8 }
 local islandBypassColor = { 0, 0.2, 1.0 }
 local debugColor = { 0.8, 0, 0, 0.5 }
 local debugTextColor = { 0.8, 0, 0, 1 }
+local warningColor = { 1, 0.5, 0 }
 local highlightedWaypointColor = { 0.7, 0.7, 0.7, 1 }
 local highlightedWaypointColorForward = { 0, 0.7, 0, 1 }
 local highlightedWaypointColorBackward = { 0.7, 0, 0, 1 }
@@ -252,7 +253,9 @@ end
 
 local function findCurrentVertices(sx, sy)
     local x, y = screenToWorld(sx, sy)
-    return findVertexForPosition(course:getPath(), x, y)
+    if course then
+        return findVertexForPosition(course:getPath(), x, y)
+    end
 end
 
 local function selectFieldUnderCursor()
@@ -285,7 +288,7 @@ end
 
 local function drawPath(p)
     if #p > 1 then
-        for _, v in p:vertices() do
+        for i, v in p:vertices() do
             if v:getExitEdge() then
                 if v:getAttributes():shouldUsePathfinderToNextWaypoint() then
                     love.graphics.setLineWidth(5 * lineWidth)
@@ -303,6 +306,11 @@ local function drawPath(p)
                 love.graphics.setLineWidth(5 * lineWidth)
                 love.graphics.setColor(usePathfinderColor)
                 love.graphics.line(v.x, v.y, v:getEntryEdge():getBase().x, v:getEntryEdge():getBase().y)
+            end
+            if p[i + 1] and v:almostEquals(p[i + 1]) then
+                -- two subsequent vertices have the same position
+                love.graphics.setColor(warningColor)
+                love.graphics.circle('line', v.x, v.y, 2)
             end
             drawVertex(v)
         end
@@ -503,10 +511,12 @@ local function drawGraphics()
     love.graphics.replaceTransform(graphicsTransform)
     love.graphics.setPointSize(pointSize)
     drawFields()
-    drawHeadlands()
-    drawCenter()
-    drawPath(course:getPath())
-    drawSwath(course:getPath())
+    if course then
+        drawHeadlands()
+        drawCenter()
+        drawPath(course:getPath())
+        drawSwath(course:getPath())
+    end
     drawStartLocation()
 end
 
