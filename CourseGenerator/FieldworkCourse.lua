@@ -64,6 +64,15 @@ function FieldworkCourse:getPath()
     return self.path
 end
 
+function FieldworkCourse:reverse()
+    -- make sure we have the forward path
+    self:getPath()
+    self.path:reverse()
+    for _, v in ipairs(self.path) do
+        v:getAttributes():_reverse()
+    end
+end
+
 ---@return cg.Polyline
 function FieldworkCourse:getHeadlandPath()
     return self.headlandPath

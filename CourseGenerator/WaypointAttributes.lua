@@ -93,9 +93,8 @@ end
 --- if this is true, the driver should use the pathfinder to navigate to the next waypoint. One example of this is
 --- switching from an end of the row to an island headland.
 function WaypointAttributes:shouldUsePathfinderToNextWaypoint()
-        return self.usePathfinderToNextWaypoint
+    return self.usePathfinderToNextWaypoint
 end
-
 
 function WaypointAttributes:setUsePathfinderToThisWaypoint()
     self.usePathfinderToThisWaypoint = true
@@ -106,7 +105,6 @@ end
 function WaypointAttributes:shouldUsePathfinderToThisWaypoint()
     return self.usePathfinderToThisWaypoint
 end
-
 
 function WaypointAttributes:setOnConnectingPath()
     self.isOnConnectingPath = true
@@ -140,6 +138,13 @@ end
 ---@return cg.Island|nil
 function WaypointAttributes:_getAtIsland()
     return self.atHeadland and self.atHeadland:isIslandHeadland() and self.atHeadland:getIsland()
+end
+
+--- For generator internal use only: when reversing a complete course, make sure the attributes
+--- are also reversed
+function WaypointAttributes:_reverse()
+    self.rowStart, self.rowEnd = self.rowEnd, self.rowStart
+    self.usePathfinderToThisWaypoint, self.usePathfinderToNextWaypoint = self.usePathfinderToNextWaypoint, self.usePathfinderToThisWaypoint
 end
 
 function WaypointAttributes:__tostring()
