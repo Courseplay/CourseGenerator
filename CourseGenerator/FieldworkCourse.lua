@@ -64,6 +64,23 @@ function FieldworkCourse:getPath()
     return self.path
 end
 
+--- Reverse the course, so the vehicle drives it in the opposite direction. The only changes made
+--- during reversing is flipping the attributes where applicable, for instance, row ends become row
+--- starts.
+--- This is for cases where someone wants to drive the exact same course, for instance baling from
+--- starting on the headland and finishing on the center, and then collecting the bales starting
+--- from the center towards the headland.
+--- Note that reverse() guarantees it is the exact same course just backwards, whereas generating
+--- a course with starting in the center instead of the headland may result in slightly different path.
+function FieldworkCourse:reverse()
+    -- make sure we have the forward path
+    self:getPath()
+    self.path:reverse()
+    for _, v in ipairs(self.path) do
+        v:getAttributes():_reverse()
+    end
+end
+
 ---@return cg.Polyline
 function FieldworkCourse:getHeadlandPath()
     return self.headlandPath
@@ -90,9 +107,6 @@ end
 --- Generate the headlands based on the current context or the context passed in here
 ---@param context cg.FieldworkContext if defined, set it as current context before generating the headlands
 function FieldworkCourse:generateHeadlands(context)
-    if context then
-        self:_setContext(context)
-    end
     self.headlands = {}
     self.logger:debug('generating %d headlands with round corners, then %d with sharp corners',
             self.nHeadlandsWithRoundCorners, self.nHeadlands - self.nHeadlandsWithRoundCorners)

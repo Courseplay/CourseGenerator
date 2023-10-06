@@ -71,6 +71,8 @@ local showDebugInfo = ToggleParameter('show debug info', false, 'd', true)
 table.insert(parameters, showDebugInfo)
 local showSwath = ToggleParameter('show swath', false, '1', true)
 table.insert(parameters, showSwath)
+local reverseCourse = ToggleParameter('reverse', false, 'v', true)
+table.insert(parameters, reverseCourse)
 
 local profilerEnabled = false
 local fileName = ''
@@ -85,6 +87,7 @@ local xOffset, yOffset = 0, 0
 local startX, startY, baselineX, baselineY = 0, 0, 0, 0
 
 local graphicsTransform, textTransform, statusTransform, mouseTransform, contextTransform, errorTransform
+local startSign, stopSign
 
 local parameterNameColor = { 1, 1, 1 }
 local parameterKeyColor = { 0, 1, 1 }
@@ -161,6 +164,9 @@ local function generate()
         context:setRowPattern(cg.RowPattern.create(rowPattern:get(), nRows:get(), leaveSkippedRowsUnworked:get()))
     end
     course = cg.FieldworkCourse(context)
+    if reverseCourse:get() then
+        course:reverse()
+    end
     if profilerEnabled then
         print(love.profiler.report(40))
         love.profiler.reset()
@@ -218,6 +224,10 @@ function love.load(arg)
     love.graphics.setLineWidth(lineWidth)
     love.window.setMode(windowWidth, windowHeight, { highdpi = true })
     love.window.setTitle(string.format('Course Generator - %s - SelectedField %d', fileName, selectedField:getId()))
+
+    startSign = love.graphics.newImage('Courseplay_FS22/img/signs/start.dds')
+    stopSign = love.graphics.newImage('Courseplay_FS22/img/signs/stop.dds')
+
     generate()
 end
 
@@ -314,6 +324,10 @@ local function drawPath(p)
             end
             drawVertex(v)
         end
+        love.graphics.scale(1, -1)
+        local signScale = 0.03
+        love.graphics.draw(startSign, p[1].x - 2, -p[1].y - 2, 0, signScale, signScale)
+        love.graphics.draw(stopSign, p[#p].x - 2, -p[#p].y - 2, 0, signScale, signScale)
     end
 end
 
