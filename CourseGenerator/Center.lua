@@ -66,7 +66,8 @@ function Center:generate()
     -- first, we split the field into blocks. Simple convex fields have just one block only,
     -- but odd shaped, concave fields or fields with island may have more blocks
     if self.context.useBaselineEdge then
-        self.rows = self:_generateCurvedUpDownRows()
+        self.rows = cg.CurvedPathHelper.generateCurvedUpDownRows(self.boundary, self.context.baselineEdge,
+                self.context.workingWidth, self.context.turningRadius, nil)
     else
         local angle = self.context.autoRowAngle and self:_findBestRowAngle() or self.context.rowAngle
         self.rows = self:_generateStraightUpDownRows(angle)
@@ -162,9 +163,7 @@ function Center:generate()
     self:_wrapUpConnectingPaths()
     self.logger:debug('Found %d block(s), %d connecting path(s).', #self.blocks, #self.connectingPaths)
     if not strict then
-        local errorText = 'Could not find the shortest path on headland between blocks'
-        self.logger:error(errorText)
-        self.context:addError(errorText)
+        self.context:addError('Could not find the shortest path on headland between blocks')
     end
     return lastLocation
 end
@@ -359,73 +358,7 @@ function Center:_calculateRowDistribution(workingWidth, fieldWidth, sameWidth, o
     end
 end
 
-function Center:_generateCurvedUpDownRows()
-    local rows = {}
 
-    local function getIntersectionsExtending(row, boundary)
-        local intersections, extensions = {}, 0
-        repeat
-            intersections = row:getIntersections(boundary, 1)
-            local evenNumberOfIntersections = #intersections % 2 == 0
-            if #intersections < 2 or not evenNumberOfIntersections then
-                row:extendStart(50)
-                row:extendEnd(50)
-                extensions = extensions + 1
-            end
-        until (#intersections > 1 and evenNumberOfIntersections) or extensions > 3
-        if #intersections > 1 and extensions > 0 then
-            self.logger:debug('Row %d extended to intersect boundary', #rows + 1)
-        elseif #intersections < 2 then
-            self.logger:debug('Row %d could not be extended to intersect boundary (tries: %d)', #rows + 1, extensions)
-        end
-        return intersections
-    end
-
-    local baseline = self:_createCurvedBaseline()
-    baseline:extendStart(50)
-    baseline:extendEnd(50)
-    -- always generate inwards
-    local offset = self.context.headlandClockwise and -self.context.workingWidth or self.context.workingWidth
-    local row = baseline:createNext(offset)
-    getIntersectionsExtending(row, self.boundary)
-    table.insert(rows, row)
-    repeat
-        row = row:createNext(offset)
-        local intersections = getIntersectionsExtending(row, self.boundary)
-        table.insert(rows, row)
-    until #rows > 100 or #intersections < 2
-    return rows
-end
-
---- Create a baseline for the up/down rows, which is not necessarily straight, instead, it follows a section
---- of the field boundary. This way some odd-shaped fields can be covered with less turns.
-function Center:_createCurvedBaseline()
-    local closest = self.boundary:findClosestVertexToPoint(self.context.baselineEdge or self.boundary:at(1))
-    return self:_findLongestStraightSection(closest.ix, self.context.turningRadius)
-end
-
----@param ix number the vertex of the boundary to start the search
----@param radiusThreshold number straight section ends when the radius is under this threshold
----@return cg.Row array of vectors (can be empty) from ix to the start of the straight section
-function Center:_findLongestStraightSection(ix, radiusThreshold)
-    local i = ix
-    local section = cg.Row(self.context.workingWidth)
-    while math.abs(self.boundary:at(i):getRadius()) > radiusThreshold do
-        section:append((self.boundary:at(i)):clone())
-        i = i - 1
-    end
-    section:reverse()
-    i = ix + 1
-    while math.abs(self.boundary:at(i):getRadius()) > radiusThreshold do
-        section:append((self.boundary:at(i)):clone())
-        i = i + 1
-    end
-    section:calculateProperties()
-    -- no straight section found, bail out here
-    self.logger:debug('Longest straight section found %d vertices, %.1f m', #section, section:getLength())
-    cg.addDebugPolyline(section)
-    return section
-end
 
 ---@param rows cg.Row[]
 function Center:_splitIntoBlocks(rows)

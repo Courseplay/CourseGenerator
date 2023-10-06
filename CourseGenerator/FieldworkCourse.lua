@@ -29,7 +29,7 @@ function FieldworkCourse:init(context)
         self.headlandPath = cg.HeadlandConnector.connectHeadlandsFromOutside(self.headlands,
                 context.startLocation, self.context.workingWidth, self.context.turningRadius)
         self:routeHeadlandsAroundSmallIslands()
-        self.logger:debug('### Generating up/down rows ###')
+        self.logger:debug('### Genera]ting up/down rows ###')
         self:generateCenter()
     else
         self.logger:debug('### Generating up/down rows ###')
@@ -105,8 +105,7 @@ end
 --- Headlands
 ------------------------------------------------------------------------------------------------------------------------
 --- Generate the headlands based on the current context or the context passed in here
----@param context cg.FieldworkContext if defined, set it as current context before generating the headlands
-function FieldworkCourse:generateHeadlands(context)
+function FieldworkCourse:generateHeadlands()
     self.headlands = {}
     self.logger:debug('generating %d headlands with round corners, then %d with sharp corners',
             self.nHeadlandsWithRoundCorners, self.nHeadlands - self.nHeadlandsWithRoundCorners)
@@ -190,13 +189,7 @@ function FieldworkCourse:generateCenter()
     -- if there are no headlands, or there are, but we start working in the middle, then use the
     -- designated start location, otherwise the point where the innermost headland ends.
     if #self.headlands == 0 then
-        -- create a virtual headland to be used by the center generation, so the center does not have towards
-        -- know if the boundary is a headland or the actual field boundary. The virtual headland is half working
-        -- width wider than the field boundary so the rows in the center cover the area between the original
-        -- field boundaries.
-        local virtualHeadland = cg.Headland(self.boundary, self.context.headlandClockwise, 0,
-                self.context.workingWidth / 2, true)
-        self.center = cg.Center(self.context, virtualHeadland, self.context.startLocation, self.bigIslands)
+        self.center = cg.Center(self.context, self.virtualHeadland, self.context.startLocation, self.bigIslands)
     else
         local innerMostHeadlandPolygon = self.headlands[#self.headlands]:getPolygon()
         self.center = cg.Center(self.context, self.headlands[#self.headlands],
@@ -326,6 +319,12 @@ function FieldworkCourse:_setContext(context)
     self.nHeadlandsWithRoundCorners = self.context.nHeadlandsWithRoundCorners
     ---@type cg.Polygon
     self.boundary = cg.FieldworkCourseHelper.createUsableBoundary(context.field:getBoundary(), self.context.headlandClockwise)
+    -- create a virtual headland to be used by the center generation, so the center does not have towards
+    -- know if the boundary is a headland or the actual field boundary. The virtual headland is half working
+    -- width wider than the field boundary so the rows in the center cover the area between the original
+    -- field boundaries.
+    self.virtualHeadland = cg.Headland(self.boundary, self.context.headlandClockwise, 0,
+            self.context.workingWidth / 2, true)
     if self.context.fieldCornerRadius > 0 then
         self.logger:debug('sharpening field boundary corners')
         self.boundary:ensureMinimumRadius(self.context.fieldCornerRadius, true)

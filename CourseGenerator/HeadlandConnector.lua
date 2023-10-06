@@ -29,10 +29,10 @@ function HeadlandConnector.connectHeadlandsFromOutside(headlands, startLocation,
         headlands[i + 1].polygon:rebase(transitionEndIx + 1)
         headlandPath:appendMany(headlands[i]:getPath())
     end
-    if #headlands == 1 then
-        headlands[1]:overlap()
-    end
     headlandPath:appendMany(headlands[#headlands]:getPath())
+    if #headlands == 1 then
+        headlandPath:append(headlandPath[1]:clone())
+    end
     headlandPath:calculateProperties()
     return headlandPath
 end
@@ -63,10 +63,10 @@ function HeadlandConnector.connectHeadlandsFromInside(headlands, startLocation, 
         headlands[i - 1].polygon:rebase(transitionEndIx + 1)
         headlandPath:appendMany(headlands[i]:getPath())
     end
-    if #headlands == 1 then
-        headlands[1]:overlap()
-    end
     headlandPath:appendMany(headlands[1]:getPath())
+    if #headlands == 1 then
+        headlandPath:append(headlandPath[1]:clone())
+    end
     headlandPath:calculateProperties()
     return headlandPath
 end

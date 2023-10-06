@@ -170,6 +170,22 @@ function testRowPatternExit()
     entries[3].position:assertAlmostEquals(cg.Vector(0, 10))
     _, exit = p:getWorkSequenceAndExit(rows, entries[3])
     exit:assertAlmostEquals(cg.Vector(0, 1))
+
+    -- odd number of rows
+    rows = {}
+    row = cg.Row(5, { cg.Vector(0, 1), cg.Vector(20, 1) })
+    for _ = 1, 3 do
+        table.insert(rows, row)
+        row = row:createNext(1)
+    end
+    p = cg.RowPatternAlternatingFirstRowEntryOnly()
+    entries = p:getPossibleEntries(rows)
+    entries[1].position:assertAlmostEquals(cg.Vector(0, 1))
+    _, exit = p:getWorkSequenceAndExit(rows, entries[1])
+    exit:assertAlmostEquals(cg.Vector(20, 3))
+    entries[2].position:assertAlmostEquals(cg.Vector(20, 1))
+    _, exit = p:getWorkSequenceAndExit(rows, entries[2])
+    exit:assertAlmostEquals(cg.Vector(0, 3))
 end
 
 os.exit(lu.LuaUnit.run())

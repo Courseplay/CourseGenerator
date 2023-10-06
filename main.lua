@@ -65,10 +65,12 @@ local spiralFromInside = ToggleParameter('spiral from inside', true, 'L')
 table.insert(parameters, spiralFromInside)
 local evenRowDistribution = ToggleParameter('even row width', false, 'e')
 table.insert(parameters, evenRowDistribution)
-local useBaselineEdge = ToggleParameter('use base line edge', false, 'g')
+local useBaselineEdge = ToggleParameter('use base line edge', true, 'g')
 table.insert(parameters, useBaselineEdge)
 local showDebugInfo = ToggleParameter('show debug info', false, 'd', true)
 table.insert(parameters, showDebugInfo)
+local twoSided = ToggleParameter('two sided', true, '2')
+table.insert(parameters, twoSided)
 local showSwath = ToggleParameter('show swath', false, '1', true)
 table.insert(parameters, showSwath)
 local reverseCourse = ToggleParameter('reverse', false, 'v', true)
@@ -163,7 +165,11 @@ local function generate()
     else
         context:setRowPattern(cg.RowPattern.create(rowPattern:get(), nRows:get(), leaveSkippedRowsUnworked:get()))
     end
-    course = cg.FieldworkCourse(context)
+    if twoSided:get() then
+        course = cg.FieldworkCourseTwoSided(context)
+    else
+        course = cg.FieldworkCourse(context)
+    end
     if reverseCourse:get() then
         course:reverse()
     end
@@ -383,7 +389,7 @@ end
 
 ---@param block cg.Center
 local function drawConnectingPaths(center)
-    if center:getConnectingPaths() == nil then return end
+    if center == nil or center:getConnectingPaths() == nil then return end
     for i, p in ipairs(center:getConnectingPaths()) do
         love.graphics.setLineWidth(10 * lineWidth)
         if #p > 0 then
@@ -402,8 +408,8 @@ local function drawConnectingPaths(center)
     end
 end
 
-local function drawBlocks()
-    for ib, b in ipairs(course:getCenter():getBlocks()) do
+local function drawBlocks(center)
+    for ib, b in ipairs(center:getBlocks()) do
         love.graphics.setColor(blockColor)
         love.graphics.polygon('fill', b:getPolygon():getUnpackedVertices())
         love.graphics.setLineWidth(2 * lineWidth)
@@ -417,8 +423,8 @@ local function drawBlocks()
     end
 end
 
-local function drawCenter()
-    if course:getCenter():getDebugRows() then
+local function drawCenter(center)
+    if center:getDebugRows() then
         if showDebugInfo:get() then
             for _, r in ipairs(course:getCenter():getDebugRows()) do
                 love.graphics.setColor(debugColor)
@@ -427,7 +433,7 @@ local function drawCenter()
             end
         end
     end
-    drawBlocks()
+    drawBlocks(center)
 end
 
 local function drawFields()
@@ -527,7 +533,9 @@ local function drawGraphics()
     drawFields()
     if course then
         drawHeadlands()
-        drawCenter()
+        if course:getCenter() then
+            drawCenter(course:getCenter())
+        end
         drawPath(course:getPath())
         drawSwath(course:getPath())
     end
@@ -594,7 +602,7 @@ local function drawDebugPolylines()
     if cg.debugPolylines then
         love.graphics.push()
         love.graphics.replaceTransform(graphicsTransform)
-        love.graphics.setLineWidth(pointSize * 3)
+        love.graphics.setLineWidth(pointSize)
         for _, p in ipairs(cg.debugPolylines) do
             if #p > 1 then
                 love.graphics.setColor(p.debugColor or debugColor)

@@ -377,5 +377,14 @@ function Polygon:_getDeltaAngle()
     return self.deltaAngle
 end
 
+function Polygon:__tostring()
+    local result = ''
+    for i, v in ipairs(self) do
+        -- show N/X to indicate if we have an entry/exit edge
+        result = result .. string.format('%d %s %s/%s\n', i, v, v:getEntryEdge() and 'N' or '-', v:getExitEdge() and 'X' or '-')
+    end
+    return result
+end
+
 ---@class cg.Polygon:cg.Polyline
 cg.Polygon = Polygon

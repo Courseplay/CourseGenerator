@@ -45,6 +45,12 @@ function Block:addRow(row)
     table.insert(self.rows, row)
 end
 
+function Block:addRows(rows)
+    for _, row in ipairs(rows) do
+        self:addRow(row)
+    end
+end
+
 ---@return number of rows in this block
 function Block:getNumberOfRows()
     -- we may not have them sequenced when this is called, so can't use self.rowsInWorkSequence
@@ -95,7 +101,7 @@ function Block:finalize(entry)
     local sequence, exit = self.rowPattern:getWorkSequenceAndExit(self.rows, entry)
     self.rowsInWorkSequence = {}
     for i, rowInfo in ipairs(sequence) do
-        local row = self.rows[rowInfo.rowIx]
+        local row = self.rows[rowInfo.rowIx]:clone()
         self.logger:debug('row %d is now at position %d', row:getSequenceNumber(), i)
         if rowInfo.reverse then
             row:reverse()

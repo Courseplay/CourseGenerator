@@ -77,7 +77,7 @@ end
 -- fast, convenient way to calculate distance between two vectors
 -- (instead of (v1 - v2):length() as that seems to take a lot of CPU)
 function Vector.getDistance(v1, v2)
-    return math.sqrt(v1, v2)
+    return math.sqrt(Vector.getDistanceSquared(v1, v2))
 end
 
 -- even faster is we just need to compare, no need to square root

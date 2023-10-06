@@ -41,7 +41,9 @@ function FieldworkContext:log()
             self.rowPattern, self.autoRowAngle, math.deg(self.rowAngle), self.evenRowDistribution, self.useBaselineEdge)
 end
 
-function FieldworkContext:addError(text)
+function FieldworkContext:addError(logger, ...)
+    local text = string.format(...)
+    logger:error(text)
     table.insert(self.errors, text)
 end
 
