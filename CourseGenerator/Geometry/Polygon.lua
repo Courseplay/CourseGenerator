@@ -287,6 +287,8 @@ end
 ---@param isValidFunc function optional function accepting a cg.Vertex and returning bool to determine if this
 --- vertex should be considered at all
 ---@return cg.Vertex
+---@return number distance of the closest vertex from point
+---@return number distance of the point from exit edge of the closest vertex
 function Polygon:findClosestVertexToPoint(point, isValidFunc)
     local d, closestVertex = math.huge, nil
     for _, v in self:vertices() do
@@ -298,8 +300,8 @@ function Polygon:findClosestVertexToPoint(point, isValidFunc)
             end
         end
     end
-    local projection = closestVertex and closestVertex:getExitEdge():getScalarProjection(point)
-    return closestVertex, projection
+    local distanceFromEdge = closestVertex and closestVertex:getExitEdge():getDistanceFrom(point)
+    return closestVertex, d, distanceFromEdge
 end
 
 function Polygon:getSmallestRadiusWithinDistance(ix, dForward, dBackward)

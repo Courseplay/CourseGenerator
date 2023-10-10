@@ -169,6 +169,23 @@ local RowPatternAlternatingFirstRowEntryOnly = CpObject(RowPattern)
 ---@class cg.RowPatternAlternatingFirstRowEntryOnly : cg.RowPattern
 cg.RowPatternAlternatingFirstRowEntryOnly = RowPatternAlternatingFirstRowEntryOnly
 
+--- Alternating pattern, entry only possible at the last row
+---@class RowPatternAlternatingLastRowEntryOnly : RowPattern
+local RowPatternAlternatingLastRowEntryOnly = CpObject(RowPattern)
+---@param rows cg.Row[]
+---@return cg.RowPattern.Entry[] list of entries usable for this pattern
+function RowPatternAlternatingLastRowEntryOnly:getPossibleEntries(rows)
+    local lastRow = rows[#rows]
+    local entries = {
+        cg.RowPattern.Entry(lastRow[1], true, false, false),
+        cg.RowPattern.Entry(lastRow[#lastRow], true, false, true),
+    }
+    return entries
+end
+
+---@class cg.RowPatternAlternatingLastRowEntryOnly : cg.RowPattern
+cg.RowPatternAlternatingLastRowEntryOnly = RowPatternAlternatingLastRowEntryOnly
+
 --- Default alternating pattern, entry at either end
 ---@class RowPatternAlternating : RowPattern
 local RowPatternAlternating = CpObject(RowPattern)

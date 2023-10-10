@@ -80,6 +80,16 @@ function Block:getRows()
     return self.rowsInWorkSequence
 end
 
+---@return cg.Row first row of the block in the work sequence
+function Block:getFirstRow()
+    return self.rowsInWorkSequence[1]
+end
+
+---@return cg.Row last row of the block in the work sequence
+function Block:getLastRow()
+    return self.rowsInWorkSequence[#self.rowsInWorkSequence]
+end
+
 ---@return cg.RowPattern.Entry[]
 function Block:getPossibleEntries()
     if not self.possibleEntries then

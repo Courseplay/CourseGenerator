@@ -166,11 +166,19 @@ function Polyline:reverse()
     return self
 end
 
-function Polyline:getLength()
-    if not self.length then
-        self.length = 0
-        for _, e in self:edges() do
-            self.length = self.length + e:getLength()
+function Polyline:getLength(startIx)
+    -- we cache the full length, and if it exists, return it
+    if not self.length or startIx then
+        -- otherwise calculate length
+        local length = 0
+        for _, e in self:edges(startIx) do
+            length = length + e:getLength()
+        end
+        if startIx then
+            return length
+        else
+            -- full length was requested, cache it
+            self.length = length
         end
     end
     return self.length
@@ -259,6 +267,24 @@ function Polyline:cutEndAtIx(ix)
         table.remove(self)
     end
     self:calculateProperties(ix - 1, ix)
+end
+
+--- Cut this polyline where it first intersects with other and keep the longer part
+---@param other cg.Polyline
+function Polyline:trimAtFirstIntersection(other)
+    local intersections = self:getIntersections(other)
+    if #intersections == 0 then
+        return
+    end
+    -- where is the longer part?
+    local lengthFromIntersectionToEnd = self:getLength(intersections[1].ixA)
+    if lengthFromIntersectionToEnd < self:getLength() / 2 then
+        -- shorter part towards the end
+        self:cutEndAtIx(intersections[1].ixA)
+    else
+        -- shorter part towards the start
+        self:cutStartAtIx(intersections[1].ixA + 1)
+    end
 end
 
 --- Calculate all interesting properties we may need later for more advanced functions

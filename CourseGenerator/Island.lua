@@ -221,7 +221,7 @@ function Island.findIslands(polygon)
             if not isOnField then
                 -- add a vertex only if it is far enough from the field boundary
                 -- to filter false positives around the field boundary
-                local _, d = polygon:getClosestPointIndex(grid[index])
+                local _, d, dFromEdge = polygon:findClosestVertexToPoint(grid[index])
                 -- TODO: should calculate the closest distance to polygon edge, not
                 -- the vertices. This may miss an island close enough to the field boundary
                 if d > 8 * Island.gridSpacing then

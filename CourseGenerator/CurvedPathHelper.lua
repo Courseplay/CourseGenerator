@@ -9,9 +9,13 @@ local logger = cg.Logger('CurvedPathHelper')
 ---@param boundary cg.Polygon the boundary, usually headland or virtual headland. Rows must cover the area within the
 --- boundary - working width / 2
 ---@param baselineLocation cg.Vector the field edge closest to this location will be the one the generated rows follow
+---@param workingWidth number distance
 ---@param nRows number how many rows to generate. If not given, keep generating until the area
+---@param firstRowWidth number|nil optional width of the first row (offset between the baseline and the first row.
+--- All other rows will be offset by workingWidth
 --- within boundary is covered.
-function CurvedPathHelper.generateCurvedUpDownRows(boundary, baselineLocation, workingWidth, turningRadius, nRows)
+function CurvedPathHelper.generateCurvedUpDownRows(boundary, baselineLocation, workingWidth, turningRadius, nRows,
+                                                   firstRowWidth)
     local rows = {}
     nRows = nRows or 300
     local function getIntersectionsExtending(row)
@@ -45,7 +49,11 @@ function CurvedPathHelper.generateCurvedUpDownRows(boundary, baselineLocation, w
     local offset = boundary:isClockwise() and -workingWidth or workingWidth
     local row, intersections = baseline
     repeat
-        row = row:createNext(offset)
+        if firstRowWidth and #rows == 0 then
+            row = row:createNext(offset / 2)
+        else
+            row = row:createNext(offset)
+        end
         intersections = getIntersectionsExtending(row)
         table.insert(rows, row)
     until #rows >= nRows or #intersections < 2
@@ -58,16 +66,19 @@ end
 ---@param section cg.Row empty row passed in to hold the straight section around ix
 ---@return cg.Row the straight section as a row, same object as passed in as the section
 function CurvedPathHelper.findLongestStraightSection(boundary, ix, radiusThreshold, section)
-    local i = ix
-    while math.abs(boundary:at(i):getRadius()) > radiusThreshold do
+    local i, n = ix, 1
+    -- max one round only (n <)
+    while n < #boundary and math.abs(boundary:at(i):getRadius()) > radiusThreshold do
         section:append((boundary:at(i)):clone())
         i = i - 1
+        n = n + 1
     end
     section:reverse()
-    i = ix + 1
-    while math.abs(boundary:at(i):getRadius()) > radiusThreshold do
+    i, n = ix + 1, 1
+    while n < #boundary and math.abs(boundary:at(i):getRadius()) > radiusThreshold do
         section:append((boundary:at(i)):clone())
         i = i + 1
+        n = n + 1
     end
     section:calculateProperties()
     -- no straight section found, bail out here
