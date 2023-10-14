@@ -104,5 +104,13 @@ function FieldworkCourseHelper.createUsableBoundary(originalBoundary, clockwise)
     return usableBoundary
 end
 
+function FieldworkCourseHelper.createVirtualHeadland(fieldBoundary, isClockwise, workingWidth)
+    -- create a virtual headland to be used by the center generation, so the center does not have towards
+    -- know if the boundary is a headland or the actual field boundary. The virtual headland is half working
+    -- width wider than the field boundary so the rows in the center cover the area between the original
+    -- field boundaries.
+    return cg.Headland(fieldBoundary, isClockwise, 0, workingWidth / 2, true)
+end
+
 ---@class cg.FieldworkCourseHelper
 cg.FieldworkCourseHelper = FieldworkCourseHelper

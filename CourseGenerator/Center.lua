@@ -8,14 +8,25 @@
 local Center = CpObject()
 
 ---@param context cg.FieldworkContext
----@param headland cg.Headland the headland (or virtual headland)
+---@param boundary cg.Polygon the field boundary
+---@param headland cg.Headland|nil the innermost headland if exists
 ---@param startLocation cg.Vector location of the vehicle before it starts working on the center.
 ---@param bigIslands cg.Island[] islands too big to circle
-function Center:init(context, headland, startLocation, bigIslands)
+function Center:init(context, boundary, headland, startLocation, bigIslands)
     self.logger = cg.Logger('Center', cg.Logger.level.debug)
-    self.boundary = headland:getPolygon()
-    self.headland = headland
     self.context = context
+    if self.context.nHeadlands == 0 then
+        -- if there are no headlands, we generate a virtual one, from the field boundary
+        -- so using this later is equivalent of having an actual headland
+        local virtualHeadland = cg.FieldworkCourseHelper.createVirtualHeadland(boundary, self.context.headlandClockwise,
+                self.context.workingWidth)
+        self.headlandPolygon = virtualHeadland:getPolygon()
+        self.headland = virtualHeadland
+    else
+        self.headlandPolygon = headland:getPolygon()
+        self.headland = headland
+    end
+    self.boundary = boundary
     self.startLocation = startLocation
     self.bigIslands = bigIslands
     -- All the blocks we divided the center into
@@ -66,7 +77,7 @@ function Center:generate()
     -- first, we split the field into blocks. Simple convex fields have just one block only,
     -- but odd shaped, concave fields or fields with island may have more blocks
     if self.context.useBaselineEdge then
-        self.rows = cg.CurvedPathHelper.generateCurvedUpDownRows(self.boundary, self.context.baselineEdge,
+        self.rows = cg.CurvedPathHelper.generateCurvedUpDownRows(self.headlandPolygon, self.context.baselineEdge,
                 self.context.workingWidth, self.context.turningRadius, nil)
     else
         local angle = self.context.autoRowAngle and self:_findBestRowAngle() or self.context.rowAngle
@@ -201,7 +212,7 @@ end
 ------------------------------------------------------------------------------------------------------------------------
 function Center:_generateStraightUpDownRows(rowAngle, suppressLog)
     local baseline = self:_createStraightBaseline(rowAngle)
-    local _, dMin, _, dMax = self.boundary:findClosestAndFarthestVertexToLineSegment(baseline[1]:getExitEdge())
+    local _, dMin, _, dMax = self.headlandPolygon:findClosestAndFarthestVertexToLineSegment(baseline[1]:getExitEdge())
 
     -- make the best effort to have the row that overlaps the headland (or the last row when there is no headland)
     -- the last row we work on. This usually works for the alternating/skip pattern, no guarantee for other patterns.
@@ -248,7 +259,7 @@ end
 
 function Center:_findBestRowAngle()
     local minScore, minRows, bestAngle = math.huge, math.huge, 0
-    local longestEdgeDirection = self.boundary:getLongestEdgeDirection()
+    local longestEdgeDirection = self.headlandPolygon:getLongestEdgeDirection()
     self.logger:debug('  longest edge direction %.1f', math.deg(longestEdgeDirection))
     for a = -90, 90, 1 do
         local rows = self:_generateStraightUpDownRows(math.rad(a), true)
@@ -271,7 +282,7 @@ end
 function Center:_createStraightBaseline(rowAngle)
     -- Set up a baseline. This goes through the lower left or right corner of the bounding box, at the requested
     -- angle, and long enough that when shifted (offset copies are created), will cover the field at any angle.
-    local x1, y1, x2, y2 = self.boundary:getBoundingBox()
+    local x1, y1, x2, y2 = self.headlandPolygon:getBoundingBox()
     -- add a little margin so all lines are a little longer than they should be, this way
     -- we guarantee that the first intersection with the boundary will always be well defined and won't
     -- fall exactly on the boundary.
@@ -357,8 +368,6 @@ function Center:_calculateRowDistribution(workingWidth, fieldWidth, sameWidth, o
         return rowOffsets
     end
 end
-
-
 
 ---@param rows cg.Row[]
 function Center:_splitIntoBlocks(rows)

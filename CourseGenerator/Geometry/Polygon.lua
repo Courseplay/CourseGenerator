@@ -283,27 +283,6 @@ function Polygon:moveForward(ix, d, isValidFunc)
     return nil
 end
 
----@param point Vector
----@param isValidFunc function optional function accepting a cg.Vertex and returning bool to determine if this
---- vertex should be considered at all
----@return cg.Vertex
----@return number distance of the closest vertex from point
----@return number distance of the point from exit edge of the closest vertex
-function Polygon:findClosestVertexToPoint(point, isValidFunc)
-    local d, closestVertex = math.huge, nil
-    for _, v in self:vertices() do
-        if not isValidFunc or isValidFunc(v) then
-            local dFromV = (point - v):length()
-            if dFromV < d then
-                d = dFromV
-                closestVertex = v
-            end
-        end
-    end
-    local distanceFromEdge = closestVertex and closestVertex:getExitEdge():getDistanceFrom(point)
-    return closestVertex, d, distanceFromEdge
-end
-
 function Polygon:getSmallestRadiusWithinDistance(ix, dForward, dBackward)
     local i, dElapsed, minRadius = ix, 0, math.huge
     while dElapsed < dBackward do

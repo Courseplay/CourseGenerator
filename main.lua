@@ -602,11 +602,15 @@ local function drawDebugPolylines()
     if cg.debugPolylines then
         love.graphics.push()
         love.graphics.replaceTransform(graphicsTransform)
+        love.graphics.setPointSize(pointSize)
         love.graphics.setLineWidth(pointSize)
         for _, p in ipairs(cg.debugPolylines) do
             if #p > 1 then
                 love.graphics.setColor(p.debugColor or debugColor)
-                love.graphics.line(p:getUnpackedVertices())
+                --love.graphics.line(p:getUnpackedVertices())
+                for _, v in ipairs(p) do
+                    love.graphics.points(v.x, v.y)
+                end
             end
         end
         love.graphics.pop()

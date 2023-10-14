@@ -605,6 +605,34 @@ function Polyline:findClosestAndFarthestVertexToLineSegment(lineSegment)
     return closestVertex, dMin, farthestVertex, dMax
 end
 
+---@param point Vector
+---@param isValidFunc function optional function accepting a cg.Vertex and returning bool to determine if this
+--- vertex should be considered at all
+---@return cg.Vertex
+---@return number distance of the closest vertex from point
+---@return number|nil distance of the point from exit (or if it does not exist, the entry) edge of the closest vertex
+function Polyline:findClosestVertexToPoint(point, isValidFunc)
+    local d, closestVertex = math.huge, nil
+    for _, v in self:vertices() do
+        if not isValidFunc or isValidFunc(v) then
+            local dFromV = (point - v):length()
+            if dFromV < d then
+                d = dFromV
+                closestVertex = v
+            end
+        end
+    end
+    local distanceFromEdge
+    if closestVertex then
+        if closestVertex:getExitEdge() then
+            distanceFromEdge = closestVertex:getExitEdge():getDistanceFrom(point)
+        elseif closestVertex:getEntryEdge() then
+            distanceFromEdge = closestVertex:getEntryEdge():getDistanceFrom(point)
+        end
+        return closestVertex, d, distanceFromEdge
+    end
+end
+
 --- Does this line intersects the other?
 ---
 --- This is a faster version of getIntersections() for the case where we only want to

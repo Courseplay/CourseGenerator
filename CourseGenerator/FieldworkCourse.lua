@@ -189,10 +189,10 @@ function FieldworkCourse:generateCenter()
     -- if there are no headlands, or there are, but we start working in the middle, then use the
     -- designated start location, otherwise the point where the innermost headland ends.
     if #self.headlands == 0 then
-        self.center = cg.Center(self.context, self.virtualHeadland, self.context.startLocation, self.bigIslands)
+        self.center = cg.Center(self.context, self.boundary, nil, self.context.startLocation, self.bigIslands)
     else
         local innerMostHeadlandPolygon = self.headlands[#self.headlands]:getPolygon()
-        self.center = cg.Center(self.context, self.headlands[#self.headlands],
+        self.center = cg.Center(self.context, self.boundary, self.headlands[#self.headlands],
                 self.context.headlandFirst and
                         innerMostHeadlandPolygon[#innerMostHeadlandPolygon] or
                         self.context.startLocation,
@@ -245,7 +245,6 @@ function FieldworkCourse:routeHeadlandsAroundSmallIslands()
         end
     end
 end
-
 
 function FieldworkCourse:bypassIslands()
     self.logger:debug('### Bypassing small islands ###')
@@ -319,12 +318,6 @@ function FieldworkCourse:_setContext(context)
     self.nHeadlandsWithRoundCorners = self.context.nHeadlandsWithRoundCorners
     ---@type cg.Polygon
     self.boundary = cg.FieldworkCourseHelper.createUsableBoundary(context.field:getBoundary(), self.context.headlandClockwise)
-    -- create a virtual headland to be used by the center generation, so the center does not have towards
-    -- know if the boundary is a headland or the actual field boundary. The virtual headland is half working
-    -- width wider than the field boundary so the rows in the center cover the area between the original
-    -- field boundaries.
-    self.virtualHeadland = cg.Headland(self.boundary, self.context.headlandClockwise, 0,
-            self.context.workingWidth / 2, true)
     if self.context.fieldCornerRadius > 0 then
         self.logger:debug('sharpening field boundary corners')
         self.boundary:ensureMinimumRadius(self.context.fieldCornerRadius, true)
@@ -342,7 +335,6 @@ function FieldworkCourse:_removeHeadland(n)
     self.logger:error('could not generate headland %d, course has %d headlands, %d rounded',
             n, self.nHeadlands, self.nHeadlandsWithRoundCorners)
 end
-
 
 ---@class cg.FieldworkCourse
 cg.FieldworkCourse = FieldworkCourse
