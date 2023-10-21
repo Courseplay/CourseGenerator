@@ -204,6 +204,7 @@ function Polyline:extendEnd(length)
     newEntryEdge:extend(length)
     self[#self] = cg.Vertex.fromVector(newEntryEdge:getEnd())
     self:calculateProperties(#self - 1)
+    return self
 end
 
 ---@param length number the polyline is extended backwards (first vertex moved).
@@ -212,6 +213,7 @@ function Polyline:extendStart(length)
     newExitEdge:extend(-length)
     self[1] = cg.Vertex.fromVector(newExitEdge:getBase())
     self:calculateProperties(1, 2)
+    return self
 end
 
 ---@param length number shorten the Polyline at the last vertex
@@ -332,7 +334,11 @@ end
 --- Use this to fix a polyline with many vertices where some edges may be slightly longer than the
 --- maximum. Use splitEdges() instead if you have just a few (as little as 2) vertices and
 --- need a vertex at every given distance
+---@param maximumLength number|nil default cg.cMaxEdgeLength,
+---@param maxDeltaAngleForOffset number|nil default cg.cMaxDeltaAngleForMaxEdgeLength
 function Polyline:ensureMaximumEdgeLength(maximumLength, maxDeltaAngleForOffset)
+    maximumLength = maximumLength or cg.cMaxEdgeLength
+    maxDeltaAngleForOffset = maxDeltaAngleForOffset or cg.cMaxDeltaAngleForMaxEdgeLength
     local i = 1
     while i <= self:fwdIterationLimit() do
         local exitEdge = cg.LineSegment.fromVectors(self:at(i), self:at(i + 1))
@@ -517,7 +523,7 @@ function Polyline:ensureMinimumRadius(r, makeCorners)
 
     self:ensureMinimumEdgeLength(cg.cMinEdgeLength)
     if makeCorners then
-        self:ensureMaximumEdgeLength(cg.cMaxEdgeLength, cg.cMaxDeltaAngleForMaxEdgeLength)
+        self:ensureMaximumEdgeLength(cg.cMaxEdgeLength)
     end
     self:calculateProperties()
 end

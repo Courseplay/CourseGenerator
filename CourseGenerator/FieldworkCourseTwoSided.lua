@@ -14,6 +14,11 @@
 -- 3: end headland block
 -- 4: center
 
+--- For this pattern, we use a center restricted to a single block as there is no headland around it that
+--- could be used to drive to the next block in all cases.
+--- Also, the center rows are always generated from the side opposite of the middle headland block, using that
+--- opposite side as a base edge as this is the easiest way to make sure they do not exit the field.
+
 ---@class FieldworkCourseTwoSided : cg.FieldworkCourse
 local FieldworkCourseTwoSided = CpObject(cg.FieldworkCourse)
 
@@ -23,9 +28,55 @@ function FieldworkCourseTwoSided:init(context)
     self.virtualHeadland = cg.FieldworkCourseHelper.createVirtualHeadland(self.boundary, self.context.headlandClockwise,
             self.context.workingWidth)
     self.headlandPath = cg.Polyline()
+
+    self:generateHeadlands()
+
     self.circledIslands = {}
     self:setupAndSortIslands()
 
+    local centerBoundary, baselineLocation = self:_createCenterBoundary()
+    if centerBoundary == nil then
+        self.context:addError(self.logger, 'Can\'t create center boundary for this field with the current settings')
+        return
+    end
+    -- this is the headland around the center part, that is, the area #4 on the drawing above
+    local centerHeadland = cg.Headland(centerBoundary, centerBoundary:isClockwise(), 0, 0, true)
+    centerHeadland:sharpenCorners(2 * self.context.turningRadius)
+    -- TODO: do this as part of sharpenCorners()?
+    centerHeadland:getPolygon():ensureMaximumEdgeLength()
+    centerHeadland:getPolygon():calculateProperties()
+
+    -- start position for the center
+    local lastHeadlandRow = self.endHeadlandBlock:getLastRow()
+    -- where to start generating the rows
+    self.context.baselineEdge = baselineLocation
+    self.center = cg.CenterTwoSided(self.context, self.boundary, centerHeadland, lastHeadlandRow[#lastHeadlandRow], self.bigIslands)
+    self.center:generate()
+end
+
+---@return cg.Polyline
+function FieldworkCourseTwoSided:getHeadlandPath()
+    local headlandPath = cg.Polyline()
+    for _, r in ipairs(self.startHeadlandBlock:getRows()) do
+        headlandPath:appendMany(r)
+    end
+    for _, r in ipairs(self.middleHeadlandBlock:getRows()) do
+        headlandPath:appendMany(r)
+    end
+    for _, r in ipairs(self.endHeadlandBlock:getRows()) do
+        headlandPath:appendMany(r)
+    end
+    self.logger:debug('headland path with %d vertices', #headlandPath)
+    return headlandPath
+end
+
+---@return cg.Polyline
+function FieldworkCourseTwoSided:getCenterPath()
+    local centerPath = self.center:getPath()
+    return centerPath
+end
+
+function FieldworkCourseTwoSided:generateHeadlands()
     -- this is the side where we start working, generate here headlands parallel to the field edge
     -- block 1 on the drawing above
     self:_createStartHeadlandBlock()
@@ -43,8 +94,8 @@ function FieldworkCourseTwoSided:init(context)
     end
 
     -- find the opposite end of the field ...
-    local center = self.boundary:getCenter()
-    local oppositeBaselineLocation = center - (self.startHeadlandBlock:getRows()[1]:getMiddle() - center)
+    local fieldCenter = self.boundary:getCenter()
+    local oppositeBaselineLocation = fieldCenter - (self.startHeadlandBlock:getRows()[1]:getMiddle() - fieldCenter)
     -- ... and generate headlands over there too, block 2 on the drawing above
     self:_createEndHeadlandBlock(oppositeBaselineLocation, self.middleHeadlandBlock:getRows()[1])
     if self.endHeadlandBlock:getNumberOfRows() == 0 then
@@ -74,42 +125,6 @@ function FieldworkCourseTwoSided:init(context)
         self.context:addError(self.logger, 'Can\'t connect headlands for this field with the current settings')
         return
     end
-    local centerBoundary, lastRow = self:_createCenterBoundary()
-    if centerBoundary == nil then
-        self.context:addError(self.logger, 'Can\'t create center boundary for this field with the current settings')
-        return
-    end
-    -- this is the headland around the center part, that is, the area #4 on the drawing above
-    self.middleHeadland = cg.Headland(centerBoundary, centerBoundary:isClockwise(), 0, 0, true)
-
-    local lastHeadlandRow = self.endHeadlandBlock:getLastRow()
-    self.context.baselineEdge = self.middleHeadlandBlock:getFirstRow():getCenter()
-    cg.addDebugPoint(self.context.baselineEdge)
-    self.center = cg.CenterTwoSided(self.context, self.boundary, self.middleHeadland, lastHeadlandRow[#lastHeadlandRow] ,
-            self.bigIslands, lastRow)
-    self.center:generate()
-end
-
----@return cg.Polyline
-function FieldworkCourseTwoSided:getHeadlandPath()
-    local headlandPath = cg.Polyline()
-    for _, r in ipairs(self.startHeadlandBlock:getRows()) do
-        headlandPath:appendMany(r)
-    end
-    for _, r in ipairs(self.middleHeadlandBlock:getRows()) do
-        headlandPath:appendMany(r)
-    end
-    for _, r in ipairs(self.endHeadlandBlock:getRows()) do
-        headlandPath:appendMany(r)
-    end
-    self.logger:debug('headland path with %d vertices', #headlandPath)
-    return headlandPath
-end
-
----@return cg.Polyline
-function FieldworkCourseTwoSided:getCenterPath()
-    local centerPath = self.center:getPath()
-    return centerPath
 end
 
 --- Create headland at the starting end of the field
@@ -118,7 +133,6 @@ function FieldworkCourseTwoSided:_createStartHeadlandBlock()
     local rows = cg.CurvedPathHelper.generateCurvedUpDownRows(self.boundary, self.context.baselineEdge,
             self.context.workingWidth, self.context.turningRadius, self.context.nHeadlands, self.context.workingWidth / 2)
     self.startSideBoundary = rows[#rows]:clone()
-    cg.addDebugPolyline(self.startSideBoundary, {1, 1, 0, 0.3})
     self.startHeadlandBlock = cg.Block(cg.RowPatternAlternatingFirstRowEntryOnly(), 1)
     self.startHeadlandBlock:addRows(self:_cutAtBoundary(rows, self.virtualHeadland))
     self.startHeadlandBlockEntry = self:_getClosestEntry(self.startHeadlandBlock, self.context.startLocation)
@@ -130,7 +144,6 @@ function FieldworkCourseTwoSided:_createEndHeadlandBlock(oppositeBaselineLocatio
     local rows = cg.CurvedPathHelper.generateCurvedUpDownRows(self.boundary, oppositeBaselineLocation,
             self.context.workingWidth, self.context.turningRadius, self.context.nHeadlands, self.context.workingWidth / 2)
     self.endSideBoundary = rows[#rows]:clone()
-    cg.addDebugPolyline(self.endSideBoundary, {1, 1, 0, 0.3})
     self.endHeadlandBlock = cg.Block(cg.RowPatternAlternatingFirstRowEntryOnly(), 3)
     rows = self:_cutAtBoundary(rows, self.virtualHeadland)
     -- on this side, we are working our way back from the field edge, so the first row is connected
@@ -146,7 +159,6 @@ function FieldworkCourseTwoSided:_createMiddleHeadlandBlock(startHeadlandBlockEx
     local rows = cg.CurvedPathHelper.generateCurvedUpDownRows(self.virtualHeadland:getPolygon(), startHeadlandBlockExit,
             self.context.workingWidth, self.context.turningRadius, 1)
     self.centerSideBoundary = rows[#rows]:clone()
-    cg.addDebugPolyline(self.centerSideBoundary, {1, 1, 0, 0.3})
     self.middleHeadlandBlock = cg.Block(cg.RowPatternAlternatingFirstRowEntryOnly(), 2)
     self.middleHeadlandBlock:addRows(self:_cutAtBoundary(rows, self.virtualHeadland))
     self.middleHeadlandBlockEntry = self:_getClosestEntry(self.middleHeadlandBlock, startHeadlandBlockExit)
@@ -201,14 +213,6 @@ function FieldworkCourseTwoSided:_trim(row, middleHeadlandRow)
     -- Block:finalize() will adjust the row length according to the headland angle
 end
 
---- Trim a at the first intersection with b, and flip a so that its last
---- vertex is at the intersection
-function FieldworkCourseTwoSided:_trimAndFlip(a, b)
-    local cutAtStart = self:_trim(a, b)
-    if cutAtStart ~= nil and cutAtStart == false then
-        a:reverse()
-    end
-end
 
 --- Create the boundary around the center from the headlands we generated on three sides and
 --- from the field boundary
@@ -219,6 +223,7 @@ function FieldworkCourseTwoSided:_createCenterBoundary()
     centerBoundary:appendMany(self.middleHeadlandBlock:getFirstRow())
     local is = centerBoundary:getIntersections(self.endSideBoundary)[1]
     if is == nil then
+        self.logger:warning('Can\t find ending part of center boundary')
         return
     end
     centerBoundary:cutEndAtIx(is.ixA)
@@ -230,45 +235,42 @@ function FieldworkCourseTwoSided:_createCenterBoundary()
         endingRow:reverse()
     end
     centerBoundary:appendMany(endingRow)
-    -- Now we have three sides, need to close the polygon on the fourth side
-    -- Instead of using the field boundary directly, we generate one row following the boundary and will
-    -- use that as the fourth side. We'll also use this same row as the last row of the center later.
-    -- This is to prevent the center rows going outside the field boundary which may be the case with irregularly
-    -- shaped fields. Also, with curved up/down rows, there is no precise row distribution calculation and the last
-    -- row may partially be outside of the field. Creating this last row parallel to the field boundary should
-    -- prevent all this.
-    -- This is somewhere around the center of the field edge opposite to the center headland piece connecting
-    -- to the starting and ending side
+
+    -- This is the center point of the side opposite to the headland, this is where
+    -- the center rows generation should be starting
     local baselineLocation = (centerBoundary[1] + centerBoundary[#centerBoundary]) / 2
-    local rows = cg.CurvedPathHelper.generateCurvedUpDownRows(self.virtualHeadland:getPolygon(), baselineLocation,
-            self.context.workingWidth, self.context.turningRadius, 1)
-    -- this will be the last up/down row of the center
-    local lastCenterRow = rows[1]
-    -- and we also use it to assemble the last, fourth side of the boundary around the center
-    local fourthSide = lastCenterRow:clone()
-    local intersections = fourthSide:getIntersections(centerBoundary)
-    local startIs, endIs = intersections[1], intersections[#intersections]
-    cg.addDebugPoint(startIs.is, 'start' .. #intersections)
-    cg.addDebugPoint(endIs.is, 'end')
-    if startIs.ixB > endIs.ixB then
-        startIs, endIs = endIs, startIs
+
+    -- extend the start/end so they intersect the virtual headland, and then cut the fourth side
+    -- out of the virtual headland
+    local p = self.virtualHeadland:getPolygon()
+    local startHelper = self.startHeadlandBlock:getLastRow():clone():extendStart(2 * self.context.workingWidth)
+    local isStart = startHelper:getIntersections(p)[1]
+    local endHelper = endingRow:extendEnd(2 * self.context.workingWidth)
+    local isEnd = endHelper:getIntersections(p)[1]
+    if isEnd == nil or isStart == nil then
+        self.logger:warning('Can\t find closing part of center boundary')
+        return
     end
-    if startIs.ixA < endIs.ixA then
-        fourthSide:cutEndAtIx(endIs.ixA)
-        fourthSide:cutStartAtIx(startIs.ixA + 1)
+    local fourthSide = p:getShortestPathBetween(isStart.ixB, isEnd.ixB):clone()
+    self:_trim(fourthSide, startHelper)
+    self:_trim(fourthSide, endHelper)
+    fourthSide:calculateProperties()
+
+    -- reverse the 4th side when needed to make sure its start is connected to the 3rd side of the center boundary
+    local closest = fourthSide:findClosestVertexToPoint(centerBoundary[#centerBoundary])
+    if closest.ix > #fourthSide / 2 then
+        centerBoundary:append(isEnd.is)
         fourthSide:reverse()
+        fourthSide:cutStartAtIx(2)
     else
-        fourthSide:cutEndAtIx(startIs.ixA)
-        fourthSide:cutStartAtIx(endIs.ixA + 1)
+        centerBoundary:append(isStart.is)
     end
-    centerBoundary:cutEndAtIx(endIs.ixB)
-    centerBoundary:cutStartAtIx(startIs.ixB + 1)
-    fourthSide:prepend(endIs.is)
-    fourthSide:append(startIs.is)
+    cg.addDebugPolyline(fourthSide, { 0, 1, 1, 1 })
+    cg.addDebugPolyline(centerBoundary, { 0, 1, 0, 1 })
+
     centerBoundary:appendMany(fourthSide)
     centerBoundary:calculateProperties()
-    cg.addDebugPolyline(centerBoundary, {0, 0, 1, 1})
-    return centerBoundary, lastCenterRow
+    return centerBoundary, baselineLocation
 end
 
 ---@class cg.FieldworkCourseTwoSided : cg.FieldworkCourse

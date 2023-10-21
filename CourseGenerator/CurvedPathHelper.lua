@@ -57,6 +57,10 @@ function CurvedPathHelper.generateCurvedUpDownRows(boundary, baselineLocation, w
         intersections = getIntersectionsExtending(row)
         table.insert(rows, row)
     until #rows >= nRows or #intersections < 2
+    if #intersections < 2 then
+        -- last row does not intersect boundary, it is invalid, should not be considered
+        table.remove(rows)
+    end
     return rows
 end
 
@@ -66,7 +70,7 @@ end
 ---@param section cg.Row empty row passed in to hold the straight section around ix
 ---@return cg.Row the straight section as a row, same object as passed in as the section
 function CurvedPathHelper.findLongestStraightSection(boundary, ix, radiusThreshold, section)
-    local i, n = ix, 1
+    local i, n, j = ix, 1
     -- max one round only (n <)
     while n < #boundary and math.abs(boundary:at(i):getRadius()) > radiusThreshold do
         section:append((boundary:at(i)):clone())
@@ -74,15 +78,16 @@ function CurvedPathHelper.findLongestStraightSection(boundary, ix, radiusThresho
         n = n + 1
     end
     section:reverse()
-    i, n = ix + 1, 1
-    while n < #boundary and math.abs(boundary:at(i):getRadius()) > radiusThreshold do
-        section:append((boundary:at(i)):clone())
-        i = i + 1
+    j, n = ix + 1, 1
+    while n < #boundary and math.abs(boundary:at(j):getRadius()) > radiusThreshold do
+        section:append((boundary:at(j)):clone())
+        j = j + 1
         n = n + 1
     end
     section:calculateProperties()
     -- no straight section found, bail out here
-    logger:debug('Longest straight section found %d vertices, %.1f m', #section, section:getLength())
+    logger:debug('Longest straight section found %d vertices, %.1f m (%d - %d - %d)',
+            #section, section:getLength(), i, ix, j)
     cg.addDebugPolyline(section)
     return section
 end

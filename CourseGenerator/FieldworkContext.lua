@@ -47,8 +47,13 @@ function FieldworkContext:addError(logger, ...)
     table.insert(self.errors, text)
 end
 
+---@return string[] Errors found during the generation
 function FieldworkContext:getErrors()
     return self.errors
+end
+
+function FieldworkContext:hasErrors()
+    return #self.errors > 0
 end
 
 ---@param nHeadlands number of headlands total.
@@ -128,6 +133,7 @@ function FieldworkContext:setAutoRowAngle(auto)
 end
 
 --- Angle of the up/down rows when not automatically selected
+---@param rowAngle number row angle in radians, x axis is 0, increasing counterclockwise
 function FieldworkContext:setRowAngle(rowAngle)
     self.rowAngle = rowAngle
     return self

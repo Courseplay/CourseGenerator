@@ -7,7 +7,7 @@ local Row = CpObject(cg.Polyline)
 function Row:init(workingWidth, vertices)
     cg.Polyline.init(self, vertices)
     self.workingWidth = workingWidth
-    self.logger = cg.Logger('Row', cg.Logger.level.debug)
+    self.logger = cg.Logger('Row ' .. tostring(self.rowNumber), cg.Logger.level.debug)
 end
 
 function Row:setRowNumber(n)

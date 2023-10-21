@@ -34,7 +34,7 @@ function Headland:init(basePolygon, clockwise, passNumber, width, outward, mustN
     self.polygon = cg.Offset.generate(basePolygon, self.offsetVector, width)
     if self.polygon then
         self.polygon:calculateProperties()
-        self.polygon:ensureMaximumEdgeLength(cg.cMaxEdgeLength, cg.cMaxDeltaAngleForMaxEdgeLength)
+        self.polygon:ensureMaximumEdgeLength(cg.cMaxEdgeLength)
         self.polygon:calculateProperties()
         if mustNotCross and self.polygon:intersects(mustNotCross) then
             self.polygon = nil

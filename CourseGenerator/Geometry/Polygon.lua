@@ -205,8 +205,8 @@ function Polygon:getLongestEdgeDirection()
             -- normalize angle of the edges, two edges with 180 degrees difference count the same
             local a = math.deg(e:getHeading())
             a = a < 0 and (a + 180) or a
-            a = a % 180
             a = math.floor(a + 0.5)
+            a = a % 180
             totalEdgeLength[a] = (totalEdgeLength[a] or 0) + e:getLength()
         end
         local bestAngle, longest = 0, -math.huge

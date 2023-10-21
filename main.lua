@@ -13,7 +13,7 @@ dofile('include.lua')
 
 local parameters = {}
 -- working width of the equipment
-local workingWidth = AdjustableParameter(6, 'width', 'W', 'w', 0.2, 0, 100)
+local workingWidth = AdjustableParameter(8.8, 'width', 'W', 'w', 0.2, 0, 100)
 table.insert(parameters, workingWidth)
 local turningRadius = AdjustableParameter(7, 'radius', 'T', 't', 0.2, 0, 20)
 table.insert(parameters, turningRadius)
@@ -40,7 +40,7 @@ local autoRowAngle = ToggleParameter('auto row angle', true, '6')
 table.insert(parameters, autoRowAngle)
 local rowAngleDeg = AdjustableParameter(-90, 'row angle', 'A', 'a', 10, -90, 90)
 table.insert(parameters, rowAngleDeg)
-local rowPattern = ListParameter(cg.RowPattern.RACETRACK, 'row pattern', 'O', 'o',
+local rowPattern = ListParameter(cg.RowPattern.ALTERNATING, 'row pattern', 'O', 'o',
         { cg.RowPattern.ALTERNATING,
           cg.RowPattern.SKIP,
           cg.RowPattern.SPIRAL,
@@ -133,28 +133,28 @@ local course
 local savedFields
 local currentVertices
 local errors = {}
-
+local context
 ------------------------------------------------------------------------------------------------------------------------
 --- Generate the fieldwork course
 ---------------------------------------------------------------------------------------------------------------------------
 local function generate()
     cg.clearDebugObjects()
-    local context = cg.FieldworkContext(selectedField, workingWidth:get(), turningRadius:get(), nHeadlandPasses:get())
-    context:setHeadlandsWithRoundCorners(nHeadlandsWithRoundCorners:get())
-    context:setHeadlandClockwise(headlandClockwise:get())
-    context:setIslandHeadlandClockwise(islandHeadlandClockwise:get())
-    context:setHeadlandFirst(headlandFirst:get())
-    context:setIslandHeadlands(nIslandHeadlandPasses:get())
-    context:setFieldCornerRadius(fieldCornerRadius:get())
-    context:setBypassIslands(bypassIslands:get())
-    context:setSharpenCorners(sharpenCorners:get())
-    context:setAutoRowAngle(autoRowAngle:get())
-    context:setRowAngle(math.rad(rowAngleDeg:get()))
-    context:setEvenRowDistribution(evenRowDistribution:get())
-    context:setUseBaselineEdge(useBaselineEdge:get())
-    context:setStartLocation(startX, startY)
-    context:setBaselineEdge(startX, startY)
-    context:setBaselineEdge(baselineX, baselineY)
+    context = cg.FieldworkContext(selectedField, workingWidth:get(), turningRadius:get(), nHeadlandPasses:get())
+                :setHeadlandsWithRoundCorners(nHeadlandsWithRoundCorners:get())
+                :setHeadlandClockwise(headlandClockwise:get())
+                :setIslandHeadlandClockwise(islandHeadlandClockwise:get())
+                :setHeadlandFirst(headlandFirst:get())
+                :setIslandHeadlands(nIslandHeadlandPasses:get())
+                :setFieldCornerRadius(fieldCornerRadius:get())
+                :setBypassIslands(bypassIslands:get())
+                :setSharpenCorners(sharpenCorners:get())
+                :setAutoRowAngle(autoRowAngle:get())
+                :setRowAngle(math.rad(rowAngleDeg:get()))
+                :setEvenRowDistribution(evenRowDistribution:get())
+                :setUseBaselineEdge(useBaselineEdge:get())
+                :setStartLocation(startX, startY)
+                :setBaselineEdge(startX, startY)
+                :setBaselineEdge(baselineX, baselineY)
     if profilerEnabled then
         love.profiler.start()
     end
@@ -269,7 +269,7 @@ end
 
 local function findCurrentVertices(sx, sy)
     local x, y = screenToWorld(sx, sy)
-    if course then
+    if course and not context:hasErrors() then
         return findVertexForPosition(course:getPath(), x, y)
     end
 end
@@ -302,6 +302,16 @@ local function drawVertex(v)
     love.graphics.points(v.x, v.y)
 end
 
+local function drawVertexAsArrow(v)
+    local left, right = -0.8, 0.8
+    local triangle = { left, 0, right, 0, 0, 1.6 }
+    love.graphics.push()
+    love.graphics.translate(v.x, v.y)
+    love.graphics.rotate((v:getExitEdge() or v:getEntryEdge()):getHeading() - math.pi / 2)
+    love.graphics.polygon('fill', triangle)
+    love.graphics.pop()
+end
+
 local function drawPath(p)
     if #p > 1 then
         for i, v in p:vertices() do
@@ -328,7 +338,7 @@ local function drawPath(p)
                 love.graphics.setColor(warningColor)
                 love.graphics.circle('line', v.x, v.y, 2)
             end
-            drawVertex(v)
+            drawVertexAsArrow(v)
         end
         love.graphics.scale(1, -1)
         local signScale = 0.03
@@ -389,7 +399,9 @@ end
 
 ---@param block cg.Center
 local function drawConnectingPaths(center)
-    if center == nil or center:getConnectingPaths() == nil then return end
+    if center == nil or center:getConnectingPaths() == nil then
+        return
+    end
     for i, p in ipairs(center:getConnectingPaths()) do
         love.graphics.setLineWidth(10 * lineWidth)
         if #p > 0 then
@@ -531,7 +543,7 @@ local function drawGraphics()
     love.graphics.replaceTransform(graphicsTransform)
     love.graphics.setPointSize(pointSize)
     drawFields()
-    if course then
+    if course and not context:hasErrors() then
         drawHeadlands()
         if course:getCenter() then
             drawCenter(course:getCenter())
@@ -571,7 +583,6 @@ local function drawErrors()
     end
 end
 
-
 local function drawStatus()
     love.graphics.setColor(1, 1, 0)
     love.graphics.replaceTransform(statusTransform)
@@ -606,10 +617,12 @@ local function drawDebugPolylines()
         love.graphics.setLineWidth(pointSize)
         for _, p in ipairs(cg.debugPolylines) do
             if #p > 1 then
-                love.graphics.setColor(p.debugColor or debugColor)
+                local color = p.debugColor or debugColor
+                love.graphics.setColor(color)
                 --love.graphics.line(p:getUnpackedVertices())
-                for _, v in ipairs(p) do
-                    love.graphics.points(v.x, v.y)
+                for i, v in ipairs(p) do
+                    drawVertexAsArrow(v)
+                    drawText(v.x + 1, v.y + 1, color, 1, i)
                 end
             end
         end

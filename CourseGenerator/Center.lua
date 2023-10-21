@@ -15,17 +15,20 @@ local Center = CpObject()
 function Center:init(context, boundary, headland, startLocation, bigIslands)
     self.logger = cg.Logger('Center', cg.Logger.level.debug)
     self.context = context
-    if self.context.nHeadlands == 0 then
+    if headland == nil then
         -- if there are no headlands, we generate a virtual one, from the field boundary
         -- so using this later is equivalent of having an actual headland
         local virtualHeadland = cg.FieldworkCourseHelper.createVirtualHeadland(boundary, self.context.headlandClockwise,
                 self.context.workingWidth)
         self.headlandPolygon = virtualHeadland:getPolygon()
         self.headland = virtualHeadland
+        self.mayOverlapHeadland = false
     else
         self.headlandPolygon = headland:getPolygon()
         self.headland = headland
+        self.mayOverlapHeadland = true
     end
+    self.useBaselineEdge = self.context.useBaselineEdge
     self.boundary = boundary
     self.startLocation = startLocation
     self.bigIslands = bigIslands
@@ -76,14 +79,14 @@ end
 function Center:generate()
     -- first, we split the field into blocks. Simple convex fields have just one block only,
     -- but odd shaped, concave fields or fields with island may have more blocks
-    if self.context.useBaselineEdge then
+    if self.useBaselineEdge then
         self.rows = cg.CurvedPathHelper.generateCurvedUpDownRows(self.headlandPolygon, self.context.baselineEdge,
                 self.context.workingWidth, self.context.turningRadius, nil)
     else
         local angle = self.context.autoRowAngle and self:_findBestRowAngle() or self.context.rowAngle
         self.rows = self:_generateStraightUpDownRows(angle)
     end
-    local blocks = self:_splitIntoBlocks(self.rows)
+    local blocks = self:_splitIntoBlocks(self.rows, self.headland)
 
     if #blocks < 1 then
         self.logger:debug('No blocks could be generated')
@@ -218,7 +221,7 @@ function Center:_generateStraightUpDownRows(rowAngle, suppressLog)
     -- the last row we work on. This usually works for the alternating/skip pattern, no guarantee for other patterns.
     local startLocationDistance = baseline[1]:getExitEdge():getDistanceFrom(self.context.startLocation)
     local overlapLast = startLocationDistance < (dMin + dMax) / 2
-    if self.context.nHeadlands > 0 and not self.context.headlandFirst then
+    if self.mayOverlapHeadland and not self.context.headlandFirst then
         overlapLast = not overlapLast
     end
     -- move the baseline to the edge of the area we want to cover
@@ -263,12 +266,14 @@ function Center:_findBestRowAngle()
     self.logger:debug('  longest edge direction %.1f', math.deg(longestEdgeDirection))
     for a = -90, 90, 1 do
         local rows = self:_generateStraightUpDownRows(math.rad(a), true)
-        local blocks = self:_splitIntoBlocks(rows)
-        local score = 6 * #blocks + #rows + self:_calculateSmallBlockPenalty(blocks, #rows) +
-                -- Prefer angles closest to the direction of the longest edge of the field
-                -- sin(a - longestEdgeDirection) will be 0 when angle is the closest.
-                3 * math.abs(math.sin(cg.Math.getDeltaAngle(math.rad(a), longestEdgeDirection)))
-        self.logger:debug('  rows: %d blocks: %d score: %.1f', #rows, #blocks, score)
+        local blocks = self:_splitIntoBlocks(rows, self.headland)
+        local smallBlockPenalty = self:_calculateSmallBlockPenalty(blocks, #rows)
+        -- Prefer angles closest to the direction of the longest edge of the field
+        -- sin(a - longestEdgeDirection) will be 0 when angle is the closest.
+        local notLongestEdgePenalty = 5 * math.abs(math.sin(cg.Math.getDeltaAngle(math.rad(a), longestEdgeDirection)))
+        local score = 6 * #blocks + #rows + smallBlockPenalty + notLongestEdgePenalty
+        self.logger:debug('  %dº - rows: %d blocks: %d small block penalty: %.1f not longest edge penalty: %.1f score: %.3f',
+                a, #rows, #blocks, smallBlockPenalty, notLongestEdgePenalty, score)
         if score < minScore then
             minScore = score
             bestAngle = math.rad(a)
@@ -341,7 +346,7 @@ function Center:_calculateRowDistribution(workingWidth, fieldWidth, sameWidth, o
         end
         local firstRowOffset
         local rowOffsets = {}
-        if self.context.nHeadlands > 0 then
+        if self.mayOverlapHeadland then
             -- #3 we have headlands
             if overlapLast then
                 firstRowOffset = workingWidth
@@ -370,13 +375,15 @@ function Center:_calculateRowDistribution(workingWidth, fieldWidth, sameWidth, o
 end
 
 ---@param rows cg.Row[]
-function Center:_splitIntoBlocks(rows)
-    local blocks = {}
+---@param headland cg.Headland
+function Center:_splitIntoBlocks(rows, headland)
+    local blocks
     local openBlocks = {}
     local function closeBlocks(rowNumber)
         local n = 0
         for block, lastRowNumber in pairs(openBlocks) do
             if rowNumber == nil or lastRowNumber ~= rowNumber then
+                blocks = blocks or {}
                 table.insert(blocks, block)
                 openBlocks[block] = nil
                 n = n + 1
@@ -389,7 +396,7 @@ function Center:_splitIntoBlocks(rows)
     local blockId = 1
 
     for i, row in ipairs(rows) do
-        local sections = row:split(self.headland, self.bigIslands)
+        local sections = row:split(headland, self.bigIslands)
         self.logger:trace('Row %d has %d section(s)', i, #sections)
         -- first check if there is a block which overlaps with more than one section
         -- if that's the case, close the open blocks. This forces the creation of new blocks

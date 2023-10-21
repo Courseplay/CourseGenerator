@@ -1,9 +1,7 @@
 --- This is to encapsulate the specifics of a field center up/down rows generated
 --- for the two-side headland pattern.
 --- With that pattern, we always use baseline edges, that is, the rows following the
---- field edge (instead of always being straight) which, with odd shaped field may
---- result in the last rows being outside of the field boundary if we don't do anything...
--- TODO: is this really specific to the the two side pattern or could be used whenever baseline edge is used?
+--- field edge (instead of always being straight) and do not allow multiple blocks.
 
 ---@class CenterTwoSided : cg.Center
 local CenterTwoSided = CpObject(cg.Center)
@@ -16,12 +14,21 @@ local CenterTwoSided = CpObject(cg.Center)
 ---@param lastRow cg.Row the last row of the center (before cut), this will be added to the ones generated
 function CenterTwoSided:init(context, boundary, headland, startLocation, bigIslands, lastRow)
     cg.Center.init(self, context, boundary, headland, startLocation, bigIslands, lastRow)
-    self.lastRow = lastRow
+    -- force using the baseline edge, no matter what the context is
+    self.useBaselineEdge = true
 end
 
 function CenterTwoSided:_splitIntoBlocks(rows)
-    table.insert(rows, self.lastRow)
-    return cg.Center._splitIntoBlocks(self, rows)
+    local block = cg.Block(self.context.rowPattern)
+    for _, row in ipairs(rows) do
+        local sections = row:split(self.headland, {}, true)
+        if #sections == 1 then
+            block:addRow(sections[1])
+        elseif #sections > 1 then
+            self.context:addError(self.logger, 'Two side headlands: center would need multiple blocks')
+        end
+    end
+    return block:getNumberOfRows() > 0 and { block } or {}
 end
 
 ---@class cg.CenterTwoSided : cg.Center
