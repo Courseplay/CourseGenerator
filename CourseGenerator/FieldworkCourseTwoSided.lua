@@ -17,7 +17,7 @@
 --- For this pattern, we use a center restricted to a single block as there is no headland around it that
 --- could be used to drive to the next block in all cases.
 --- Also, the center rows are always generated from the side opposite of the middle headland block, using that
---- opposite side as a base edge as this is the easiest way to make sure they do not exit the field.
+--- opposite side as a base edge as this is the easiest way to make sure rows remain on the field.
 
 ---@class FieldworkCourseTwoSided : cg.FieldworkCourse
 local FieldworkCourseTwoSided = CpObject(cg.FieldworkCourse)
@@ -42,9 +42,6 @@ function FieldworkCourseTwoSided:init(context)
     -- this is the headland around the center part, that is, the area #4 on the drawing above
     local centerHeadland = cg.Headland(centerBoundary, centerBoundary:isClockwise(), 0, 0, true)
     centerHeadland:sharpenCorners(2 * self.context.turningRadius)
-    -- TODO: do this as part of sharpenCorners()?
-    centerHeadland:getPolygon():ensureMaximumEdgeLength()
-    centerHeadland:getPolygon():calculateProperties()
 
     -- start position for the center
     local lastHeadlandRow = self.endHeadlandBlock:getLastRow()
@@ -112,6 +109,7 @@ function FieldworkCourseTwoSided:generateHeadlands()
     local intersections = lastStartHeadlandRow:getIntersections(self.middleHeadlandBlock:getFirstRow())
     lastStartHeadlandRow:cutEndAtIx(intersections[1].ixA)
     lastStartHeadlandRow:append(intersections[1].is)
+    lastStartHeadlandRow:setAttribute(#lastStartHeadlandRow, cg.WaypointAttributes.setHeadlandTurn)
     self.middleHeadlandBlock:getFirstRow():cutStartAtIx(intersections[1].ixB + 1)
 
     -- connect the middle and the end
@@ -119,8 +117,10 @@ function FieldworkCourseTwoSided:generateHeadlands()
     intersections = firstEndHeadlandRow:getIntersections(self.middleHeadlandBlock:getFirstRow())
     if #intersections > 0 then
         firstEndHeadlandRow:cutStartAtIx(intersections[1].ixA + 1)
-        self.middleHeadlandBlock:getFirstRow():cutEndAtIx(intersections[1].ixB)
-        self.middleHeadlandBlock:getFirstRow():append(intersections[1].is)
+        local firstMiddleHeadlandRow = self.middleHeadlandBlock:getFirstRow()
+        firstMiddleHeadlandRow:cutEndAtIx(intersections[1].ixB)
+        firstMiddleHeadlandRow:append(intersections[1].is)
+        firstMiddleHeadlandRow:setAttribute(#firstMiddleHeadlandRow, cg.WaypointAttributes.setHeadlandTurn)
     else
         self.context:addError(self.logger, 'Can\'t connect headlands for this field with the current settings')
         return
@@ -221,9 +221,14 @@ function FieldworkCourseTwoSided:_createCenterBoundary()
     -- connect the start side to the center
     centerBoundary:appendMany(self.startHeadlandBlock:getLastRow())
     centerBoundary:appendMany(self.middleHeadlandBlock:getFirstRow())
-    local is = centerBoundary:getIntersections(self.endSideBoundary)[1]
+        centerBoundary:calculateProperties()
+    -- extend to make sure it'll intersect
+    local is = centerBoundary:extendEnd(1):getIntersections(self.endSideBoundary)[1]
     if is == nil then
-        self.logger:warning('Can\t find ending part of center boundary')
+        self.endSideBoundary:calculateProperties()
+        cg.addDebugPolyline(centerBoundary, {0, 0, 1})
+        cg.addDebugPolyline(self.endSideBoundary, {0, 0, 1})
+        self.logger:warning('Can\'t find ending part of center boundary')
         return
     end
     centerBoundary:cutEndAtIx(is.ixA)

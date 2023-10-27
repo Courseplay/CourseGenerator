@@ -31,5 +31,11 @@ function CenterTwoSided:_splitIntoBlocks(rows)
     return block:getNumberOfRows() > 0 and { block } or {}
 end
 
+function CenterTwoSided:_wrapUpConnectingPaths()
+    -- instead of the connecting track use pathfinder to the entry of the next block
+    self.connectingPaths[1] = {}
+    self.blocks[1]:getEntryVertex():getAttributes():setUsePathfinderToThisWaypoint()
+end
+
 ---@class cg.CenterTwoSided : cg.Center
 cg.CenterTwoSided = CenterTwoSided

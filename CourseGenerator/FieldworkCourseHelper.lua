@@ -71,7 +71,7 @@ function FieldworkCourseHelper.bypassSmallIsland(polyline, workingWidth, other, 
             polyline:append(is1.is)
             polyline:calculateProperties()
             FieldworkCourseHelper.adjustLengthAtEnd(polyline, workingWidth, is1:getAngle())
-            polyline:setAttributes(#polyline, #polyline, cg.WaypointAttributes.setUsePathfinderToNextWaypoint)
+            polyline:setAttribute(#polyline, cg.WaypointAttributes.setUsePathfinderToNextWaypoint)
         else
             polyline.logger:debug('Start of row is on an island, removing all vertices up to index %d (of %d)',
                     is1.ixA, #polyline)
@@ -80,7 +80,7 @@ function FieldworkCourseHelper.bypassSmallIsland(polyline, workingWidth, other, 
             polyline:prepend(is1.is)
             polyline:calculateProperties()
             FieldworkCourseHelper.adjustLengthAtStart(polyline, workingWidth, is1:getAngle())
-            polyline:setAttributes(1, 1, cg.WaypointAttributes.setUsePathfinderToThisWaypoint)
+            polyline:setAttribute(1, cg.WaypointAttributes.setUsePathfinderToThisWaypoint)
         end
         return false
     end

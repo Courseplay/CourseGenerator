@@ -560,7 +560,7 @@ function Polyline:goAroundBetweenIntersections(other, circle, is1, is2)
         self.logger:debug('path A: %.1f, path B: %.1f', pathA:getLength(), pathB:getLength())
         if circle then
             path = shortPath:clone()
-            path:setAttributes(nil, nil, cg.WaypointAttributes.setIslandBypass)
+            path:setAttribute(nil, cg.WaypointAttributes.setIslandBypass)
             longPath:reverse()
             path:appendMany(longPath)
             -- mark this roundtrip as island bypass
@@ -766,8 +766,9 @@ function Polyline:_getPathBetweenIntersections(fromIx, toIx)
     end
     return self:_getPathBetween(from, to)
 end
+
 --- Set an attribute for a series of vertices
----@param first number | nil index of first vertex to set the attribute
+---@param first number | nil index of first vertex to set the attribute for
 ---@param last number | nil index of last vertex
 ---@param setter cg.WaypointAttributes function to call on each vertex' attributes
 ---@param ... any arguments for setter
@@ -777,6 +778,14 @@ function Polyline:setAttributes(first, last, setter, ...)
     for i = first, last do
         setter(self:at(i):getAttributes(), ...)
     end
+end
+
+--- Set an attribute for a single vertex (or all)
+---@param ix number|nil index of vertex to set the attribute for, if nil, the attribute is set for all vertices
+---@param setter cg.WaypointAttributes function to call on each vertex' attributes
+---@param ... any arguments for setter
+function Polyline:setAttribute(ix, setter, ...)
+    self:setAttributes(ix, ix, setter, ...)
 end
 
 --- Remove all existing vertices

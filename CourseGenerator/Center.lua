@@ -20,7 +20,11 @@ function Center:init(context, boundary, headland, startLocation, bigIslands)
         -- so using this later is equivalent of having an actual headland
         local virtualHeadland = cg.FieldworkCourseHelper.createVirtualHeadland(boundary, self.context.headlandClockwise,
                 self.context.workingWidth)
+        if self.context.sharpenCorners then
+            virtualHeadland:sharpenCorners(self.context.turningRadius)
+        end
         self.headlandPolygon = virtualHeadland:getPolygon()
+        cg.addDebugPolyline(self.headlandPolygon, {1, 1, 0, 0.5})
         self.headland = virtualHeadland
         self.mayOverlapHeadland = false
     else
@@ -493,7 +497,7 @@ function Center:_wrapUpConnectingPaths()
         end
     else
         for _, c in ipairs(self.connectingPaths) do
-            c:setAttributes(nil, nil, cg.WaypointAttributes.setOnConnectingPath)
+            c:setAttribute(nil, cg.WaypointAttributes.setOnConnectingPath)
         end
     end
 end

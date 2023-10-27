@@ -289,9 +289,9 @@ function FieldworkCourse:circleBigIslands()
 
             -- from the row end to the start of the headland, we instruct the driver to use
             -- the pathfinder.
-            path:setAttributes(i, i, cg.WaypointAttributes.setUsePathfinderToNextWaypoint)
-            headlandPath:setAttributes(#headlandPath, #headlandPath, cg.WaypointAttributes.setUsePathfinderToNextWaypoint)
-            headlandPath:setAttributes(nil, nil, cg.WaypointAttributes.setIslandHeadland)
+            path:setAttribute(i, cg.WaypointAttributes.setUsePathfinderToNextWaypoint)
+            headlandPath:setAttribute(#headlandPath, cg.WaypointAttributes.setUsePathfinderToNextWaypoint)
+            headlandPath:setAttribute(nil, cg.WaypointAttributes.setIslandHeadland)
 
             self.logger:debug('Added headland path around island %d with %d points', island:getId(), #headlandPath)
             for j = #headlandPath, 1, -1 do

@@ -71,7 +71,7 @@ end
 ---@return cg.Polyline Headland vertices with waypoint attributes
 function Headland:getPath()
     -- make sure all attributes are set correctly
-    self.polygon:setAttributes(nil, nil, cg.WaypointAttributes.setHeadlandPassNumber, self.passNumber)
+    self.polygon:setAttribute(nil, cg.WaypointAttributes.setHeadlandPassNumber, self.passNumber)
     return self.polygon
 end
 

@@ -196,16 +196,16 @@ end
 --- or not. The attributes are set when the row is split at headlands but may need to be reapplied when
 --- we adjust the end of the row as we may remove the first/last vertex.
 function Row:setEndAttributes()
-    self:setAttributes(1, 1, cg.WaypointAttributes.setRowStart)
-    self:setAttributes(1, 1, cg.WaypointAttributes._setAtHeadland, self.startsAtHeadland)
-    self:setAttributes(#self, #self, cg.WaypointAttributes.setRowEnd)
-    self:setAttributes(#self, #self, cg.WaypointAttributes._setAtHeadland, self.endsAtHeadland)
+    self:setAttribute(1, cg.WaypointAttributes.setRowStart)
+    self:setAttribute(1, cg.WaypointAttributes._setAtHeadland, self.startsAtHeadland)
+    self:setAttribute(#self, cg.WaypointAttributes.setRowEnd)
+    self:setAttribute(#self, cg.WaypointAttributes._setAtHeadland, self.endsAtHeadland)
 end
 
 function Row:setAllAttributes()
     self:setEndAttributes()
-    self:setAttributes(nil, nil, cg.WaypointAttributes.setRowNumber, self.rowNumber)
-    self:setAttributes(nil, nil, cg.WaypointAttributes.setBlockNumber, self.blockNumber)
+    self:setAttribute(nil, cg.WaypointAttributes.setRowNumber, self.rowNumber)
+    self:setAttribute(nil, cg.WaypointAttributes.setBlockNumber, self.blockNumber)
 end
 
 function Row:reverse()

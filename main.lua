@@ -13,7 +13,7 @@ dofile('include.lua')
 
 local parameters = {}
 -- working width of the equipment
-local workingWidth = AdjustableParameter(8.8, 'width', 'W', 'w', 0.2, 0, 100)
+local workingWidth = AdjustableParameter(6, 'width', 'W', 'w', 0.2, 0, 100)
 table.insert(parameters, workingWidth)
 local turningRadius = AdjustableParameter(7, 'radius', 'T', 't', 0.2, 0, 20)
 table.insert(parameters, turningRadius)
@@ -65,7 +65,7 @@ local spiralFromInside = ToggleParameter('spiral from inside', true, 'L')
 table.insert(parameters, spiralFromInside)
 local evenRowDistribution = ToggleParameter('even row width', false, 'e')
 table.insert(parameters, evenRowDistribution)
-local useBaselineEdge = ToggleParameter('use base line edge', true, 'g')
+local useBaselineEdge = ToggleParameter('use base line edge', false, 'g')
 table.insert(parameters, useBaselineEdge)
 local showDebugInfo = ToggleParameter('show debug info', false, 'd', true)
 table.insert(parameters, showDebugInfo)
@@ -86,7 +86,7 @@ local windowWidth = 1400
 local windowHeight = 800
 local xOffset, yOffset = 0, 0
 -- starting position
-local startX, startY, baselineX, baselineY = 0, 0, 0, 0
+local startX, startY, baselineX, baselineY = 1000, 0, 1000, 0
 
 local graphicsTransform, textTransform, statusTransform, mouseTransform, contextTransform, errorTransform
 local startSign, stopSign
@@ -104,7 +104,7 @@ local islandHeadlandColor = { 1, 1, 1, 0.2 }
 local waypointColor = { 0.7, 0.5, 0.2 }
 local cornerColor = { 1, 1, 0.0, 0.8 }
 local islandBypassColor = { 0, 0.2, 1.0 }
-local debugColor = { 0.8, 0, 0, 0.5 }
+local debugColor = { 1, 1, 1, 0.1 }
 local debugTextColor = { 0.8, 0, 0, 1 }
 local warningColor = { 1, 0.5, 0 }
 local highlightedWaypointColor = { 0.7, 0.7, 0.7, 1 }
@@ -287,21 +287,6 @@ local function selectFieldUnderCursor()
     end
 end
 
-local function drawVertex(v)
-    if v.color then
-        love.graphics.setColor(v.color)
-    else
-        love.graphics.setColor(waypointColor)
-    end
-    if v.isCorner then
-        love.graphics.setColor(cornerColor)
-    end
-    if v:getAttributes():isIslandBypass() then
-        love.graphics.setColor(islandBypassColor)
-    end
-    love.graphics.points(v.x, v.y)
-end
-
 local function drawVertexAsArrow(v)
     local left, right = -0.8, 0.8
     local triangle = { left, 0, right, 0, 0, 1.6 }
@@ -310,6 +295,26 @@ local function drawVertexAsArrow(v)
     love.graphics.rotate((v:getExitEdge() or v:getEntryEdge()):getHeading() - math.pi / 2)
     love.graphics.polygon('fill', triangle)
     love.graphics.pop()
+end
+
+local function drawWaypoint(v)
+    if v.color then
+        love.graphics.setColor(v.color)
+    else
+        love.graphics.setColor(waypointColor)
+    end
+    if v.isCorner or v:getAttributes():isHeadlandTurn() then
+        love.graphics.setColor(cornerColor)
+    end
+    if v:getAttributes():isIslandBypass() then
+        love.graphics.setColor(islandBypassColor)
+    end
+    if v:getAttributes():isRowStart() then
+        love.graphics.setColor(rowStartColor)
+    elseif v:getAttributes():isRowEnd() then
+        love.graphics.setColor(rowEndColor)
+    end
+    drawVertexAsArrow(v)
 end
 
 local function drawPath(p)
@@ -338,7 +343,7 @@ local function drawPath(p)
                 love.graphics.setColor(warningColor)
                 love.graphics.circle('line', v.x, v.y, 2)
             end
-            drawVertexAsArrow(v)
+            drawWaypoint(v)
         end
         love.graphics.scale(1, -1)
         local signScale = 0.03
@@ -385,10 +390,6 @@ local function drawRows(block)
         love.graphics.push()
         love.graphics.setColor(centerColor)
         love.graphics.setPointSize(pointSize * 1.5)
-        love.graphics.setColor(rowStartColor)
-        love.graphics.points(r[1].x, r[1].y)
-        love.graphics.setColor(rowEndColor)
-        love.graphics.points(r[#r].x, r[#r].y)
         local m = r:getMiddle()
         love.graphics.setColor(centerFontColor)
         love.graphics.scale(1, -1)
@@ -617,9 +618,10 @@ local function drawDebugPolylines()
         love.graphics.setLineWidth(pointSize)
         for _, p in ipairs(cg.debugPolylines) do
             if #p > 1 then
+                love.graphics.setColor(debugColor)
+                love.graphics.line(p:getUnpackedVertices())
                 local color = p.debugColor or debugColor
                 love.graphics.setColor(color)
-                --love.graphics.line(p:getUnpackedVertices())
                 for i, v in ipairs(p) do
                     drawVertexAsArrow(v)
                     drawText(v.x + 1, v.y + 1, color, 1, i)
