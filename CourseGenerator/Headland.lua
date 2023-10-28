@@ -72,6 +72,12 @@ end
 function Headland:getPath()
     -- make sure all attributes are set correctly
     self.polygon:setAttribute(nil, cg.WaypointAttributes.setHeadlandPassNumber, self.passNumber)
+    -- mark corners as headland turns
+    for _, v in ipairs(self.polygon) do
+        if v.isCorner then
+            v:getAttributes():setHeadlandTurn()
+        end
+    end
     return self.polygon
 end
 

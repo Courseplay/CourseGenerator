@@ -303,7 +303,7 @@ local function drawWaypoint(v)
     else
         love.graphics.setColor(waypointColor)
     end
-    if v.isCorner or v:getAttributes():isHeadlandTurn() then
+    if v:getAttributes():isHeadlandTurn() then
         love.graphics.setColor(cornerColor)
     end
     if v:getAttributes():isIslandBypass() then
