@@ -2,9 +2,12 @@
 ---@class Field
 local Field = CpObject()
 
-function Field:init(id)
+---@param id string unique ID for this field for logging
+---@param num number field number as shown in game
+function Field:init(id, num)
 	self.id = id
-	self.logger = cg.Logger('Field ' .. id)
+	self.num = num
+	self.logger = Logger('Field ' .. id)
 	---@type cg.Polygon
 	self.boundary = cg.Polygon()
 	---@type cg.Polygon
@@ -17,6 +20,10 @@ function Field:getId()
 	return self.id
 end
 
+function Field:getNum()
+	return self.num
+end
+
 --- Read all fields saved in an XML file from the game console with the cpSaveAllFields command
 ---@return Field[] list of Fields in the file
 function Field.loadSavedFields(fileName)
@@ -27,12 +34,12 @@ function Field.loadSavedFields(fileName)
 		if fieldNum then
 			-- a new field started
 			ix = tonumber( fieldNum )
-			fields[ix] = Field(ix)
-			cg.debug('Loading field %d', ix)
+			fields[ix] = Field(string.gsub(fileName, 'fields/', ''):gsub('.xml', '') .. '-' .. ix, ix)
+			Logger(''):debug('Loading field %s', ix)
 		end
 		local num, x, z = string.match( line, '<point(%d+).+pos="([%d%.-]+) [%d%.-]+ ([%d%.-]+)"' )
 		if num then
-			fields[ ix ].boundary:append(cg.Vertex(tonumber(x), -tonumber(z)))
+			fields[ix].boundary:append(cg.Vertex(tonumber(x), -tonumber(z)))
 		end
 		num, x, z = string.match( line, '<islandNode(%d+).+pos="([%d%.-]+) +([%d%.-]+)"' )
 		if num then

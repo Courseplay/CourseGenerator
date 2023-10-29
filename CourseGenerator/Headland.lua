@@ -15,7 +15,7 @@ local Headland = CpObject()
 ---@param mustNotCross|nil cg.Polygon the headland must not cross this polygon, if it does, it is invalid. This is usually
 --- the outermost headland around the field, as when anything crosses that, it'll be at least partly outside of the field.
 function Headland:init(basePolygon, clockwise, passNumber, width, outward, mustNotCross)
-    self.logger = cg.Logger('Headland ' .. passNumber or '')
+    self.logger = Logger('Headland ' .. passNumber or '')
     self.clockwise = clockwise
     self.passNumber = passNumber
     self.logger:debug('start generating, base clockwise %s, desired clockwise %s, width %.1f, outward: %s',

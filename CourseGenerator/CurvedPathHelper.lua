@@ -4,7 +4,7 @@
 ---@class CurvedPathHelper
 local CurvedPathHelper = {}
 
-local logger = cg.Logger('CurvedPathHelper')
+local logger = Logger('CurvedPathHelper')
 
 ---@param boundary cg.Polygon the boundary, usually headland or virtual headland. Rows must cover the area within the
 --- boundary - working width / 2

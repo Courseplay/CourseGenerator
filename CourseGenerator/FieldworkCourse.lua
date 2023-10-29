@@ -10,7 +10,7 @@ local FieldworkCourse = CpObject()
 
 ---@param context cg.FieldworkContext
 function FieldworkCourse:init(context)
-    self.logger = cg.Logger('FieldworkCourse')
+    self.logger = Logger('FieldworkCourse')
     self:_setContext(context)
     self.headlandPath = cg.Polyline()
     self.circledIslands = {}

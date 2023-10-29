@@ -2,7 +2,7 @@ local Polygon = CpObject(cg.Polyline)
 
 function Polygon:init(vertices)
     cg.Polyline.init(self, vertices)
-    self.logger = cg.Logger('Polygon', cg.Logger.level.debug)
+    self.logger = Logger('Polygon', Logger.level.debug)
 end
 
 function Polygon:clone()

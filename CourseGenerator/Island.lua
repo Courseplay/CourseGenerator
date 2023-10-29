@@ -10,7 +10,7 @@ Island.gridSpacing = 1
 function Island:init(id, perimeterPoints)
     self.boundary = cg.Polygon()
     self.id = id
-    self.logger = cg.Logger('Island ' .. self.id)
+    self.logger = Logger('Island ' .. self.id)
     self.headlands = {}
     self.circled = false
     self:createFromPerimeterPoints(perimeterPoints)

@@ -23,7 +23,7 @@
 local FieldworkCourseTwoSided = CpObject(cg.FieldworkCourse)
 
 function FieldworkCourseTwoSided:init(context)
-    self.logger = cg.Logger('FieldworkCourseTwoSided')
+    self.logger = Logger('FieldworkCourseTwoSided')
     self:_setContext(context)
     self.virtualHeadland = cg.FieldworkCourseHelper.createVirtualHeadland(self.boundary, self.context.headlandClockwise,
             self.context.workingWidth)

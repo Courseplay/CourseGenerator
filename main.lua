@@ -11,6 +11,7 @@
 --
 dofile('include.lua')
 
+local logger = Logger('main', Logger.level.debug)
 local parameters = {}
 -- working width of the equipment
 local workingWidth = AdjustableParameter(6, 'width', 'W', 'w', 0.2, 0, 100)
@@ -138,6 +139,7 @@ local context
 --- Generate the fieldwork course
 ---------------------------------------------------------------------------------------------------------------------------
 local function generate()
+    Logger.setLogfile(string.format('log/%s.log', selectedField:getId()))
     cg.clearDebugObjects()
     context = cg.FieldworkContext(selectedField, workingWidth:get(), turningRadius:get(), nHeadlandPasses:get())
                 :setHeadlandsWithRoundCorners(nHeadlandsWithRoundCorners:get())
@@ -165,10 +167,27 @@ local function generate()
     else
         context:setRowPattern(cg.RowPattern.create(rowPattern:get(), nRows:get(), leaveSkippedRowsUnworked:get()))
     end
+    local generatorFunc
     if twoSided:get() then
-        course = cg.FieldworkCourseTwoSided(context)
+        generatorFunc = function()
+            return cg.FieldworkCourseTwoSided(context)
+        end
     else
-        course = cg.FieldworkCourse(context)
+        generatorFunc = function()
+            return cg.FieldworkCourse(context)
+        end
+    end
+    local success
+    success, course = xpcall(
+            generatorFunc,
+            function(err)
+                context:addError(logger, debug.traceback(err))
+                error(nil)
+            end)
+    if not success then
+        io.stdout:flush()
+        errors = context:getErrors()
+        return
     end
     if reverseCourse:get() then
         course:reverse()
@@ -199,13 +218,9 @@ function love.load(arg)
         love.profiler = require('profile')
     end
     fileName = arg[1]
-    cg.debug('Reading %s...', fileName)
+    logger:debug('Reading %s...', fileName)
     savedFields = cg.Field.loadSavedFields(fileName)
-    for _, f in pairs(savedFields) do
-        if f:getId() == tonumber(arg[2]) then
-            selectedField = f
-        end
-    end
+    selectedField = savedFields[tonumber(arg[2])]
     local x1, y1, x2, y2 = selectedField:getBoundingBox()
     local fieldWidth, fieldHeight = x2 - x1, y2 - y1
     local xScale = windowWidth / fieldWidth
@@ -229,7 +244,7 @@ function love.load(arg)
     love.graphics.setPointSize(pointSize)
     love.graphics.setLineWidth(lineWidth)
     love.window.setMode(windowWidth, windowHeight, { highdpi = true })
-    love.window.setTitle(string.format('Course Generator - %s - SelectedField %d', fileName, selectedField:getId()))
+    love.window.setTitle(string.format('Course Generator - %s', selectedField:getId()))
 
     startSign = love.graphics.newImage('Courseplay_FS22/img/signs/start.dds')
     stopSign = love.graphics.newImage('Courseplay_FS22/img/signs/stop.dds')
@@ -279,9 +294,9 @@ local function selectFieldUnderCursor()
     startX, startY = screenToWorld(x, y)
     for _, f in pairs(savedFields) do
         if f:getBoundary():isInside(startX, startY) then
-            print(string.format('Field %d selected', f:getId()))
+            print(string.format('Field %s selected', f:getId()))
             selectedField = f
-            love.window.setTitle(string.format('Course Generator - %s - SelectedField %d', fileName, selectedField:getId()))
+            love.window.setTitle(string.format('Course Generator - %s', selectedField:getId()))
             generate()
         end
     end
@@ -483,7 +498,7 @@ local function drawFields()
         local c = f:getCenter()
         love.graphics.push()
         love.graphics.scale(1, -1)
-        love.graphics.print(f:getId(), c.x, -c.y)
+        love.graphics.print(f:getNum(), c.x, -c.y)
         love.graphics.pop()
     end
 end

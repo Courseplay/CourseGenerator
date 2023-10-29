@@ -7,7 +7,7 @@ function Polyline:init(vertices)
             self[i] = cg.Vertex(v.x, v.y, i)
         end
     end
-    self.logger = cg.Logger('Polyline', cg.Logger.level.debug)
+    self.logger = Logger('Polyline', Logger.level.debug)
     self:calculateProperties()
 end
 

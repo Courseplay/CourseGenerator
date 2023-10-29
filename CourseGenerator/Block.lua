@@ -22,7 +22,7 @@ local Block = CpObject()
 ---@param rowPattern cg.RowPattern pattern to use for the up/down rows
 function Block:init(rowPattern, id)
     self.id = id or 0
-    self.logger = cg.Logger('Block ' .. self.id)
+    self.logger = Logger('Block ' .. self.id)
     -- rows in the order they were added, first vertex of each row is on the same side
     self.rows = {}
     -- rows in the order they will be worked on, every second row in this sequence is reversed

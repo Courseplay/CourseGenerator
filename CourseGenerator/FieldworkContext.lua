@@ -28,7 +28,7 @@ function FieldworkContext:init(field, workingWidth, turningRadius, nHeadlands)
     self.rowAngle = 0
     self.evenRowDistribution = false
     self.useBaselineEdge = false
-    self.logger = cg.Logger('FieldworkContext')
+    self.logger = Logger('FieldworkContext')
     self.errors = {}
 end
 

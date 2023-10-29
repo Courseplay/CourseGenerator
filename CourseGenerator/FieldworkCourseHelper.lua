@@ -3,7 +3,7 @@
 ---@class FieldworkCourseHelper
 local FieldworkCourseHelper = {}
 
-FieldworkCourseHelper.logger = cg.Logger('FieldworkCourseHelper')
+FieldworkCourseHelper.logger = Logger('FieldworkCourseHelper')
 
 -- how far to drive beyond the field edge/headland if we hit it at an angle, to cover the row completely
 local function getDistanceBetweenRowEndAndFieldBoundary(workingWidth, angle)

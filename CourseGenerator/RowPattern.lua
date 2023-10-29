@@ -24,7 +24,7 @@ function RowPattern.create(pattern, ...)
 end
 
 function RowPattern:init()
-    self.logger = cg.Logger('RowPattern')
+    self.logger = Logger('RowPattern')
     self.sequence = {}
 end
 
