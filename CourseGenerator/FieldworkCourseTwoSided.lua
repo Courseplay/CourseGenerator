@@ -25,7 +25,8 @@ local FieldworkCourseTwoSided = CpObject(cg.FieldworkCourse)
 function FieldworkCourseTwoSided:init(context)
     self.logger = Logger('FieldworkCourseTwoSided')
     self:_setContext(context)
-    self.virtualHeadland = cg.FieldworkCourseHelper.createVirtualHeadland(self.boundary, self.context.headlandClockwise,
+    -- clockwise setting really does not matter but the generated headland is expected match the boundary
+    self.virtualHeadland = cg.FieldworkCourseHelper.createVirtualHeadland(self.boundary, self.boundary:isClockwise(),
             self.context.workingWidth)
     self.headlandPath = cg.Polyline()
 
