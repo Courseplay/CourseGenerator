@@ -41,7 +41,7 @@ local autoRowAngle = ToggleParameter('auto row angle', true, '6')
 table.insert(parameters, autoRowAngle)
 local rowAngleDeg = AdjustableParameter(-90, 'row angle', 'A', 'a', 10, -90, 90)
 table.insert(parameters, rowAngleDeg)
-local rowPattern = ListParameter(cg.RowPattern.ALTERNATING, 'row pattern', 'O', 'o',
+local rowPattern = ListParameter(cg.RowPattern.SPIRAL, 'row pattern', 'O', 'o',
         { cg.RowPattern.ALTERNATING,
           cg.RowPattern.SKIP,
           cg.RowPattern.SPIRAL,

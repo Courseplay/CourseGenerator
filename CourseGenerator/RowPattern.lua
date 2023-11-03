@@ -23,8 +23,8 @@ function RowPattern.create(pattern, ...)
     end
 end
 
-function RowPattern:init()
-    self.logger = Logger('RowPattern')
+function RowPattern:init(logPrefix)
+    self.logger = Logger(logPrefix or 'RowPattern')
     self.sequence = {}
 end
 
@@ -117,6 +117,8 @@ function RowPattern:getWorkSequenceAndExit(rows, entry)
     for i, rowInfo in self:iterator(rowInfos) do
         if i % 2 == (reverseOddRows and 1 or 0) then
             rowInfo.reverse = true
+        else
+            rowInfo.reverse = false
         end
         table.insert(rowInfosInWorkSequence, rowInfo)
     end
@@ -219,7 +221,7 @@ local RowPatternSkip = CpObject(RowPattern)
 --- the skipped rows unworked. Otherwise, it will work on the skipped rows backwards to the beginning, and then
 --- back and forth until all rows are covered.
 function RowPatternSkip:init(nRowsToSkip, leaveSkippedRowsUnworked)
-    cg.RowPattern.init(self)
+    cg.RowPattern.init(self, 'RowPatternSkip')
     self.nRowsToSkip = nRowsToSkip
     self.leaveSkippedRowsUnworked = leaveSkippedRowsUnworked
 end
@@ -302,7 +304,7 @@ local RowPatternSpiral = CpObject(RowPattern)
 ---@param fromInside boolean if true, start in the middle and continue outwards. If false,
 --- start from one of the outermost rows and continue inwards
 function RowPatternSpiral:init(clockwise, fromInside)
-    cg.RowPattern.init(self)
+    cg.RowPattern.init(self, 'RowPatternSpiral')
     self.clockwise = clockwise
     self.fromInside = fromInside
 end
@@ -333,43 +335,45 @@ function RowPatternSpiral:getPossibleEntries(rows)
     if #rows < 2 then
         return RowPattern.getPossibleEntries(self, rows)
     end
-    local sequence = self:_getSequence(#rows)
-    local odd = #rows % 2 ~= 0
-    local firstRow = rows[sequence[1]]
-    local secondRow = rows[sequence[2]]
     -- normalize rows, making sure the second (and all other) row are on the
     -- right side of the first row when looking into the row's direction
     -- this makes life easier later as reduces the number of combinations we need to think about.
-    if firstRow[1]:getExitEdge():isLeft(secondRow[1]) then
+    if rows[1][1]:getExitEdge():isLeft(rows[#rows][1]) then
         self.logger:debug('normalizing rows')
         for _, row in ipairs(rows) do
             row:reverse()
         end
     end
+    local sequence = self:_getSequence(#rows)
+    local odd = #rows % 2 ~= 0
+    local firstRow = rows[sequence[1]]
+    local secondRow = rows[sequence[2]]
     self.logger:debug('from inside %s, clockwise %s, odd %s', self.fromInside, self.clockwise, odd)
     if self.fromInside then
         if self.clockwise then
             -- from inside, clockwise
             if odd then
                 return {
-                    cg.RowPattern.Entry(firstRow[1], false, false, false)
+                    cg.RowPattern.Entry(firstRow[1], false, false, false),
+                    cg.RowPattern.Entry(firstRow[#firstRow], true, false, true),
                 }
             else
                 return {
-                    cg.RowPattern.Entry(firstRow[#firstRow], true, false, true),
+                    cg.RowPattern.Entry(firstRow[#firstRow], false, false, true),
+                    secondRow and cg.RowPattern.Entry(secondRow[1], true, false, false),
                 }
             end
         else
             -- from inside, counterclockwise
             if odd then
                 return {
-                    cg.RowPattern.Entry(firstRow[#firstRow], false, false, true)
+                    cg.RowPattern.Entry(firstRow[1], true, false, false),
+                    cg.RowPattern.Entry(firstRow[#firstRow], false, false, true),
                 }
             else
                 return {
-                    -- if there is only one row we can enter either end of it
-                    secondRow and cg.RowPattern.Entry(secondRow[1], true, false, false) or
-                            cg.RowPattern.Entry(firstRow[1], false, false, false),
+                    cg.RowPattern.Entry(firstRow[1], false, false, false),
+                    secondRow and cg.RowPattern.Entry(secondRow[#secondRow], true, false, true)
                 }
             end
 
@@ -542,7 +546,7 @@ cg.RowPatternLands = RowPatternLands
 local RowPatternRacetrack = CpObject(RowPattern)
 
 function RowPatternRacetrack:init()
-    cg.RowPattern.init(self)
+    cg.RowPattern.init(self, 'RowPatternRaceTrack')
     -- by default we skip the first four rows when starting
     self.nSkip = 4
 end
