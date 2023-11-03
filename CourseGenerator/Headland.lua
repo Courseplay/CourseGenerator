@@ -15,7 +15,7 @@ local Headland = CpObject()
 ---@param mustNotCross|nil cg.Polygon the headland must not cross this polygon, if it does, it is invalid. This is usually
 --- the outermost headland around the field, as when anything crosses that, it'll be at least partly outside of the field.
 function Headland:init(basePolygon, clockwise, passNumber, width, outward, mustNotCross)
-    self.logger = cg.Logger('Headland ' .. passNumber or '')
+    self.logger = Logger('Headland ' .. passNumber or '')
     self.clockwise = clockwise
     self.passNumber = passNumber
     self.logger:debug('start generating, base clockwise %s, desired clockwise %s, width %.1f, outward: %s',
@@ -34,7 +34,7 @@ function Headland:init(basePolygon, clockwise, passNumber, width, outward, mustN
     self.polygon = cg.Offset.generate(basePolygon, self.offsetVector, width)
     if self.polygon then
         self.polygon:calculateProperties()
-        self.polygon:ensureMaximumEdgeLength(cg.cMaxEdgeLength, cg.cMaxDeltaAngleForMaxEdgeLength)
+        self.polygon:ensureMaximumEdgeLength(cg.cMaxEdgeLength)
         self.polygon:calculateProperties()
         if mustNotCross and self.polygon:intersects(mustNotCross) then
             self.polygon = nil
@@ -71,7 +71,13 @@ end
 ---@return cg.Polyline Headland vertices with waypoint attributes
 function Headland:getPath()
     -- make sure all attributes are set correctly
-    self.polygon:setAttributes(nil, nil, cg.WaypointAttributes.setHeadlandPassNumber, self.passNumber)
+    self.polygon:setAttribute(nil, cg.WaypointAttributes.setHeadlandPassNumber, self.passNumber)
+    -- mark corners as headland turns
+    for _, v in ipairs(self.polygon) do
+        if v.isCorner then
+            v:getAttributes():setHeadlandTurn()
+        end
+    end
     return self.polygon
 end
 

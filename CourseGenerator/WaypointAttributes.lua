@@ -25,6 +25,7 @@ function WaypointAttributes:setHeadlandTransition()
     self.headlandTransition = true
 end
 
+---@return boolean true if this waypoint is on a section leading from one headland to the next
 function WaypointAttributes:isHeadlandTransition()
     return self.headlandTransition
 end
@@ -56,13 +57,13 @@ function WaypointAttributes:getRowNumber()
     return self.rowNumber
 end
 
----@return boolean true if this is the last waypoint of an up/down row. It is either time to switch to the next
---- row (by starting a turn) of the same block, the first row of the next block, or, to the headland if we
---- started working on the center of the field
 function WaypointAttributes:setRowEnd()
     self.rowEnd = true
 end
 
+---@return boolean true if this is the last waypoint of an up/down row. It is either time to switch to the next
+--- row (by starting a turn) of the same block, the first row of the next block, or, to the headland if we
+--- started working on the center of the field
 function WaypointAttributes:isRowEnd()
     return self.rowEnd
 end
@@ -74,6 +75,17 @@ end
 ---@return boolean true if this is the first waypoint of an up/down row.
 function WaypointAttributes:isRowStart()
     return self.rowStart
+end
+
+function WaypointAttributes:setHeadlandTurn()
+    self.headlandTurn = true
+end
+
+---@return boolean true if this is a headland turn waypoint, like a corner where the vehicle must perform a turn
+--- maneuver into the new direction (usually around 90º, but can be anything between 10 - 170),
+--- making sure it covers the entire area.
+function WaypointAttributes:isHeadlandTurn()
+    return self.headlandTurn
 end
 
 function WaypointAttributes:setIslandHeadland()

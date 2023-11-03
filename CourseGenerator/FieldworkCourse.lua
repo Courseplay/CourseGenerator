@@ -10,7 +10,7 @@ local FieldworkCourse = CpObject()
 
 ---@param context cg.FieldworkContext
 function FieldworkCourse:init(context)
-    self.logger = cg.Logger('FieldworkCourse')
+    self.logger = Logger('FieldworkCourse')
     self:_setContext(context)
     self.headlandPath = cg.Polyline()
     self.circledIslands = {}
@@ -29,7 +29,7 @@ function FieldworkCourse:init(context)
         self.headlandPath = cg.HeadlandConnector.connectHeadlandsFromOutside(self.headlands,
                 context.startLocation, self.context.workingWidth, self.context.turningRadius)
         self:routeHeadlandsAroundSmallIslands()
-        self.logger:debug('### Generating up/down rows ###')
+        self.logger:debug('### Genera]ting up/down rows ###')
         self:generateCenter()
     else
         self.logger:debug('### Generating up/down rows ###')
@@ -105,8 +105,7 @@ end
 --- Headlands
 ------------------------------------------------------------------------------------------------------------------------
 --- Generate the headlands based on the current context or the context passed in here
----@param context cg.FieldworkContext if defined, set it as current context before generating the headlands
-function FieldworkCourse:generateHeadlands(context)
+function FieldworkCourse:generateHeadlands()
     self.headlands = {}
     self.logger:debug('generating %d headlands with round corners, then %d with sharp corners',
             self.nHeadlandsWithRoundCorners, self.nHeadlands - self.nHeadlandsWithRoundCorners)
@@ -190,16 +189,10 @@ function FieldworkCourse:generateCenter()
     -- if there are no headlands, or there are, but we start working in the middle, then use the
     -- designated start location, otherwise the point where the innermost headland ends.
     if #self.headlands == 0 then
-        -- create a virtual headland to be used by the center generation, so the center does not have towards
-        -- know if the boundary is a headland or the actual field boundary. The virtual headland is half working
-        -- width wider than the field boundary so the rows in the center cover the area between the original
-        -- field boundaries.
-        local virtualHeadland = cg.Headland(self.boundary, self.context.headlandClockwise, 0,
-                self.context.workingWidth / 2, true)
-        self.center = cg.Center(self.context, virtualHeadland, self.context.startLocation, self.bigIslands)
+        self.center = cg.Center(self.context, self.boundary, nil, self.context.startLocation, self.bigIslands)
     else
         local innerMostHeadlandPolygon = self.headlands[#self.headlands]:getPolygon()
-        self.center = cg.Center(self.context, self.headlands[#self.headlands],
+        self.center = cg.Center(self.context, self.boundary, self.headlands[#self.headlands],
                 self.context.headlandFirst and
                         innerMostHeadlandPolygon[#innerMostHeadlandPolygon] or
                         self.context.startLocation,
@@ -253,7 +246,6 @@ function FieldworkCourse:routeHeadlandsAroundSmallIslands()
     end
 end
 
-
 function FieldworkCourse:bypassIslands()
     self.logger:debug('### Bypassing small islands ###')
     for _, island in pairs(self.smallIslands) do
@@ -297,9 +289,9 @@ function FieldworkCourse:circleBigIslands()
 
             -- from the row end to the start of the headland, we instruct the driver to use
             -- the pathfinder.
-            path:setAttributes(i, i, cg.WaypointAttributes.setUsePathfinderToNextWaypoint)
-            headlandPath:setAttributes(#headlandPath, #headlandPath, cg.WaypointAttributes.setUsePathfinderToNextWaypoint)
-            headlandPath:setAttributes(nil, nil, cg.WaypointAttributes.setIslandHeadland)
+            path:setAttribute(i, cg.WaypointAttributes.setUsePathfinderToNextWaypoint)
+            headlandPath:setAttribute(#headlandPath, cg.WaypointAttributes.setUsePathfinderToNextWaypoint)
+            headlandPath:setAttribute(nil, cg.WaypointAttributes.setIslandHeadland)
 
             self.logger:debug('Added headland path around island %d with %d points', island:getId(), #headlandPath)
             for j = #headlandPath, 1, -1 do
@@ -343,7 +335,6 @@ function FieldworkCourse:_removeHeadland(n)
     self.logger:error('could not generate headland %d, course has %d headlands, %d rounded',
             n, self.nHeadlands, self.nHeadlandsWithRoundCorners)
 end
-
 
 ---@class cg.FieldworkCourse
 cg.FieldworkCourse = FieldworkCourse

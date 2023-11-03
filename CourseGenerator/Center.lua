@@ -8,14 +8,32 @@
 local Center = CpObject()
 
 ---@param context cg.FieldworkContext
----@param headland cg.Headland the headland (or virtual headland)
+---@param boundary cg.Polygon the field boundary
+---@param headland cg.Headland|nil the innermost headland if exists
 ---@param startLocation cg.Vector location of the vehicle before it starts working on the center.
 ---@param bigIslands cg.Island[] islands too big to circle
-function Center:init(context, headland, startLocation, bigIslands)
-    self.logger = cg.Logger('Center', cg.Logger.level.debug)
-    self.boundary = headland:getPolygon()
-    self.headland = headland
+function Center:init(context, boundary, headland, startLocation, bigIslands)
+    self.logger = Logger('Center', Logger.level.debug)
     self.context = context
+    if headland == nil then
+        -- if there are no headlands, we generate a virtual one, from the field boundary
+        -- so using this later is equivalent of having an actual headland
+        local virtualHeadland = cg.FieldworkCourseHelper.createVirtualHeadland(boundary, self.context.headlandClockwise,
+                self.context.workingWidth)
+        if self.context.sharpenCorners then
+            virtualHeadland:sharpenCorners(self.context.turningRadius)
+        end
+        self.headlandPolygon = virtualHeadland:getPolygon()
+        cg.addDebugPolyline(self.headlandPolygon, {1, 1, 0, 0.5})
+        self.headland = virtualHeadland
+        self.mayOverlapHeadland = false
+    else
+        self.headlandPolygon = headland:getPolygon()
+        self.headland = headland
+        self.mayOverlapHeadland = true
+    end
+    self.useBaselineEdge = self.context.useBaselineEdge
+    self.boundary = boundary
     self.startLocation = startLocation
     self.bigIslands = bigIslands
     -- All the blocks we divided the center into
@@ -65,13 +83,14 @@ end
 function Center:generate()
     -- first, we split the field into blocks. Simple convex fields have just one block only,
     -- but odd shaped, concave fields or fields with island may have more blocks
-    if self.context.useBaselineEdge then
-        self.rows = self:_generateCurvedUpDownRows()
+    if self.useBaselineEdge then
+        self.rows = cg.CurvedPathHelper.generateCurvedUpDownRows(self.headlandPolygon, self.context.baselineEdge,
+                self.context.workingWidth, self.context.turningRadius, nil)
     else
         local angle = self.context.autoRowAngle and self:_findBestRowAngle() or self.context.rowAngle
         self.rows = self:_generateStraightUpDownRows(angle)
     end
-    local blocks = self:_splitIntoBlocks(self.rows)
+    local blocks = self:_splitIntoBlocks(self.rows, self.headland)
 
     if #blocks < 1 then
         self.logger:debug('No blocks could be generated')
@@ -162,9 +181,7 @@ function Center:generate()
     self:_wrapUpConnectingPaths()
     self.logger:debug('Found %d block(s), %d connecting path(s).', #self.blocks, #self.connectingPaths)
     if not strict then
-        local errorText = 'Could not find the shortest path on headland between blocks'
-        self.logger:error(errorText)
-        self.context:addError(errorText)
+        self.context:addError('Could not find the shortest path on headland between blocks')
     end
     return lastLocation
 end
@@ -202,13 +219,13 @@ end
 ------------------------------------------------------------------------------------------------------------------------
 function Center:_generateStraightUpDownRows(rowAngle, suppressLog)
     local baseline = self:_createStraightBaseline(rowAngle)
-    local _, dMin, _, dMax = self.boundary:findClosestAndFarthestVertexToLineSegment(baseline[1]:getExitEdge())
+    local _, dMin, _, dMax = self.headlandPolygon:findClosestAndFarthestVertexToLineSegment(baseline[1]:getExitEdge())
 
     -- make the best effort to have the row that overlaps the headland (or the last row when there is no headland)
     -- the last row we work on. This usually works for the alternating/skip pattern, no guarantee for other patterns.
     local startLocationDistance = baseline[1]:getExitEdge():getDistanceFrom(self.context.startLocation)
     local overlapLast = startLocationDistance < (dMin + dMax) / 2
-    if self.context.nHeadlands > 0 and not self.context.headlandFirst then
+    if self.mayOverlapHeadland and not self.context.headlandFirst then
         overlapLast = not overlapLast
     end
     -- move the baseline to the edge of the area we want to cover
@@ -249,16 +266,18 @@ end
 
 function Center:_findBestRowAngle()
     local minScore, minRows, bestAngle = math.huge, math.huge, 0
-    local longestEdgeDirection = self.boundary:getLongestEdgeDirection()
+    local longestEdgeDirection = self.headlandPolygon:getLongestEdgeDirection()
     self.logger:debug('  longest edge direction %.1f', math.deg(longestEdgeDirection))
     for a = -90, 90, 1 do
         local rows = self:_generateStraightUpDownRows(math.rad(a), true)
-        local blocks = self:_splitIntoBlocks(rows)
-        local score = 6 * #blocks + #rows + self:_calculateSmallBlockPenalty(blocks, #rows) +
-                -- Prefer angles closest to the direction of the longest edge of the field
-                -- sin(a - longestEdgeDirection) will be 0 when angle is the closest.
-                3 * math.abs(math.sin(cg.Math.getDeltaAngle(math.rad(a), longestEdgeDirection)))
-        self.logger:debug('  rows: %d blocks: %d score: %.1f', #rows, #blocks, score)
+        local blocks = self:_splitIntoBlocks(rows, self.headland)
+        local smallBlockPenalty = self:_calculateSmallBlockPenalty(blocks, #rows)
+        -- Prefer angles closest to the direction of the longest edge of the field
+        -- sin(a - longestEdgeDirection) will be 0 when angle is the closest.
+        local notLongestEdgePenalty = 5 * math.abs(math.sin(cg.Math.getDeltaAngle(math.rad(a), longestEdgeDirection)))
+        local score = 6 * #blocks + #rows + smallBlockPenalty + notLongestEdgePenalty
+        self.logger:debug('  %dº - rows: %d blocks: %d small block penalty: %.1f not longest edge penalty: %.1f score: %.3f',
+                a, #rows, #blocks, smallBlockPenalty, notLongestEdgePenalty, score)
         if score < minScore then
             minScore = score
             bestAngle = math.rad(a)
@@ -272,7 +291,7 @@ end
 function Center:_createStraightBaseline(rowAngle)
     -- Set up a baseline. This goes through the lower left or right corner of the bounding box, at the requested
     -- angle, and long enough that when shifted (offset copies are created), will cover the field at any angle.
-    local x1, y1, x2, y2 = self.boundary:getBoundingBox()
+    local x1, y1, x2, y2 = self.headlandPolygon:getBoundingBox()
     -- add a little margin so all lines are a little longer than they should be, this way
     -- we guarantee that the first intersection with the boundary will always be well defined and won't
     -- fall exactly on the boundary.
@@ -331,7 +350,7 @@ function Center:_calculateRowDistribution(workingWidth, fieldWidth, sameWidth, o
         end
         local firstRowOffset
         local rowOffsets = {}
-        if self.context.nHeadlands > 0 then
+        if self.mayOverlapHeadland then
             -- #3 we have headlands
             if overlapLast then
                 firstRowOffset = workingWidth
@@ -359,82 +378,16 @@ function Center:_calculateRowDistribution(workingWidth, fieldWidth, sameWidth, o
     end
 end
 
-function Center:_generateCurvedUpDownRows()
-    local rows = {}
-
-    local function getIntersectionsExtending(row, boundary)
-        local intersections, extensions = {}, 0
-        repeat
-            intersections = row:getIntersections(boundary, 1)
-            local evenNumberOfIntersections = #intersections % 2 == 0
-            if #intersections < 2 or not evenNumberOfIntersections then
-                row:extendStart(50)
-                row:extendEnd(50)
-                extensions = extensions + 1
-            end
-        until (#intersections > 1 and evenNumberOfIntersections) or extensions > 3
-        if #intersections > 1 and extensions > 0 then
-            self.logger:debug('Row %d extended to intersect boundary', #rows + 1)
-        elseif #intersections < 2 then
-            self.logger:debug('Row %d could not be extended to intersect boundary (tries: %d)', #rows + 1, extensions)
-        end
-        return intersections
-    end
-
-    local baseline = self:_createCurvedBaseline()
-    baseline:extendStart(50)
-    baseline:extendEnd(50)
-    -- always generate inwards
-    local offset = self.context.headlandClockwise and -self.context.workingWidth or self.context.workingWidth
-    local row = baseline:createNext(offset)
-    getIntersectionsExtending(row, self.boundary)
-    table.insert(rows, row)
-    repeat
-        row = row:createNext(offset)
-        local intersections = getIntersectionsExtending(row, self.boundary)
-        table.insert(rows, row)
-    until #rows > 100 or #intersections < 2
-    return rows
-end
-
---- Create a baseline for the up/down rows, which is not necessarily straight, instead, it follows a section
---- of the field boundary. This way some odd-shaped fields can be covered with less turns.
-function Center:_createCurvedBaseline()
-    local closest = self.boundary:findClosestVertexToPoint(self.context.baselineEdge or self.boundary:at(1))
-    return self:_findLongestStraightSection(closest.ix, self.context.turningRadius)
-end
-
----@param ix number the vertex of the boundary to start the search
----@param radiusThreshold number straight section ends when the radius is under this threshold
----@return cg.Row array of vectors (can be empty) from ix to the start of the straight section
-function Center:_findLongestStraightSection(ix, radiusThreshold)
-    local i = ix
-    local section = cg.Row(self.context.workingWidth)
-    while math.abs(self.boundary:at(i):getRadius()) > radiusThreshold do
-        section:append((self.boundary:at(i)):clone())
-        i = i - 1
-    end
-    section:reverse()
-    i = ix + 1
-    while math.abs(self.boundary:at(i):getRadius()) > radiusThreshold do
-        section:append((self.boundary:at(i)):clone())
-        i = i + 1
-    end
-    section:calculateProperties()
-    -- no straight section found, bail out here
-    self.logger:debug('Longest straight section found %d vertices, %.1f m', #section, section:getLength())
-    cg.addDebugPolyline(section)
-    return section
-end
-
 ---@param rows cg.Row[]
-function Center:_splitIntoBlocks(rows)
-    local blocks = {}
+---@param headland cg.Headland
+function Center:_splitIntoBlocks(rows, headland)
+    local blocks
     local openBlocks = {}
     local function closeBlocks(rowNumber)
         local n = 0
         for block, lastRowNumber in pairs(openBlocks) do
             if rowNumber == nil or lastRowNumber ~= rowNumber then
+                blocks = blocks or {}
                 table.insert(blocks, block)
                 openBlocks[block] = nil
                 n = n + 1
@@ -447,7 +400,7 @@ function Center:_splitIntoBlocks(rows)
     local blockId = 1
 
     for i, row in ipairs(rows) do
-        local sections = row:split(self.headland, self.bigIslands)
+        local sections = row:split(headland, self.bigIslands)
         self.logger:trace('Row %d has %d section(s)', i, #sections)
         -- first check if there is a block which overlaps with more than one section
         -- if that's the case, close the open blocks. This forces the creation of new blocks
@@ -544,7 +497,7 @@ function Center:_wrapUpConnectingPaths()
         end
     else
         for _, c in ipairs(self.connectingPaths) do
-            c:setAttributes(nil, nil, cg.WaypointAttributes.setOnConnectingPath)
+            c:setAttribute(nil, cg.WaypointAttributes.setOnConnectingPath)
         end
     end
 end

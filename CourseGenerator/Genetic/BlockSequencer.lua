@@ -139,7 +139,7 @@ local BlockSequencer = CpObject()
 ---@param blocks cg.Block[]
 function BlockSequencer:init(blocks)
     self.blocks = blocks
-    self.logger = cg.Logger('BlockSequencer')
+    self.logger = Logger('BlockSequencer')
 end
 
 --- Find the (near) optimum sequence of blocks and entry/exit points.

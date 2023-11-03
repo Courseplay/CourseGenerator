@@ -309,7 +309,7 @@ end
 
 function testShorten()
     lu.EPS = 0.01
-    local p = cg.Polyline({ cg.Vertex(0, 0), cg.Vertex(0, 10)})
+    local p = cg.Polyline({ cg.Vertex(0, 0), cg.Vertex(0, 10) })
     p:cutEnd(1)
     p[1]:assertAlmostEquals(cg.Vector(0, 0))
     p[#p]:assertAlmostEquals(cg.Vector(0, 9))
@@ -321,7 +321,7 @@ function testShorten()
     lu.assertEquals(p:getLength(), 8)
 
     p = cg.Polyline({ cg.Vertex(0, 0), cg.Vertex(0, 5), cg.Vertex(0, 10), cg.Vertex(5, 10),
-                            cg.Vertex(10, 10), cg.Vertex(15, 10), cg.Vertex(20, 10) })
+                      cg.Vertex(10, 10), cg.Vertex(15, 10), cg.Vertex(20, 10) })
     lu.assertEquals(p:getLength(), 30)
     p:cutEnd(1)
     p[1]:assertAlmostEquals(cg.Vector(0, 0))
@@ -340,6 +340,22 @@ function testShorten()
     p[1]:assertAlmostEquals(cg.Vector(0, 8))
     p[#p]:assertAlmostEquals(cg.Vector(12, 10))
 
+end
+
+function testTrimAtFirstIntersection()
+    local p = cg.Polyline({ cg.Vertex(0, 0), cg.Vertex(5, 0), cg.Vertex(10, 0), cg.Vertex(15, 0), cg.Vertex(20, 0)})
+    local o = cg.Polyline({ cg.Vertex(3, 10), cg.Vertex(3, -10)})
+    lu.assertEquals(p:getLength(), 20)
+    lu.assertEquals(p:getLength(3), 10)
+    p:trimAtFirstIntersection(o)
+    lu.assertEquals(p:getLength(), 15)
+    p[1]:assertAlmostEquals(cg.Vertex(5, 0))
+    p = cg.Polyline({ cg.Vertex(0, 0), cg.Vertex(5, 0), cg.Vertex(10, 0), cg.Vertex(15, 0), cg.Vertex(20, 0)})
+    o = cg.Polyline({ cg.Vertex(17, 10), cg.Vertex(17, -10)})
+    p:trimAtFirstIntersection(o)
+    lu.assertEquals(p:getLength(), 15)
+    p[1]:assertAlmostEquals(cg.Vertex(0, 0))
+    p[#p]:assertAlmostEquals(cg.Vertex(15, 0))
 end
 
 os.exit(lu.LuaUnit.run())

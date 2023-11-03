@@ -41,48 +41,6 @@ NewCourseGenerator.cSmallBlockRowPercentageLimit = 5
 -- will just simple drive around it. No rows intersecting the island will be split at the island.
 NewCourseGenerator.maxRowsToBypassIsland = 5
 
--- when enabled, will print a lot of information
-NewCourseGenerator.traceEnabled = false
-
---- Debug print, will either just call print when running standalone
---  or use the CP debug channel when running in the game.
-function NewCourseGenerator.debug(...)
-    if NewCourseGenerator.isRunningInGame() then
-        CpUtil.debugVehicle(CpDebug.DBG_COURSES, g_currentMission.controlledVehicle, ...)
-    else
-        print(string.format(...))
-        io.stdout:flush()
-    end
-end
-
-function NewCourseGenerator.info(...)
-    if NewCourseGenerator.isRunningInGame() then
-        -- TODO: debug channel (info)
-        CpUtil.info(...)
-    else
-        print(string.format(...))
-        io.stdout:flush()
-    end
-end
-
-function NewCourseGenerator.trace(...)
-    if not NewCourseGenerator.traceEnabled then return end
-    if NewCourseGenerator.isRunningInGame() then
-        CpUtil.debugVehicle(CpDebug.DBG_COURSES, g_currentMission.controlledVehicle, ...)
-    else
-        print(string.format(...))
-        io.stdout:flush()
-    end
-end
-
-function NewCourseGenerator.enableTrace()
-    NewCourseGenerator.traceEnabled = true
-end
-
-function NewCourseGenerator.disableTrace()
-    NewCourseGenerator.traceEnabled = false
-end
-
 function NewCourseGenerator.clearDebugObjects()
     NewCourseGenerator.debugPoints = {}
     NewCourseGenerator.debugPolylines = {}

@@ -7,7 +7,37 @@ local Row = CpObject(cg.Polyline)
 function Row:init(workingWidth, vertices)
     cg.Polyline.init(self, vertices)
     self.workingWidth = workingWidth
-    self.logger = cg.Logger('Row', cg.Logger.level.debug)
+    self.logger = Logger('Row ' .. tostring(self.rowNumber), Logger.level.debug)
+end
+
+function Row:setRowNumber(n)
+    self.rowNumber = n
+end
+
+function Row:setBlockNumber(n)
+    self.blockNumber = n
+end
+
+--- Sequence number to keep the original row sequence for debug purposes
+function Row:setSequenceNumber(n)
+    self.sequenceNumber = n
+end
+
+function Row:getSequenceNumber()
+    return self.sequenceNumber
+end
+
+function Row:clone()
+    local clone = cg.Row(self.workingWidth)
+    for _, v in ipairs(self) do
+        clone:append(v:clone())
+    end
+    clone:calculateProperties()
+    clone.blockNumber = self.blockNumber
+    clone.sequenceNumber = self.sequenceNumber
+    clone.startHeadlandAngle, clone.endHeadlandAngle = self.startHeadlandAngle, self.endHeadlandAngle
+    clone.startsAtHeadland, clone.endsAtHeadland = self.startsAtHeadland, self.endsAtHeadland
+    return clone
 end
 
 --- Create a row parallel to this one at offset distance.
@@ -39,19 +69,23 @@ function Row:overlaps(other)
 end
 
 --- Split a row at its intersections with the field boundary and with big islands.
---- In the trivial case of a rectangular field, this returns an array with a single polyline element,
+--- In the trivial case of a rectangular field, this returns an array with a single row element,
 --- the line between the two points where the row intersects the boundary.
 ---
---- In complex cases, with concave fields, the result may be more than one segments (polylines)
+--- In complex cases, with concave fields, the result may be more than one segments (rows)
 --- so for any section of the row which is within the boundary there'll be one entry in the
 --- returned array.
 ---
 --- Big islands in the field also split a row which intersects them. We just drive around
 --- smaller islands but at bigger ones it is better to end the row and turn around into the next.
 ---
----@param boundary cg.Headland the field boundary (or innermost headland)
+---@param headland cg.Headland the field boundary (or innermost headland)
+---@param bigIslands cg.Island[] islands big enough to split a row (we'll not just drive around them but turn)
+---@param onlyFirstAndLastIntersections|nil boolean ignore all intersections between the first and the last. This makes
+--- only sense if there are no islands. For cases where the row is almost parallel to the boundary and crosses it
+--- multiple times, so we rather not split it
 ---@return cg.Row[]
-function Row:split(headland, bigIslands)
+function Row:split(headland, bigIslands, onlyFirstAndLastIntersections)
     -- get all the intersections with the field boundary
     local intersections = self:getIntersections(headland:getPolygon(), 1,
             {
@@ -67,7 +101,14 @@ function Row:split(headland, bigIslands)
 
     if #intersections < 2 then
         self.logger:warning('Row has only %d intersection with headland %d', #intersections, headland:getPassNumber())
-        return cg.Row(self.workingWidth)
+        return {}
+    end
+
+    if onlyFirstAndLastIntersections then
+        intersections[2] = intersections[#intersections]
+        for _ = 3, #intersections do
+            table.remove(intersections)
+        end
     end
 
     -- then get all the intersections with big islands
@@ -150,38 +191,21 @@ function Row:getMiddle()
     end
 end
 
-function Row:setRowNumber(n)
-    self.rowNumber = n
-end
-
-function Row:setBlockNumber(n)
-    self.blockNumber = n
-end
-
---- Sequence number to keep the original row sequence for debug purposes
-function Row:setSequenceNumber(n)
-    self.sequenceNumber = n
-end
-
-function Row:getSequenceNumber()
-    return self.sequenceNumber
-end
-
 --- Update the attributes of the first and last vertex of the row based on the row's properties.
 --- We use these attributes when finding an entry to a block, to see if the entry is on an island headland
 --- or not. The attributes are set when the row is split at headlands but may need to be reapplied when
 --- we adjust the end of the row as we may remove the first/last vertex.
 function Row:setEndAttributes()
-    self:setAttributes(1, 1, cg.WaypointAttributes.setRowStart)
-    self:setAttributes(1, 1, cg.WaypointAttributes._setAtHeadland, self.startsAtHeadland)
-    self:setAttributes(#self, #self, cg.WaypointAttributes.setRowEnd)
-    self:setAttributes(#self, #self, cg.WaypointAttributes._setAtHeadland, self.endsAtHeadland)
+    self:setAttribute(1, cg.WaypointAttributes.setRowStart)
+    self:setAttribute(1, cg.WaypointAttributes._setAtHeadland, self.startsAtHeadland)
+    self:setAttribute(#self, cg.WaypointAttributes.setRowEnd)
+    self:setAttribute(#self, cg.WaypointAttributes._setAtHeadland, self.endsAtHeadland)
 end
 
 function Row:setAllAttributes()
     self:setEndAttributes()
-    self:setAttributes(nil, nil, cg.WaypointAttributes.setRowNumber, self.rowNumber)
-    self:setAttributes(nil, nil, cg.WaypointAttributes.setBlockNumber, self.blockNumber)
+    self:setAttribute(nil, cg.WaypointAttributes.setRowNumber, self.rowNumber)
+    self:setAttribute(nil, cg.WaypointAttributes.setBlockNumber, self.blockNumber)
 end
 
 function Row:reverse()

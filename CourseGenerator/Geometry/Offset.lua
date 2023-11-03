@@ -1,5 +1,5 @@
 local Offset = {}
-Offset.logger = cg.Logger('Offset')
+Offset.logger = Logger('Offset')
 local recursionCount = 0
 
 function Offset.generate(polygon, offsetVector, targetOffset, currentOffset)

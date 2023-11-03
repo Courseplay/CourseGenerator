@@ -28,7 +28,7 @@ function FieldworkContext:init(field, workingWidth, turningRadius, nHeadlands)
     self.rowAngle = 0
     self.evenRowDistribution = false
     self.useBaselineEdge = false
-    self.logger = cg.Logger('FieldworkContext')
+    self.logger = Logger('FieldworkContext')
     self.errors = {}
 end
 
@@ -41,12 +41,19 @@ function FieldworkContext:log()
             self.rowPattern, self.autoRowAngle, math.deg(self.rowAngle), self.evenRowDistribution, self.useBaselineEdge)
 end
 
-function FieldworkContext:addError(text)
+function FieldworkContext:addError(logger, ...)
+    local text = string.format(...)
+    logger:error(text)
     table.insert(self.errors, text)
 end
 
+---@return string[] Errors found during the generation
 function FieldworkContext:getErrors()
     return self.errors
+end
+
+function FieldworkContext:hasErrors()
+    return #self.errors > 0
 end
 
 ---@param nHeadlands number of headlands total.
@@ -126,6 +133,7 @@ function FieldworkContext:setAutoRowAngle(auto)
 end
 
 --- Angle of the up/down rows when not automatically selected
+---@param rowAngle number row angle in radians, x axis is 0, increasing counterclockwise
 function FieldworkContext:setRowAngle(rowAngle)
     self.rowAngle = rowAngle
     return self

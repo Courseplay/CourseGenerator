@@ -2,7 +2,7 @@ local Polygon = CpObject(cg.Polyline)
 
 function Polygon:init(vertices)
     cg.Polyline.init(self, vertices)
-    self.logger = cg.Logger('Polygon', cg.Logger.level.debug)
+    self.logger = Logger('Polygon', Logger.level.debug)
 end
 
 function Polygon:clone()
@@ -205,8 +205,8 @@ function Polygon:getLongestEdgeDirection()
             -- normalize angle of the edges, two edges with 180 degrees difference count the same
             local a = math.deg(e:getHeading())
             a = a < 0 and (a + 180) or a
-            a = a % 180
             a = math.floor(a + 0.5)
+            a = a % 180
             totalEdgeLength[a] = (totalEdgeLength[a] or 0) + e:getLength()
         end
         local bestAngle, longest = 0, -math.huge
@@ -283,25 +283,6 @@ function Polygon:moveForward(ix, d, isValidFunc)
     return nil
 end
 
----@param point Vector
----@param isValidFunc function optional function accepting a cg.Vertex and returning bool to determine if this
---- vertex should be considered at all
----@return cg.Vertex
-function Polygon:findClosestVertexToPoint(point, isValidFunc)
-    local d, closestVertex = math.huge, nil
-    for _, v in self:vertices() do
-        if not isValidFunc or isValidFunc(v) then
-            local dFromV = (point - v):length()
-            if dFromV < d then
-                d = dFromV
-                closestVertex = v
-            end
-        end
-    end
-    local projection = closestVertex and closestVertex:getExitEdge():getScalarProjection(point)
-    return closestVertex, projection
-end
-
 function Polygon:getSmallestRadiusWithinDistance(ix, dForward, dBackward)
     local i, dElapsed, minRadius = ix, 0, math.huge
     while dElapsed < dBackward do
@@ -375,6 +356,15 @@ function Polygon:_getDeltaAngle()
         end
     end
     return self.deltaAngle
+end
+
+function Polygon:__tostring()
+    local result = ''
+    for i, v in ipairs(self) do
+        -- show N/X to indicate if we have an entry/exit edge
+        result = result .. string.format('%d %s %s/%s\n', i, v, v:getEntryEdge() and 'N' or '-', v:getExitEdge() and 'X' or '-')
+    end
+    return result
 end
 
 ---@class cg.Polygon:cg.Polyline

@@ -7,7 +7,7 @@ function Polyline:init(vertices)
             self[i] = cg.Vertex(v.x, v.y, i)
         end
     end
-    self.logger = cg.Logger('Polyline', cg.Logger.level.debug)
+    self.logger = Logger('Polyline', Logger.level.debug)
     self:calculateProperties()
 end
 
@@ -166,11 +166,19 @@ function Polyline:reverse()
     return self
 end
 
-function Polyline:getLength()
-    if not self.length then
-        self.length = 0
-        for _, e in self:edges() do
-            self.length = self.length + e:getLength()
+function Polyline:getLength(startIx)
+    -- we cache the full length, and if it exists, return it
+    if not self.length or startIx then
+        -- otherwise calculate length
+        local length = 0
+        for _, e in self:edges(startIx) do
+            length = length + e:getLength()
+        end
+        if startIx then
+            return length
+        else
+            -- full length was requested, cache it
+            self.length = length
         end
     end
     return self.length
@@ -196,6 +204,7 @@ function Polyline:extendEnd(length)
     newEntryEdge:extend(length)
     self[#self] = cg.Vertex.fromVector(newEntryEdge:getEnd())
     self:calculateProperties(#self - 1)
+    return self
 end
 
 ---@param length number the polyline is extended backwards (first vertex moved).
@@ -204,6 +213,7 @@ function Polyline:extendStart(length)
     newExitEdge:extend(-length)
     self[1] = cg.Vertex.fromVector(newExitEdge:getBase())
     self:calculateProperties(1, 2)
+    return self
 end
 
 ---@param length number shorten the Polyline at the last vertex
@@ -261,6 +271,24 @@ function Polyline:cutEndAtIx(ix)
     self:calculateProperties(ix - 1, ix)
 end
 
+--- Cut this polyline where it first intersects with other and keep the longer part
+---@param other cg.Polyline
+function Polyline:trimAtFirstIntersection(other)
+    local intersections = self:getIntersections(other)
+    if #intersections == 0 then
+        return
+    end
+    -- where is the longer part?
+    local lengthFromIntersectionToEnd = self:getLength(intersections[1].ixA)
+    if lengthFromIntersectionToEnd < self:getLength() / 2 then
+        -- shorter part towards the end
+        self:cutEndAtIx(intersections[1].ixA)
+    else
+        -- shorter part towards the start
+        self:cutStartAtIx(intersections[1].ixA + 1)
+    end
+end
+
 --- Calculate all interesting properties we may need later for more advanced functions
 ---@param from number index of vertex to start the calculation, default 1
 ---@param to number index of last vertex to use in the calculation, default #self
@@ -306,7 +334,11 @@ end
 --- Use this to fix a polyline with many vertices where some edges may be slightly longer than the
 --- maximum. Use splitEdges() instead if you have just a few (as little as 2) vertices and
 --- need a vertex at every given distance
+---@param maximumLength number|nil default cg.cMaxEdgeLength,
+---@param maxDeltaAngleForOffset number|nil default cg.cMaxDeltaAngleForMaxEdgeLength
 function Polyline:ensureMaximumEdgeLength(maximumLength, maxDeltaAngleForOffset)
+    maximumLength = maximumLength or cg.cMaxEdgeLength
+    maxDeltaAngleForOffset = maxDeltaAngleForOffset or cg.cMaxDeltaAngleForMaxEdgeLength
     local i = 1
     while i <= self:fwdIterationLimit() do
         local exitEdge = cg.LineSegment.fromVectors(self:at(i), self:at(i + 1))
@@ -491,7 +523,7 @@ function Polyline:ensureMinimumRadius(r, makeCorners)
 
     self:ensureMinimumEdgeLength(cg.cMinEdgeLength)
     if makeCorners then
-        self:ensureMaximumEdgeLength(cg.cMaxEdgeLength, cg.cMaxDeltaAngleForMaxEdgeLength)
+        self:ensureMaximumEdgeLength(cg.cMaxEdgeLength)
     end
     self:calculateProperties()
 end
@@ -528,7 +560,7 @@ function Polyline:goAroundBetweenIntersections(other, circle, is1, is2)
         self.logger:debug('path A: %.1f, path B: %.1f', pathA:getLength(), pathB:getLength())
         if circle then
             path = shortPath:clone()
-            path:setAttributes(nil, nil, cg.WaypointAttributes.setIslandBypass)
+            path:setAttribute(nil, cg.WaypointAttributes.setIslandBypass)
             longPath:reverse()
             path:appendMany(longPath)
             -- mark this roundtrip as island bypass
@@ -577,6 +609,34 @@ function Polyline:findClosestAndFarthestVertexToLineSegment(lineSegment)
         end
     end
     return closestVertex, dMin, farthestVertex, dMax
+end
+
+---@param point Vector
+---@param isValidFunc function optional function accepting a cg.Vertex and returning bool to determine if this
+--- vertex should be considered at all
+---@return cg.Vertex
+---@return number distance of the closest vertex from point
+---@return number|nil distance of the point from exit (or if it does not exist, the entry) edge of the closest vertex
+function Polyline:findClosestVertexToPoint(point, isValidFunc)
+    local d, closestVertex = math.huge, nil
+    for _, v in self:vertices() do
+        if not isValidFunc or isValidFunc(v) then
+            local dFromV = (point - v):length()
+            if dFromV < d then
+                d = dFromV
+                closestVertex = v
+            end
+        end
+    end
+    local distanceFromEdge
+    if closestVertex then
+        if closestVertex:getExitEdge() then
+            distanceFromEdge = closestVertex:getExitEdge():getDistanceFrom(point)
+        elseif closestVertex:getEntryEdge() then
+            distanceFromEdge = closestVertex:getEntryEdge():getDistanceFrom(point)
+        end
+        return closestVertex, d, distanceFromEdge
+    end
 end
 
 --- Does this line intersects the other?
@@ -706,8 +766,9 @@ function Polyline:_getPathBetweenIntersections(fromIx, toIx)
     end
     return self:_getPathBetween(from, to)
 end
+
 --- Set an attribute for a series of vertices
----@param first number | nil index of first vertex to set the attribute
+---@param first number | nil index of first vertex to set the attribute for
 ---@param last number | nil index of last vertex
 ---@param setter cg.WaypointAttributes function to call on each vertex' attributes
 ---@param ... any arguments for setter
@@ -717,6 +778,14 @@ function Polyline:setAttributes(first, last, setter, ...)
     for i = first, last do
         setter(self:at(i):getAttributes(), ...)
     end
+end
+
+--- Set an attribute for a single vertex (or all)
+---@param ix number|nil index of vertex to set the attribute for, if nil, the attribute is set for all vertices
+---@param setter cg.WaypointAttributes function to call on each vertex' attributes
+---@param ... any arguments for setter
+function Polyline:setAttribute(ix, setter, ...)
+    self:setAttributes(ix, ix, setter, ...)
 end
 
 --- Remove all existing vertices

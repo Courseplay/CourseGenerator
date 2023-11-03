@@ -5,9 +5,9 @@ local Vertex = CpObject(cg.Vector)
 
 function Vertex:init(x, y, ix)
     cg.Vector.init(self, x, y)
-    self.ix = ix or 0
     --- public properties (wish lua was a proper language...)
-    --- This is a corner vertex, and should remain a sharp corner
+    self.ix = ix or 0
+    --- This is a corner vertex, and should remain a sharp corner (no smoothing)
     self.isCorner = nil
     --- Delta angle at this vertex, angle between the entry and exit edges
     self.dA = nil
@@ -126,7 +126,8 @@ function Vertex:calculateProperties(entry, exit)
 end
 
 function Vertex:__tostring()
-    return string.format('(%s) %s %s', self.ix, cg.Vector.__tostring(self), self.attributes:__tostring())
+    return string.format('(%s) %s r: %.1f %s', self.ix, cg.Vector.__tostring(self),
+            self:getRadius(), self.attributes:__tostring())
 end
 
 ---@class cg.Vertex:cg.Vector

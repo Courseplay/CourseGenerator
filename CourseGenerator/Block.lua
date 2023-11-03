@@ -22,7 +22,7 @@ local Block = CpObject()
 ---@param rowPattern cg.RowPattern pattern to use for the up/down rows
 function Block:init(rowPattern, id)
     self.id = id or 0
-    self.logger = cg.Logger('Block ' .. id)
+    self.logger = Logger('Block ' .. self.id)
     -- rows in the order they were added, first vertex of each row is on the same side
     self.rows = {}
     -- rows in the order they will be worked on, every second row in this sequence is reversed
@@ -43,6 +43,12 @@ function Block:addRow(row)
     row:setSequenceNumber(#self.rows + 1)
     row:setBlockNumber(self.id)
     table.insert(self.rows, row)
+end
+
+function Block:addRows(rows)
+    for _, row in ipairs(rows) do
+        self:addRow(row)
+    end
 end
 
 ---@return number of rows in this block
@@ -74,6 +80,16 @@ function Block:getRows()
     return self.rowsInWorkSequence
 end
 
+---@return cg.Row first row of the block in the work sequence
+function Block:getFirstRow()
+    return self.rowsInWorkSequence[1]
+end
+
+---@return cg.Row last row of the block in the work sequence
+function Block:getLastRow()
+    return self.rowsInWorkSequence[#self.rowsInWorkSequence]
+end
+
 ---@return cg.RowPattern.Entry[]
 function Block:getPossibleEntries()
     if not self.possibleEntries then
@@ -95,7 +111,7 @@ function Block:finalize(entry)
     local sequence, exit = self.rowPattern:getWorkSequenceAndExit(self.rows, entry)
     self.rowsInWorkSequence = {}
     for i, rowInfo in ipairs(sequence) do
-        local row = self.rows[rowInfo.rowIx]
+        local row = self.rows[rowInfo.rowIx]:clone()
         self.logger:debug('row %d is now at position %d', row:getSequenceNumber(), i)
         if rowInfo.reverse then
             row:reverse()

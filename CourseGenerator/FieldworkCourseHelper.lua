@@ -3,7 +3,7 @@
 ---@class FieldworkCourseHelper
 local FieldworkCourseHelper = {}
 
-FieldworkCourseHelper.logger = cg.Logger('FieldworkCourseHelper')
+FieldworkCourseHelper.logger = Logger('FieldworkCourseHelper')
 
 -- how far to drive beyond the field edge/headland if we hit it at an angle, to cover the row completely
 local function getDistanceBetweenRowEndAndFieldBoundary(workingWidth, angle)
@@ -71,7 +71,7 @@ function FieldworkCourseHelper.bypassSmallIsland(polyline, workingWidth, other, 
             polyline:append(is1.is)
             polyline:calculateProperties()
             FieldworkCourseHelper.adjustLengthAtEnd(polyline, workingWidth, is1:getAngle())
-            polyline:setAttributes(#polyline, #polyline, cg.WaypointAttributes.setUsePathfinderToNextWaypoint)
+            polyline:setAttribute(#polyline, cg.WaypointAttributes.setUsePathfinderToNextWaypoint)
         else
             polyline.logger:debug('Start of row is on an island, removing all vertices up to index %d (of %d)',
                     is1.ixA, #polyline)
@@ -80,7 +80,7 @@ function FieldworkCourseHelper.bypassSmallIsland(polyline, workingWidth, other, 
             polyline:prepend(is1.is)
             polyline:calculateProperties()
             FieldworkCourseHelper.adjustLengthAtStart(polyline, workingWidth, is1:getAngle())
-            polyline:setAttributes(1, 1, cg.WaypointAttributes.setUsePathfinderToThisWaypoint)
+            polyline:setAttribute(1, cg.WaypointAttributes.setUsePathfinderToThisWaypoint)
         end
         return false
     end
@@ -102,6 +102,14 @@ function FieldworkCourseHelper.createUsableBoundary(originalBoundary, clockwise)
         usableBoundary:reverse()
     end
     return usableBoundary
+end
+
+function FieldworkCourseHelper.createVirtualHeadland(fieldBoundary, isClockwise, workingWidth)
+    -- create a virtual headland to be used by the center generation, so the center does not have towards
+    -- know if the boundary is a headland or the actual field boundary. The virtual headland is half working
+    -- width wider than the field boundary so the rows in the center cover the area between the original
+    -- field boundaries.
+    return cg.Headland(fieldBoundary, isClockwise, 0, workingWidth / 2, true)
 end
 
 ---@class cg.FieldworkCourseHelper
