@@ -12,26 +12,13 @@ function WaypointAttributes:clone()
     return a
 end
 
-function WaypointAttributes:setIslandBypass()
-    self.islandBypass = true
-end
-
 ---@return boolean true if the waypoint is part of a path bypassing a small island.
 function WaypointAttributes:isIslandBypass()
     return self.islandBypass
 end
-
-function WaypointAttributes:setHeadlandTransition()
-    self.headlandTransition = true
-end
-
 ---@return boolean true if this waypoint is on a section leading from one headland to the next
 function WaypointAttributes:isHeadlandTransition()
     return self.headlandTransition
-end
-
-function WaypointAttributes:setHeadlandPassNumber(n)
-    self.headlandPassNumber = n
 end
 
 ---@return number | nil number of the headland, starting at 1 on the outermost headland. The section leading
@@ -41,24 +28,9 @@ function WaypointAttributes:getHeadlandPassNumber()
     return self.headlandPassNumber
 end
 
-function WaypointAttributes:setBlockNumber(n)
-    self.blockNumber = n
-end
-
-function WaypointAttributes:getBlockNumber()
-    return self.blockNumber
-end
-
-function WaypointAttributes:setRowNumber(n)
-    self.rowNumber = n
-end
-
+---@return number the number of the row (within the block) this point is in, in the order of working,
 function WaypointAttributes:getRowNumber()
     return self.rowNumber
-end
-
-function WaypointAttributes:setRowEnd()
-    self.rowEnd = true
 end
 
 ---@return boolean true if this is the last waypoint of an up/down row. It is either time to switch to the next
@@ -68,17 +40,9 @@ function WaypointAttributes:isRowEnd()
     return self.rowEnd
 end
 
-function WaypointAttributes:setRowStart()
-    self.rowStart = true
-end
-
 ---@return boolean true if this is the first waypoint of an up/down row.
 function WaypointAttributes:isRowStart()
     return self.rowStart
-end
-
-function WaypointAttributes:setHeadlandTurn()
-    self.headlandTurn = true
 end
 
 ---@return boolean true if this is a headland turn waypoint, like a corner where the vehicle must perform a turn
@@ -88,18 +52,10 @@ function WaypointAttributes:isHeadlandTurn()
     return self.headlandTurn
 end
 
-function WaypointAttributes:setIslandHeadland()
-    self.islandHeadland = true
-end
-
 ---@return boolean true if this waypoint is part of a headland around a (big) island. Small islands are bypassed
 --- and there isIslandBypass is set to true.
 function WaypointAttributes:isIslandHeadland()
     return self.islandHeadland
-end
-
-function WaypointAttributes:setUsePathfinderToNextWaypoint()
-    self.usePathfinderToNextWaypoint = true
 end
 
 --- if this is true, the driver should use the pathfinder to navigate to the next waypoint. One example of this is
@@ -108,18 +64,10 @@ function WaypointAttributes:shouldUsePathfinderToNextWaypoint()
     return self.usePathfinderToNextWaypoint
 end
 
-function WaypointAttributes:setUsePathfinderToThisWaypoint()
-    self.usePathfinderToThisWaypoint = true
-end
-
 --- if this is true, the driver should use the pathfinder to navigate to the this waypoint from the previous.
 --- One example of this is when row starts at a small island so the 180º turn must use the pathfinder to avoid the island.
 function WaypointAttributes:shouldUsePathfinderToThisWaypoint()
     return self.usePathfinderToThisWaypoint
-end
-
-function WaypointAttributes:setOnConnectingPath()
-    self.isOnConnectingPath = true
 end
 
 --- Is this waypoint on a connecting path, that is, a section connecting the headlands to the
@@ -131,6 +79,146 @@ end
 --- of this path and the first up/down waypoint.
 function WaypointAttributes:isOnConnectingPath()
     return self.isOnConnectingPath
+end
+
+--- Was the area on the left of this waypoint worked on already? Use this to determine:
+---   * Is there fruit under the harvester's pipe?
+---   * Which side to deploy the ridge markers?
+---   * Which side to turn a rotatable plow?
+--- NOTE: this only considers up/down rows in the same block. Headlands or rows in an adjacent block may have been
+--- worked on or not, depending on whether the headland or the middle is worked first and on the block sequence.
+--- NOTE: this is valid only if the vehicle worked on the course from the beginning as we rely on the planned
+--- course here, not the actual course driven. If you start a course in the middle, you will get incorrect results.
+--- NOTE: if this returns nil, we have no information if the left side was worked on or not. Use isLeftSideNotWorked() 
+--- instead of not isLeftSideWorked() 
+---@return boolean|nil returns true _only_ if we have valid information that the left side was worked.
+function WaypointAttributes:isLeftSideWorked()
+    return self.leftSideWorked
+end
+
+---@see isLeftSideWorked()
+---@return boolean returns true _only_ if we have valid information that the left side is not worked
+function WaypointAttributes:isLeftSideNotWorked()
+    return self.leftSideWorked == false
+end
+
+--- Was the area on the right of this waypoint worked on already?
+---   * Is there fruit under the harvester's pipe?
+---   * Which side to deploy the ridge markers?
+---   * Which side to turn a rotatable plow?
+--- NOTE: this only considers up/down rows in the same block. Headlands or rows in an adjacent block may have been
+--- worked on or not, depending on whether the headland or the middle is worked first and on the block sequence.
+--- NOTE: this is valid only if the vehicle worked on the course from the beginning as we rely on the planned
+--- course here, not the actual course driven. If you start a course in the middle, you will get incorrect results.
+--- NOTE: if this returns nil, we have no information if the right side was worked on or not. Use isRightSideNotWorked() 
+--- instead of not isRightSideWorked() 
+---@return boolean|nil returns true _only_ if we have valid information that the right side was worked.
+function WaypointAttributes:isRightSideWorked()
+    return self.rightSideWorked
+end
+
+---@see isRightSideWorked()
+---@return boolean returns true _only_ if we have valid information that the right side is not worked
+function WaypointAttributes:isRightSideNotWorked()
+    return self.rightSideWorked == false
+end
+
+------------------------------------------------------------------------------------------------------------------------
+--- Setters
+---------------------------------------------------------------------------------------------------------------------------
+function WaypointAttributes:setIslandBypass()
+    self.islandBypass = true
+end
+
+function WaypointAttributes:setHeadlandTransition()
+    self.headlandTransition = true
+end
+
+function WaypointAttributes:setHeadlandPassNumber(n)
+    self.headlandPassNumber = n
+end
+
+function WaypointAttributes:setBlockNumber(n)
+    self.blockNumber = n
+end
+
+function WaypointAttributes:setRowNumber(n)
+    self.rowNumber = n
+end
+
+function WaypointAttributes:setRowEnd()
+    self.rowEnd = true
+end
+
+function WaypointAttributes:setRowStart()
+    self.rowStart = true
+end
+
+function WaypointAttributes:setHeadlandTurn()
+    self.headlandTurn = true
+end
+
+function WaypointAttributes:setIslandHeadland()
+    self.islandHeadland = true
+end
+
+function WaypointAttributes:setUsePathfinderToNextWaypoint()
+    self.usePathfinderToNextWaypoint = true
+end
+
+function WaypointAttributes:setUsePathfinderToThisWaypoint()
+    self.usePathfinderToThisWaypoint = true
+end
+
+function WaypointAttributes:setOnConnectingPath()
+    self.isOnConnectingPath = true
+end
+
+function WaypointAttributes:setRowStart()
+    self.rowStart = true
+end
+
+function WaypointAttributes:setHeadlandTurn()
+    self.headlandTurn = true
+end
+
+function WaypointAttributes:setIslandHeadland()
+    self.islandHeadland = true
+end
+
+function WaypointAttributes:setUsePathfinderToNextWaypoint()
+    self.usePathfinderToNextWaypoint = true
+end
+
+function WaypointAttributes:setUsePathfinderToThisWaypoint()
+    self.usePathfinderToThisWaypoint = true
+end
+
+function WaypointAttributes:setOnConnectingPath()
+    self.isOnConnectingPath = true
+end
+
+---@see isLeftSideWorked()
+function WaypointAttributes:setLeftSideWorked(worked)
+    self.leftSideWorked = worked
+end
+
+---@see isRightSideWorked()
+function WaypointAttributes:setRightSideWorked(worked)
+    self.rightSideWorked = worked
+end
+
+function WaypointAttributes:setLeftSideBlockBoundary(blockBoundary)
+    self.leftSideBlockBoundary = blockBoundary
+end
+
+function WaypointAttributes:setRightSideBlockBoundary(blockBoundary)
+    self.rightSideBlockBoundary = blockBoundary
+end
+
+---@return number number of the block this waypoint is in
+function WaypointAttributes:_getBlockNumber()
+    return self.blockNumber
 end
 
 ---@param headland cg.Headland
@@ -157,6 +245,8 @@ end
 function WaypointAttributes:_reverse()
     self.rowStart, self.rowEnd = self.rowEnd, self.rowStart
     self.usePathfinderToThisWaypoint, self.usePathfinderToNextWaypoint = self.usePathfinderToNextWaypoint, self.usePathfinderToThisWaypoint
+    -- TODO: is there a use case where these are needed for a reversed course? It isn't trivial to find these out after the block is finalized
+    self.leftSideWorked, self.rightSideWorked = nil, nil
 end
 
 function WaypointAttributes:__tostring()

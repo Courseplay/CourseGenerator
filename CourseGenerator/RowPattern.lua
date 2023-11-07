@@ -338,7 +338,7 @@ function RowPatternSpiral:getPossibleEntries(rows)
     -- normalize rows, making sure the second (and all other) row are on the
     -- right side of the first row when looking into the row's direction
     -- this makes life easier later as reduces the number of combinations we need to think about.
-    if rows[1][1]:getExitEdge():isLeft(rows[#rows][1]) then
+    if rows[1][1]:getExitEdge():isPointOnLeft(rows[#rows][1]) then
         self.logger:debug('normalizing rows')
         for _, row in ipairs(rows) do
             row:reverse()

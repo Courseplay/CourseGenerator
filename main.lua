@@ -41,7 +41,7 @@ local autoRowAngle = ToggleParameter('auto row angle', true, '6')
 table.insert(parameters, autoRowAngle)
 local rowAngleDeg = AdjustableParameter(-90, 'row angle', 'A', 'a', 10, -90, 90)
 table.insert(parameters, rowAngleDeg)
-local rowPattern = ListParameter(cg.RowPattern.SPIRAL, 'row pattern', 'O', 'o',
+local rowPattern = ListParameter(cg.RowPattern.RACETRACK, 'row pattern', 'O', 'o',
         { cg.RowPattern.ALTERNATING,
           cg.RowPattern.SKIP,
           cg.RowPattern.SPIRAL,
@@ -70,7 +70,7 @@ local useBaselineEdge = ToggleParameter('use base line edge', false, 'g')
 table.insert(parameters, useBaselineEdge)
 local showDebugInfo = ToggleParameter('show debug info', false, 'd', true)
 table.insert(parameters, showDebugInfo)
-local twoSided = ToggleParameter('two sided', true, '2')
+local twoSided = ToggleParameter('two sided', false, '2')
 table.insert(parameters, twoSided)
 local showSwath = ToggleParameter('show swath', false, '1', true)
 table.insert(parameters, showSwath)
@@ -96,7 +96,7 @@ local parameterNameColor = { 1, 1, 1 }
 local parameterKeyColor = { 0, 1, 1 }
 local parameterValueColor = { 1, 1, 0 }
 
-local startLocationColor = { 0.8, 0.8, 0.8 }
+local startLocationColor = { 0.9, 0.9, 0.9 }
 local fieldBoundaryColor = { 0.5, 0.5, 0.5 }
 local courseColor = { 0, 0.7, 1 }
 local turnColor = { 1, 1, 0, 0.5 }
@@ -232,6 +232,8 @@ function love.load(arg)
         scale = 0.9 * xScale
         pointSize = 0.9 * xScale
     end
+    -- initially, start in the lower left corner
+    startX, startY = x1 + 10, y1 + 10
     local fieldCenter = selectedField:getCenter()
     -- world offset
     --scale = 1
@@ -303,12 +305,18 @@ local function selectFieldUnderCursor()
 end
 
 local function drawVertexAsArrow(v)
-    local left, right = -0.8, 0.8
+    local left, right, back = -0.8, 0.8, -0.5
     local triangle = { left, 0, right, 0, 0, 1.6 }
     love.graphics.push()
     love.graphics.translate(v.x, v.y)
     love.graphics.rotate((v:getExitEdge() or v:getEntryEdge()):getHeading() - math.pi / 2)
     love.graphics.polygon('fill', triangle)
+    if v:getAttributes():isLeftSideNotWorked() then
+        love.graphics.line({1.5 * left, back, 0, back})
+    end
+    if v:getAttributes():isRightSideNotWorked() then
+        love.graphics.line({1.5 * right, back, 0, back})
+    end
     love.graphics.pop()
 end
 
@@ -360,10 +368,12 @@ local function drawPath(p)
             end
             drawWaypoint(v)
         end
+        love.graphics.push()
         love.graphics.scale(1, -1)
         local signScale = 0.03
         love.graphics.draw(startSign, p[1].x - 2, -p[1].y - 2, 0, signScale, signScale)
         love.graphics.draw(stopSign, p[#p].x - 2, -p[#p].y - 2, 0, signScale, signScale)
+        love.graphics.pop()
     end
 end
 
@@ -371,7 +381,11 @@ local function drawSwath(p)
     if showSwath:get() then
         if #p > 1 then
             love.graphics.setLineWidth(workingWidth:get())
-            for _, v in p:vertices() do
+            for i, v in p:vertices() do
+                -- when hovering over a vertex, show the swath up
+                if currentVertices and currentVertices[1] and currentVertices[1].ix <= i then
+                    break
+                end
                 if v:getExitEdge() then
                     if not v:getAttributes():isRowEnd() then
                         love.graphics.setColor(swathColor)
@@ -535,6 +549,7 @@ end
 -- Highlight a few vertices around the selected one
 local function highlightPathAroundVertex(v)
     love.graphics.replaceTransform(graphicsTransform)
+    love.graphics.setLineWidth(lineWidth)
     for i = v.ix - 20, v.ix + 30 do
         love.graphics.setColor(i == v.ix and highlightedWaypointColor or
                 (i < v.ix and highlightedWaypointColorBackward or highlightedWaypointColorForward))
@@ -548,6 +563,7 @@ end
 local function drawStartLocation()
     love.graphics.replaceTransform(graphicsTransform)
     love.graphics.setColor(startLocationColor)
+    love.graphics.setLineWidth(lineWidth)
     love.graphics.circle('line', startX, startY, 2)
     love.graphics.push()
     love.graphics.scale(1, -1)

@@ -257,7 +257,7 @@ end
 
 ---@param point cg.Vector
 ---@return boolean is point on the left side of the line segment (looking towards the end of the line segment)
-function LineSegment:isLeft(point)
+function LineSegment:isPointOnLeft(point)
     local v = point - self.base
     return cg.Math.getDeltaAngle(v:heading(), self.slope:heading()) <= 0
 end
@@ -271,11 +271,11 @@ function LineSegment:isEntering(clockwise, other)
     if clockwise then
         -- if the start of my intersecting edge is left of the polygon's intersecting edge and
         -- the polygon is clockwise, I'm entering the polygon here
-        return other:isLeft(self.base)
+        return other:isPointOnLeft(self.base)
     else
         -- similarly, to enter a counterclockwise polygon, my intersecting edge start vertex
         -- must be on the right when entering the polygon
-        return not other:isLeft(self.base)
+        return not other:isPointOnLeft(self.base)
     end
 end
 

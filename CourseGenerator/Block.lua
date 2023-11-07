@@ -40,7 +40,7 @@ function Block:__tostring()
 end
 
 function Block:addRow(row)
-    row:setSequenceNumber(#self.rows + 1)
+    row:setOriginalSequenceNumber(#self.rows + 1)
     row:setBlockNumber(self.id)
     table.insert(self.rows, row)
 end
@@ -112,15 +112,23 @@ function Block:finalize(entry)
     self.rowsInWorkSequence = {}
     for i, rowInfo in ipairs(sequence) do
         local row = self.rows[rowInfo.rowIx]:clone()
-        self.logger:debug('row %d is now at position %d', row:getSequenceNumber(), i)
         if rowInfo.reverse then
             row:reverse()
         end
+        -- this assumes row has not been manipulated other than reversed
+        local rowOnLeftWorked, rowOnRightWorked, leftSideBlockBoundary, rightSideBlockBoundary =
+            self:_getAdjacentRowInfo(rowInfo.rowIx, rowInfo.reverse, self.rows, self.rowsInWorkSequence)
+        self.logger:debug('row %d is now at position %d, left/right worked %s/%s, headland %s/%s',
+                row:getOriginalSequenceNumber(), i, rowOnLeftWorked, rowOnRightWorked, leftSideBlockBoundary, rightSideBlockBoundary)
         -- need vertices close enough so the smoothing in goAround() only starts close to the island
         row:splitEdges(cg.cRowWaypointDistance)
         row:adjustLength()
         row:setRowNumber(i)
         row:setAllAttributes()
+        row:setAttribute(nil, cg.WaypointAttributes.setLeftSideWorked, rowOnLeftWorked)
+        row:setAttribute(nil, cg.WaypointAttributes.setRightSideWorked, rowOnRightWorked)
+        row:setAttribute(nil, cg.WaypointAttributes.setLeftSideBlockBoundary, leftSideBlockBoundary)
+        row:setAttribute(nil, cg.WaypointAttributes.setRightSideBlockBoundary, rightSideBlockBoundary)
         table.insert(self.rowsInWorkSequence, row)
     end
     return exit
@@ -160,6 +168,50 @@ end
 function Block:getExitVertex()
     local lastRow = self.rowsInWorkSequence[#self.rowsInWorkSequence]
     return lastRow[#lastRow]
+end
+
+--- For a given row, find out if the rows on the left and right have been already worked on when we get
+--- to this row in the working sequence and set the waypoint attributes on the row.
+--- This can be used to figure out if there is fruit under the combine's pipe at any position, or which side
+--- to open the ridge marker.
+---@param originalIx number index of row in rows (the original index)
+---@param reversed boolean true if the row in the work sequence had to be reversed
+---@param rows Row[] in the order there where generated
+---@param previousRowsInWorkSequence Row[] rows already worked, in the order they should be worked on
+---@return boolean, boolean, boolean, boolean rows on the left worked, rows on the right worked, left side is headland
+--- or field boundary, right side is headland or field boundary
+function Block:_getAdjacentRowInfo(originalIx, reversed, rows, previousRowsInWorkSequence)
+    local originalRow = rows[originalIx]
+    -- assume -1 is on left, + 1 is on right from row
+    local rowLeftIx = originalIx - 1
+    local rowRightIx = originalIx + 1
+    -- now check if our assumption was correct, remembering that the current row may be the first or last and
+    -- has one neighbor only
+    if (rows[rowRightIx] and originalRow[1]:getExitEdge():isPointOnLeft(rows[rowRightIx][1])) or
+            (rows[rowLeftIx] and not originalRow[1]:getExitEdge():isPointOnLeft(rows[rowLeftIx][1])) then
+        -- first point of the rowRight is left of the original row's first point, so
+        -- rowRight is really on the left, our assumption was incorrect, so reverse them
+        rowLeftIx, rowRightIx = rowRightIx, rowLeftIx
+    end
+    if reversed then
+        -- the original row has been reversed, so sides must flip again
+        rowLeftIx, rowRightIx = rowRightIx, rowLeftIx
+    end
+    -- We can be sure that in the final direction row is pointing, rowLeft and rowRight are the left and
+    -- right side, respectively. Now, let's check if those rows are earlier in the sequence as the current one.
+    -- If a row is earlier in the sequence, it means that side of our current row has already been worked on, which
+    -- may be interesting for harvesting, as there would be no fruit on the worked side, or, when working with
+    -- an implement with ridge markers, you wouldn't want to activate them on the side you already worked on.
+    local rowOnLeftWorked, rowOnRightWorked = false, false
+    for _, r in ipairs(previousRowsInWorkSequence) do
+        if r:getOriginalSequenceNumber() == rowRightIx then
+            rowOnRightWorked = true
+        end
+        if r:getOriginalSequenceNumber() == rowLeftIx then
+            rowOnLeftWorked = true
+        end
+    end
+    return rowOnLeftWorked, rowOnRightWorked, rowLeftIx == 0 or rowLeftIx > #rows, rowRightIx == 0 or rowRightIx > #rows
 end
 
 ---@class cg.Block
