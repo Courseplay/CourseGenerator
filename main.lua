@@ -525,25 +525,24 @@ end
 -- Draw a tooltip with the vertex' details
 local function drawVertexInfo()
     love.graphics.replaceTransform(mouseTransform)
-    love.graphics.setColor(0.2, 0.2, 0.2)
-    local width, margin = 200, 10
-    love.graphics.rectangle('fill', 0, 0, 200, #currentVertices * 100)
-    love.graphics.setColor(0.9, 0.9, 0.9)
-    local row = 12
-    for _, v in ipairs(currentVertices) do
-        love.graphics.printf(string.format('ix: %s', intToString(v.ix)), 10, row, width - 2 * margin)
-        row = row + 12
-        love.graphics.printf(string.format('r: %s xte: %s',
-                floatToString(v:getSignedRadius()), floatToString(v.xte)), 10, row, width - 2 * margin)
-        row = row + 12
-        love.graphics.printf(string.format('corner: %s', v.isCorner), 10, row, width - 2 * margin)
-        row = row + 12
-        love.graphics.printf(string.format('x: %s y: %s',
-                floatToString(v.x), floatToString(v.y)), 10, row, width - 2 * margin)
-        row = row + 12
-        love.graphics.printf(string.format('%s', v:getAttributes()), 10, row, width - 2 * margin)
-        row = row + 36
+    local text = ''
+    for i, v in ipairs(currentVertices) do
+        if i > 1 then
+            text = text .. '---\n'
+        end
+        text = text .. string.format('ix: %s\n', intToString(v.ix))
+        text = text .. string.format('r: %s xte: %s\n', floatToString(v:getSignedRadius()), floatToString(v.xte))
+        text = text .. string.format('corner: %s\n', v.isCorner)
+        text = text .. string.format('x: %s y: %s\n', floatToString(v.x), floatToString(v.y))
+        text = text .. tostring(v:getAttributes()) .. '\n'
     end
+    local width, margin = 300, 10
+    local _, wrappedText = love.graphics.getFont():getWrap(text, width - 2 * margin)
+    local h = love.graphics.getFont():getHeight()
+    love.graphics.setColor(0.2, 0.2, 0.2)
+    love.graphics.rectangle('fill', 0, 0, width, (#wrappedText + 1) * h)
+    love.graphics.setColor(0.9, 0.9, 0.9)
+    love.graphics.printf(text, margin, h, width - 2 * margin)
 end
 
 -- Highlight a few vertices around the selected one
@@ -622,8 +621,8 @@ local function drawStatus()
     local x, y = screenToWorld(mx, my)
     love.graphics.print(string.format('%.1f %.1f (%.1f %.1f / %.1f)', x, y, xOffset, yOffset, scale), 0, 0)
     if currentVertices and #currentVertices > 0 then
-        drawVertexInfo(currentVertices)
         highlightPathAroundVertex(currentVertices[1])
+        drawVertexInfo(currentVertices)
     end
 end
 
