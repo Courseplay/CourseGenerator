@@ -12,6 +12,14 @@ function WaypointAttributes:clone()
     return a
 end
 
+--- Copy the attributes of v
+---@param v cg.Vertex the vertex to get the attributes from
+function WaypointAttributes:copy(v)
+    for attribute, value in pairs(v:getAttributes()) do
+        self[attribute] = value
+    end
+end
+
 ---@return boolean true if the waypoint is part of a path bypassing a small island.
 function WaypointAttributes:isIslandBypass()
     return self.islandBypass
