@@ -558,6 +558,10 @@ function Polyline:goAroundBetweenIntersections(other, circle, is1, is2)
         local shortPath = pathA:getLength() < pathB:getLength() and pathA or pathB
         local longPath = pathA:getLength() >= pathB:getLength() and pathA or pathB
         self.logger:debug('path A: %.1f, path B: %.1f', pathA:getLength(), pathB:getLength())
+        shortPath:setAttribute(nil, cg.WaypointAttributes.setHeadlandPassNumber,
+                self:at(is1.ixA):getAttributes():getHeadlandPassNumber())
+        longPath:setAttribute(nil, cg.WaypointAttributes.setHeadlandPassNumber,
+                self:at(is1.ixA):getAttributes():getHeadlandPassNumber())
         if circle then
             path = shortPath:clone()
             path:setAttribute(nil, cg.WaypointAttributes.setIslandBypass)

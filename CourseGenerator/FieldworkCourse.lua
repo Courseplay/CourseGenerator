@@ -29,7 +29,7 @@ function FieldworkCourse:init(context)
         self.headlandPath = cg.HeadlandConnector.connectHeadlandsFromOutside(self.headlands,
                 context.startLocation, self.context.workingWidth, self.context.turningRadius)
         self:routeHeadlandsAroundSmallIslands()
-        self.logger:debug('### Genera]ting up/down rows ###')
+        self.logger:debug('### Generating up/down rows ###')
         self:generateCenter()
     else
         self.logger:debug('### Generating up/down rows ###')
@@ -230,15 +230,15 @@ function FieldworkCourse:routeHeadlandsAroundBigIslands()
     end
 end
 
+---
 function FieldworkCourse:routeHeadlandsAroundSmallIslands()
-
-    self.logger:debug('### Bypassing small islands ###')
+    self.logger:debug('### Bypassing small islands on the headland ###')
     for _, island in pairs(self.smallIslands) do
         local startIx, circled = 1, false
         while startIx ~= nil do
             self.logger:debug('Bypassing island %d on the headland, at %d', island:getId(), startIx)
             --- Remember the islands we circled already, as even if multiple tracks cross it, we only want to
-            --- circle once.
+            --- circle once, subsequent bypasses just pick the shortest way around it.
             circled, startIx = self.headlandPath:goAround(
                     island:getHeadlands()[1]:getPolygon(), startIx, not self.circledIslands[island])
             self.circledIslands[island] = circled or self.circledIslands[island]
@@ -247,12 +247,12 @@ function FieldworkCourse:routeHeadlandsAroundSmallIslands()
 end
 
 function FieldworkCourse:bypassIslands()
-    self.logger:debug('### Bypassing small islands ###')
+    self.logger:debug('### Bypassing small islands in the center ###')
     for _, island in pairs(self.smallIslands) do
         self.logger:debug('Bypassing small island %d on the center', island:getId())
         self.center:bypassSmallIsland(island:getInnermostHeadland():getPolygon(), not self.circledIslands[island])
     end
-    self.logger:debug('### Bypassing big islands: create path around them ###')
+    self.logger:debug('### Bypassing big islands in the center: create path around them ###')
     self:circleBigIslands()
 end
 
