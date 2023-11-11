@@ -131,6 +131,20 @@ function WaypointAttributes:isRightSideNotWorked()
     return self.rightSideWorked == false
 end
 
+--- Set for each headland waypoint, this string uniquely identifies the boundary the headland was based on.
+---@return string F for the headlands around the field boundary, I<island ID> for headlands around an island,
+--- but do not try to interpret as these can be arbitrary strings, use only for comparison with getAtBoundaryId()
+function WaypointAttributes:getBoundaryId()
+    return self.boundaryId
+end
+
+--- Row start/end waypoints ending at a headland will have to set this to the boundary ID of the headland.
+--- This can be used to check if the next row can be reached using the same headland where the previous row ends.
+---@return string
+function WaypointAttributes:getAtBoundaryId()
+    return self.atBoundaryId
+end
+
 ------------------------------------------------------------------------------------------------------------------------
 --- Setters
 ---------------------------------------------------------------------------------------------------------------------------
@@ -222,6 +236,16 @@ end
 
 function WaypointAttributes:setRightSideBlockBoundary(blockBoundary)
     self.rightSideBlockBoundary = blockBoundary
+end
+
+---@param boundaryId string
+function WaypointAttributes:setBoundaryId(boundaryId)
+    self.boundaryId = boundaryId
+end
+
+---@param boundaryId string
+function WaypointAttributes:setAtBoundaryId(boundaryId)
+    self.atBoundaryId = boundaryId
 end
 
 ---@return number number of the block this waypoint is in

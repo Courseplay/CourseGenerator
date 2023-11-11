@@ -118,6 +118,7 @@ function Block:finalize(entry)
         -- this assumes row has not been manipulated other than reversed
         local rowOnLeftWorked, rowOnRightWorked, leftSideBlockBoundary, rightSideBlockBoundary =
             self:_getAdjacentRowInfo(rowInfo.rowIx, rowInfo.reverse, self.rows, self.rowsInWorkSequence)
+        row:setAdjacentRowInfo(rowOnLeftWorked, rowOnRightWorked, leftSideBlockBoundary, rightSideBlockBoundary)
         self.logger:debug('row %d is now at position %d, left/right worked %s/%s, headland %s/%s',
                 row:getOriginalSequenceNumber(), i, rowOnLeftWorked, rowOnRightWorked, leftSideBlockBoundary, rightSideBlockBoundary)
         -- need vertices close enough so the smoothing in goAround() only starts close to the island
@@ -125,10 +126,6 @@ function Block:finalize(entry)
         row:adjustLength()
         row:setRowNumber(i)
         row:setAllAttributes()
-        row:setAttribute(nil, cg.WaypointAttributes.setLeftSideWorked, rowOnLeftWorked)
-        row:setAttribute(nil, cg.WaypointAttributes.setRightSideWorked, rowOnRightWorked)
-        row:setAttribute(nil, cg.WaypointAttributes.setLeftSideBlockBoundary, leftSideBlockBoundary)
-        row:setAttribute(nil, cg.WaypointAttributes.setRightSideBlockBoundary, rightSideBlockBoundary)
         table.insert(self.rowsInWorkSequence, row)
     end
     return exit

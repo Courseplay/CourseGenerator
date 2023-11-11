@@ -25,6 +25,7 @@ function FieldworkCourse:init(context)
     end
 
     if self.context.headlandFirst then
+        -- connect the headlands first as the center needs to start where the headlands finish
         self.logger:debug('### Connecting headlands (%d) from the outside towards the inside ###', #self.headlands)
         self.headlandPath = cg.HeadlandConnector.connectHeadlandsFromOutside(self.headlands,
                 context.startLocation, self.context.workingWidth, self.context.turningRadius)
@@ -32,6 +33,7 @@ function FieldworkCourse:init(context)
         self.logger:debug('### Generating up/down rows ###')
         self:generateCenter()
     else
+        -- here, make the center first as we want to start on the headlands where the center was finished
         self.logger:debug('### Generating up/down rows ###')
         local endOfLastRow = self:generateCenter()
         self.logger:debug('### Connecting headlands (%d) from the inside towards the outside ###', #self.headlands)
@@ -39,8 +41,11 @@ function FieldworkCourse:init(context)
                 endOfLastRow, self.context.workingWidth, self.context.turningRadius)
         self:routeHeadlandsAroundSmallIslands()
     end
+
     if self.context.bypassIslands then
-        self:bypassIslands()
+        self:bypassSmallIslandsInCenter()
+        self.logger:debug('### Bypassing big islands in the center: create path around them ###')
+        self:circleBigIslands()
     end
 end
 
@@ -59,8 +64,8 @@ function FieldworkCourse:getPath()
             self.path:appendMany(self:getCenterPath())
             self.path:appendMany(self:getHeadlandPath())
         end
+        self.path:calculateProperties()
     end
-    self.path:calculateProperties()
     return self.path
 end
 
@@ -230,7 +235,8 @@ function FieldworkCourse:routeHeadlandsAroundBigIslands()
     end
 end
 
----
+--- We do this after we have connected the individual headlands so the links between the headlands
+--- are also routed around the islands.
 function FieldworkCourse:routeHeadlandsAroundSmallIslands()
     self.logger:debug('### Bypassing small islands on the headland ###')
     for _, island in pairs(self.smallIslands) do
@@ -246,14 +252,12 @@ function FieldworkCourse:routeHeadlandsAroundSmallIslands()
     end
 end
 
-function FieldworkCourse:bypassIslands()
+function FieldworkCourse:bypassSmallIslandsInCenter()
     self.logger:debug('### Bypassing small islands in the center ###')
     for _, island in pairs(self.smallIslands) do
         self.logger:debug('Bypassing small island %d on the center', island:getId())
         self.center:bypassSmallIsland(island:getInnermostHeadland():getPolygon(), not self.circledIslands[island])
     end
-    self.logger:debug('### Bypassing big islands in the center: create path around them ###')
-    self:circleBigIslands()
 end
 
 -- Once we have the whole course laid out, we add the headland passes around the big islands
