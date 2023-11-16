@@ -559,6 +559,21 @@ local function highlightPathAroundVertex(v)
     end
 end
 
+local function highlightPathToNextRow(vertices)
+    for i, v in ipairs(vertices) do
+        if v:getAttributes():isRowEnd() then
+            local innermostHeadland = course:findPathToNextRow(v:getAttributes():getAtBoundaryId(),
+                    v, course:getPath()[v.ix + 1], turningRadius:get())
+            if #innermostHeadland > 1 then
+                love.graphics.replaceTransform(graphicsTransform)
+                love.graphics.setLineWidth(10 * lineWidth)
+                love.graphics.setColor({1, 1, 0, 0.3})
+                love.graphics.line(innermostHeadland:getUnpackedVertices())
+            end
+        end
+    end
+end
+
 local function drawStartLocation()
     love.graphics.replaceTransform(graphicsTransform)
     love.graphics.setColor(startLocationColor)
@@ -623,6 +638,7 @@ local function drawStatus()
     if currentVertices and #currentVertices > 0 then
         highlightPathAroundVertex(currentVertices[1])
         drawVertexInfo(currentVertices)
+        highlightPathToNextRow(currentVertices)
     end
 end
 

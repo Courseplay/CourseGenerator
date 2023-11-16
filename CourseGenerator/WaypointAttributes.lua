@@ -86,7 +86,7 @@ end
 --- cannot guarantee that there are no obstacles (like a small island) between the last waypoint
 --- of this path and the first up/down waypoint.
 function WaypointAttributes:isOnConnectingPath()
-    return self.isOnConnectingPath
+    return self.onConnectingPath
 end
 
 --- Was the area on the left of this waypoint worked on already? Use this to determine:
@@ -132,7 +132,7 @@ function WaypointAttributes:isRightSideNotWorked()
 end
 
 --- Set for each headland waypoint, this string uniquely identifies the boundary the headland was based on.
----@return string F for the headlands around the field boundary, I<island ID> for headlands around an island,
+---@return string | nil F for the headlands around the field boundary, I<island ID> for headlands around an island,
 --- but do not try to interpret as these can be arbitrary strings, use only for comparison with getAtBoundaryId()
 function WaypointAttributes:getBoundaryId()
     return self.boundaryId
@@ -140,9 +140,15 @@ end
 
 --- Row start/end waypoints ending at a headland will have to set this to the boundary ID of the headland.
 --- This can be used to check if the next row can be reached using the same headland where the previous row ends.
----@return string
+---@return string | nil
 function WaypointAttributes:getAtBoundaryId()
     return self.atBoundaryId
+end
+
+--- For the first and last waypoints of a row, the angle between the row and the headland
+---@return number | nil
+function WaypointAttributes:getHeadlandAngle()
+    return self.headlandAngle
 end
 
 ------------------------------------------------------------------------------------------------------------------------
@@ -193,31 +199,7 @@ function WaypointAttributes:setUsePathfinderToThisWaypoint()
 end
 
 function WaypointAttributes:setOnConnectingPath()
-    self.isOnConnectingPath = true
-end
-
-function WaypointAttributes:setRowStart()
-    self.rowStart = true
-end
-
-function WaypointAttributes:setHeadlandTurn()
-    self.headlandTurn = true
-end
-
-function WaypointAttributes:setIslandHeadland()
-    self.islandHeadland = true
-end
-
-function WaypointAttributes:setUsePathfinderToNextWaypoint()
-    self.usePathfinderToNextWaypoint = true
-end
-
-function WaypointAttributes:setUsePathfinderToThisWaypoint()
-    self.usePathfinderToThisWaypoint = true
-end
-
-function WaypointAttributes:setOnConnectingPath()
-    self.isOnConnectingPath = true
+    self.onConnectingPath = true
 end
 
 ---@see isLeftSideWorked()
@@ -246,6 +228,11 @@ end
 ---@param boundaryId string
 function WaypointAttributes:setAtBoundaryId(boundaryId)
     self.atBoundaryId = boundaryId
+end
+
+---@param a number radians
+function WaypointAttributes:setHeadlandAngle(a)
+    self.headlandAngle = a
 end
 
 ---@return number number of the block this waypoint is in

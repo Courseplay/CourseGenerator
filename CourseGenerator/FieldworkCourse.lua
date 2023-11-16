@@ -14,6 +14,7 @@ function FieldworkCourse:init(context)
     self:_setContext(context)
     self.headlandPath = cg.Polyline()
     self.circledIslands = {}
+    self.headlandCache = cg.CacheMap()
 
     self.logger:debug('### Generating headlands around the field perimeter ###')
     self:generateHeadlands()
@@ -309,7 +310,31 @@ function FieldworkCourse:circleBigIslands()
         end
         i = i + step
     end
+end
 
+--- Find the path to the next row on the headland.
+---@param boundaryId string the boundary ID, telling if this is a boundary around the field or around an island. Will
+--- only return a path when the next row can be reached while staying on the same boundary.
+---@param rowEnd cg.Vector Last waypoint of the row
+---@param rowStart cg.Vector First waypoint of the next row
+---@param minDistanceFromRowEnd number|nil minimum distance of the headland (default 0)we choose for the path,
+--- from the row end, this should be set so that the vehicle can make the turn from the position where it ended the
+--- work on the row into the headland. In case of a headland perpendicular to the rows, this is approximately the turn
+--- radius, at other angles it could be bigger or smaller, which we currently do not take into account
+---@return cg.Polyline The path on the headland to the next row. Users should consider shortening both ends of the
+--- path with the turning radius to leave enough room for the vehicle to cleanly make the turn from the row end into
+--- the headland path and from the headland into the next row
+function FieldworkCourse:findPathToNextRow(boundaryId, rowEnd, rowStart, minDistanceFromRowEnd)
+    local headlands = self:_getCachedHeadlands(boundaryId)
+    local headlandWidth = #headlands * self.context.workingWidth
+    local usableHeadlandWidth = headlandWidth - (minDistanceFromRowEnd or 0)
+    local headlandPassNumber = cg.Math.clamp(math.floor(usableHeadlandWidth / self.context.workingWidth), 1, #headlands)
+    local headland = headlands[headlandPassNumber]
+    local vx1 = headland:findClosestVertexToPoint(rowEnd)
+    local vx2 = headland:findClosestVertexToPoint(rowStart)
+    --self.logger:debug('Found shortest path to next row on boundary %s, headland %d, %d->%d',
+    --        boundaryId, headlandPassNumber, vx1.ix, vx2.ix)
+    return headland:getShortestPathBetween(vx1.ix, vx2.ix)
 end
 
 ------------------------------------------------------------------------------------------------------------------------
@@ -338,6 +363,30 @@ function FieldworkCourse:_removeHeadland(n)
     self.nHeadlandsWithRoundCorners = math.min(self.nHeadlands, self.nHeadlandsWithRoundCorners)
     self.logger:error('could not generate headland %d, course has %d headlands, %d rounded',
             n, self.nHeadlands, self.nHeadlandsWithRoundCorners)
+end
+
+function FieldworkCourse:_getCachedHeadlands(boundaryId)
+    local headlands = self.headlandCache:get(boundaryId)
+    if not headlands then
+        headlands = {}
+        for _, v in ipairs(self:getPath()) do
+            local a = v:getAttributes()
+            if a:getBoundaryId() == boundaryId and not a:isIslandBypass() and not a:isHeadlandTransition() and
+                    not a:isOnConnectingPath() then
+                local pass = a:getHeadlandPassNumber()
+                if headlands[pass] == nil then
+                    headlands[pass] = cg.Polygon()
+                end
+                headlands[pass]:append(v)
+            end
+        end
+        for i, h in ipairs(headlands) do
+            self.logger:debug('cached boundary %s, headland %d with %d vertices', boundaryId, i, #h)
+            h:calculateProperties()
+        end
+        self.headlandCache:put(boundaryId, headlands)
+    end
+    return headlands
 end
 
 ---@class cg.FieldworkCourse
