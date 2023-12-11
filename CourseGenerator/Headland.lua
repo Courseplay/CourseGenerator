@@ -72,6 +72,7 @@ end
 function Headland:getPath()
     -- make sure all attributes are set correctly
     self.polygon:setAttribute(nil, cg.WaypointAttributes.setHeadlandPassNumber, self.passNumber)
+    self.polygon:setAttribute(nil, cg.WaypointAttributes.setBoundaryId, self:getBoundaryId())
     -- mark corners as headland turns
     for _, v in ipairs(self.polygon) do
         if v.isCorner then
@@ -114,21 +115,6 @@ function Headland:getUnpackedVertices()
         self.unpackedVertices = self.polygon:getUnpackedVertices()
     end
     return self.unpackedVertices
-end
-
---- We route headlands around small islands on the first island headland. Each island has to be
---- circled completely once by the headland first bypassing it, subsequent bypasses just pick the
---- shortest way around it.
-function Headland:bypassSmallIslands(smallIslands)
-    for _, island in pairs(smallIslands) do
-        local startIx, circled = 1, false
-        while startIx ~= nil do
-            self.logger:debug('Bypassing island %d, at %d', island:getId(), startIx)
-            circled, startIx = self.polygon:goAround(
-                    island:getHeadlands()[1]:getPolygon(), startIx, not self.circledIslands[island])
-            self.circledIslands[island] = circled or self.circledIslands[island]
-        end
-    end
 end
 
 --- Bypassing big island differs from small ones as:
@@ -265,6 +251,12 @@ function Headland:_getHeadlandChangeMinRadius()
     return NewCourseGenerator.cHeadlandChangeMinRadius
 end
 
+--- A short ID to identify the boundary this headland is based on when serializing/deserializing. By default, this
+--- is the field boundary.
+function Headland:getBoundaryId()
+   return 'F'
+end
+
 function Headland:__tostring()
     return 'Headland ' .. self.passNumber
 end
@@ -312,6 +304,11 @@ function IslandHeadland:_getHeadlandChangeMinRadius()
     -- headlands around are not very long, and as they are generated outwards, usually have no
     -- very sharp corners, and we don't have the luxury to pick a straight section for a transition
     return 0
+end
+
+--- A short ID in the form I<island ID> to identify the boundary this headland is based on when serializing/deserializing
+function IslandHeadland:getBoundaryId()
+    return 'I' .. self.island:getId()
 end
 
 function IslandHeadland:__tostring()

@@ -8,6 +8,7 @@ dofile('Courseplay_FS22/scripts/pathfinder/Dubins.lua')
 dofile('CourseGenerator/CourseGenerator.lua')
 dofile('CourseGenerator/Logger.lua')
 dofile('CourseGenerator/Util.lua')
+dofile('CourseGenerator/CacheMap.lua')
 
 dofile('CourseGenerator/Geometry/Vector.lua')
 dofile('CourseGenerator/Geometry/Vertex.lua')

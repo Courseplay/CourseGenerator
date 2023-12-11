@@ -1,10 +1,11 @@
 lu = require("luaunit")
 package.path = package.path .. ";../../?.lua;../?.lua;../Geometry/?.lua;../Genetic/?.lua;..?.lua;../../Courseplay_FS22/scripts/?.lua;../../Courseplay_FS22/scripts/pathfinder/?.lua;../../Courseplay_FS22/scripts/util/?.lua"
 require('profile')
-require('CourseGenerator')
-require('Util')
 require('CpObject')
 require('Logger')
+require('CourseGenerator')
+require('Util')
+require('CacheMap')
 require('WrapAroundIndex')
 require('CpMathUtil')
 require('Dubins')

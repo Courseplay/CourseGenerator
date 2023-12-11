@@ -24,7 +24,7 @@ function Center:init(context, boundary, headland, startLocation, bigIslands)
             virtualHeadland:sharpenCorners(self.context.turningRadius)
         end
         self.headlandPolygon = virtualHeadland:getPolygon()
-        cg.addDebugPolyline(self.headlandPolygon, {1, 1, 0, 0.5})
+        cg.addDebugPolyline(self.headlandPolygon, { 1, 1, 0, 0.5 })
         self.headland = virtualHeadland
         self.mayOverlapHeadland = false
     else
@@ -103,7 +103,7 @@ function Center:generate()
     -- headland from one block to the other
 
     -- clear cache for the block sequencer
-    self.closestVertexCache, self.pathCache = {}, {}
+    self.closestVertexCache, self.pathCache = cg.CacheMap(2), cg.CacheMap(3)
 
     -- first run of the genetic search will restrict connecting path between blocks to the same
     -- headland, that is, the entry to the next block must be adjacent to the headland where the
@@ -463,27 +463,18 @@ end
 ---@param v2 cg.Vector
 ---@return Polyline always has at least one vertex
 function Center:_findShortestPathOnHeadland(headland, v1, v2)
-    if not self.closestVertexCache[headland] then
-        self.closestVertexCache[headland] = {}
-    end
-    local cvc = self.closestVertexCache[headland]
-    if not cvc[v1] then
-        cvc[v1] = headland:getPolygon():findClosestVertexToPoint(v1)
-    end
-    if not cvc[v2] then
-        cvc[v2] = headland:getPolygon():findClosestVertexToPoint(v2)
-    end
-    if not self.pathCache[headland] then
-        self.pathCache[headland] = {}
-    end
-    local pc = self.pathCache[headland]
-    if not pc[v1] then
-        pc[v1] = {}
-    end
-    if not pc[v1][v2] then
-        pc[v1][v2] = headland:getPolygon():getShortestPathBetween(cvc[v1].ix, cvc[v2].ix)
-    end
-    return pc[v1][v2]
+    local cv1 = self.closestVertexCache:getWithLambda(headland, v1,
+            function()
+                return headland:getPolygon():findClosestVertexToPoint(v1)
+            end)
+    local cv2 = self.closestVertexCache:getWithLambda(headland, v2,
+            function()
+                return headland:getPolygon():findClosestVertexToPoint(v2)
+            end)
+    return self.pathCache:getWithLambda(headland, v1, v2,
+            function()
+                return headland:getPolygon():getShortestPathBetween(cv1.ix, cv2.ix)
+            end)
 end
 
 function Center:_wrapUpConnectingPaths()

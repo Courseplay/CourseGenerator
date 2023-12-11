@@ -191,6 +191,14 @@ function Row:getMiddle()
     end
 end
 
+--- What is on the left and right side of the row?
+function Row:setAdjacentRowInfo(rowOnLeftWorked, rowOnRightWorked, leftSideBlockBoundary, rightSideBlockBoundary)
+    self.rowOnLeftWorked = rowOnLeftWorked
+    self.rowOnRightWorked = rowOnRightWorked
+    self.leftSideBlockBoundary = leftSideBlockBoundary
+    self.rightSideBlockBoundary = rightSideBlockBoundary
+end
+
 --- Update the attributes of the first and last vertex of the row based on the row's properties.
 --- We use these attributes when finding an entry to a block, to see if the entry is on an island headland
 --- or not. The attributes are set when the row is split at headlands but may need to be reapplied when
@@ -198,20 +206,28 @@ end
 function Row:setEndAttributes()
     self:setAttribute(1, cg.WaypointAttributes.setRowStart)
     self:setAttribute(1, cg.WaypointAttributes._setAtHeadland, self.startsAtHeadland)
+    self:setAttribute(1, cg.WaypointAttributes.setAtBoundaryId, self.startsAtHeadland:getBoundaryId())
     self:setAttribute(#self, cg.WaypointAttributes.setRowEnd)
     self:setAttribute(#self, cg.WaypointAttributes._setAtHeadland, self.endsAtHeadland)
+    self:setAttribute(#self, cg.WaypointAttributes.setAtBoundaryId, self.endsAtHeadland:getBoundaryId())
 end
 
 function Row:setAllAttributes()
     self:setEndAttributes()
     self:setAttribute(nil, cg.WaypointAttributes.setRowNumber, self.rowNumber)
     self:setAttribute(nil, cg.WaypointAttributes.setBlockNumber, self.blockNumber)
+    self:setAttribute(nil, cg.WaypointAttributes.setLeftSideWorked, self.rowOnLeftWorked)
+    self:setAttribute(nil, cg.WaypointAttributes.setRightSideWorked, self.rowOnRightWorked)
+    self:setAttribute(nil, cg.WaypointAttributes.setLeftSideBlockBoundary, self.leftSideBlockBoundary)
+    self:setAttribute(nil, cg.WaypointAttributes.setRightSideBlockBoundary, self.rightSideBlockBoundary)
 end
 
 function Row:reverse()
     cg.Polyline.reverse(self)
     self.startHeadlandAngle, self.endHeadlandAngle = self.endHeadlandAngle, self.startHeadlandAngle
     self.startsAtHeadland, self.endsAtHeadland = self.endsAtHeadland, self.startsAtHeadland
+    self.rowOnLeftWorked, self.rowOnRightWorked = self.rowOnRightWorked, self.rowOnLeftWorked
+    self.leftSideBlockBoundary, self.rightSideBlockBoundary = self.rightSideBlockBoundary, self.leftSideBlockBoundary
 end
 
 --- Adjust the length of this tow for full coverage where it meets the headland or field boundary
