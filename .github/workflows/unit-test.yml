@@ -32,7 +32,7 @@ jobs:
         run: |
           cd CourseGenerator/test
           lua BlockSequencerTest.lua
-          lua CachedMapTest.lua
+          lua CacheMapTest.lua
           lua FieldTest.lua
           lua FieldworkCourseTest.lua
           lua HeadlandConnectorTest.lua
