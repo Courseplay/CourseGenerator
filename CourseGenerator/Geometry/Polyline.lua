@@ -123,12 +123,15 @@ function Polyline:vertices(from, to)
 end
 
 --- edge iterator
+---@param startIx number|nil start the iteration at the edge starting at the startIx vertex (or at the first)
+---@param endIx number|nil the last edge to return is the one starting at endIx (or the last vertex)
 ---@return number, cg.LineSegment, cg.Vertex
-function Polyline:edges(startIx)
+function Polyline:edges(startIx, endIx)
     local i = startIx and startIx - 1 or 0
+    local last = endIx or #self
     return function()
         i = i + 1
-        if i >= #self then
+        if i >= last then
             return nil, nil, nil
         else
             return i, self[i]:getExitEdge() or cg.LineSegment.fromVectors(self[i], self[i + 1]), self[i]
@@ -166,22 +169,25 @@ function Polyline:reverse()
     return self
 end
 
-function Polyline:getLength(startIx)
+function Polyline:getLength()
     -- we cache the full length, and if it exists, return it
-    if not self.length or startIx then
+    if not self.length then
         -- otherwise calculate length
         local length = 0
-        for _, e in self:edges(startIx) do
+        for _, e in self:edges() do
             length = length + e:getLength()
         end
-        if startIx then
-            return length
-        else
-            -- full length was requested, cache it
-            self.length = length
-        end
+        self.length = length
     end
     return self.length
+end
+
+function Polyline:getLengthBetween(startIx, endIx)
+    local length = 0
+    for _, e in self:edges(startIx, endIx) do
+        length = length + e:getLength()
+    end
+    return length
 end
 
 ---@return number index of the first vertex which is at least d distance from ix
@@ -255,6 +261,9 @@ end
 --- Cut all vertices from the first vertex up to but not including ix, shortening the polyline at the start
 ---@param ix number
 function Polyline:cutStartAtIx(ix)
+    if ix >= #self then
+        return
+    end
     ix = math.min(ix - 1, #self - 2)
     for _ = 1, ix do
         table.remove(self, 1)
@@ -279,7 +288,7 @@ function Polyline:trimAtFirstIntersection(other)
         return
     end
     -- where is the longer part?
-    local lengthFromIntersectionToEnd = self:getLength(intersections[1].ixA)
+    local lengthFromIntersectionToEnd = self:getLengthBetween(intersections[1].ixA)
     if lengthFromIntersectionToEnd < self:getLength() / 2 then
         -- shorter part towards the end
         self:cutEndAtIx(intersections[1].ixA)
@@ -498,7 +507,7 @@ function Polyline:ensureMinimumRadius(r, makeCorners)
                             totalMoved)
                     cg.addDebugPoint(entry:getBase())
                     cg.addDebugPoint(exit:getBase())
-                    self[currentIx].isCorner = true
+                    cg.addDebugPoint(self[currentIx])
                 end
             else
                 adjustedCornerVertices = makeArc(entry, exit)
@@ -666,7 +675,7 @@ end
 --- Private functions
 ------------------------------------------------------------------------------------------------------------------------
 
---- Get all intersections with other, in the order we would meet them traversing self in the given direction
+--- Get all intersections with other, in the order we would meet them traversing self in the increasing index direction
 ---@param other cg.Polyline
 ---@param startIx number index to start looking for intersections with other
 ---@param userData any user data to add to the Intersection objects (to later identify them)
@@ -816,6 +825,25 @@ function Polyline:_createOffset(result, offsetVector, minEdgeLength, preserveCor
     return result
 end
 
+
+------ Cut a polyline at is1 and is2, keeping the section between the two. is1 and is2 becomes the start and
+--- end of the cut polyline.
+---@param is1 cg.Intersection
+---@param is2 cg.Intersection
+---@param section cg.Polyline|nil an optional, initialized object that will become the section
+---@return cg.Polyline
+function Polyline:_cutAtIntersections(is1, is2, section)
+    section = section or cg.Polyline()
+    section:append(is1.is)
+    local src = is1.ixA + 1
+    while src < is2.ixA do
+        section:append(self[src])
+        src = src + 1
+    end
+    section:append(is2.is)
+    section:calculateProperties()
+    return section
+end
 
 function Polyline:__tostring()
     local result = ''

@@ -6,8 +6,9 @@ local Slider = CpObject(cg.LineSegment)
 ---@param d number distance from polyline[ix] for the initial position
 function Slider:init(polyline, ix, d)
     self.polyline = polyline
+    self._isAtEnd = false
     self:set(ix, 0)
-    self:move(d)
+    self:move(d or 0)
 end
 
 function Slider:set(ix, d)
@@ -29,15 +30,19 @@ end
 
 --- Move d distance along the polyline. Will not move past the ends.
 ---@param d number distance to move
+---@return boolean true if the move was successful, false if the end of the polyline reached before moving the
+--- distance required
 function Slider:move(d)
     local dRemaining = math.abs(d)
     local ix, offset = self.ix, self.d
+    local endReached = false
 
     local function forward()
         local exitEdge = self:vertex(ix):getExitEdge()
         if not exitEdge then
             -- reached the end of polyline
             offset = 0
+            endReached = true
             return false
         end
         local dToEdgeEnd = exitEdge:getLength() - offset
@@ -57,6 +62,7 @@ function Slider:move(d)
         if not entryEdge then
             -- reached the start of polyline
             dRemaining = 0
+            endReached = true
             return false
         end
         if dRemaining > offset then
@@ -76,6 +82,7 @@ function Slider:move(d)
 
     end
     self:set(ix, offset)
+    return not endReached
 end
 
 ---@class cg.Slider : cg.LineSegment
