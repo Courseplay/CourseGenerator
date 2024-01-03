@@ -7,7 +7,7 @@ local Row = CpObject(cg.Polyline)
 function Row:init(workingWidth, vertices)
     cg.Polyline.init(self, vertices)
     self.workingWidth = workingWidth
-    self.logger = Logger('Row ' .. tostring(self.rowNumber), Logger.level.trace)
+    self.logger = Logger('Row ' .. tostring(self.rowNumber), Logger.level.debug)
 end
 
 function Row:setRowNumber(n)
@@ -156,7 +156,7 @@ function Row:split(headland, bigIslands, onlyFirstAndLastIntersections)
         -- counter go below 0 here
         outside = math.max(0, outside + (isEnteringField and -1 or 1))
         if not isEnteringField and outside == 1 then
-            if not self:_isSectionCloseToHeadland(intersections[i]:getUserData().headland, intersections[i], intersections[i + 1]) then
+            if not self:_isSectionCloseToHeadland(intersections[i]:getUserData().headland:getPolygon(), intersections[i], intersections[i + 1]) then
                 -- exiting the polygon and we were inside before (outside was 0)
                 -- create a section here
                 local section = self:_cutAtIntersections(intersections[lastInsideIx], intersections[i])
@@ -286,12 +286,12 @@ end
 ---@param is1 cg.Intersection
 ---@param is2 cg.Intersection
 function Row:_isSectionCloseToHeadland(headland, is1, is2)
-    if is1 == nil or is2 == nil or headland.getPolygon == nil then
+    if is1 == nil or is2 == nil or headland == nil then
         return false
     end
     -- build two paths, each starting at is1 and ending at is2, one following the row, one the headland
     local rowSection = self:_cutAtIntersections(is1, is2)
-    local headlandSection = headland:getPolygon():getShortestPathBetween(is1.ixB, is2.ixB)
+    local headlandSection = headland:getShortestPathBetween(is1.ixB, is2.ixB)
     headlandSection:calculateProperties()
     headlandSection:cutStartAtIx(2)
     local sameDirection = is1:getAngle() < math.pi / 2

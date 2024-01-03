@@ -17,7 +17,7 @@ local headland = cg.Polygon({
 
 function testRowCloseToHeadland()
     ---@type cg.Polyline
-    local row = cg.Row(10, { cg.Vertex(0, 1), cg.Vertex(50, 1)})
+    local row = cg.Row(10, { cg.Vertex(0, 1), cg.Vertex(40, 1)})
     local is = row:getIntersections(headland, 1)
     lu.assertTrue(row:_isSectionCloseToHeadland(headland, is[1], is[2]))
     row:reverse()
