@@ -14,12 +14,12 @@ dofile('include.lua')
 local logger = Logger('main', Logger.level.debug)
 local parameters = {}
 -- working width of the equipment
-local workingWidth = AdjustableParameter(6, 'width', 'W', 'w', 0.2, 0, 100)
+local workingWidth = AdjustableParameter(24, 'width', 'W', 'w', 0.2, 0, 100)
 table.insert(parameters, workingWidth)
 local turningRadius = AdjustableParameter(7, 'radius', 'T', 't', 0.2, 0, 20)
 table.insert(parameters, turningRadius)
 -- number of headland passes around the field boundary
-local nHeadlandPasses = AdjustableParameter(2, 'headlands', 'P', 'p', 1, 0, 100)
+local nHeadlandPasses = AdjustableParameter(3, 'headlands', 'P', 'p', 1, 0, 100)
 table.insert(parameters, nHeadlandPasses)
 local nHeadlandsWithRoundCorners = AdjustableParameter(0, 'headlands with round corners', 'R', 'r', 1, 0, 100)
 table.insert(parameters, nHeadlandsWithRoundCorners)
@@ -66,7 +66,7 @@ local spiralFromInside = ToggleParameter('spiral from inside', true, 'L')
 table.insert(parameters, spiralFromInside)
 local evenRowDistribution = ToggleParameter('even row width', false, 'e')
 table.insert(parameters, evenRowDistribution)
-local useBaselineEdge = ToggleParameter('use base line edge', true, 'g')
+local useBaselineEdge = ToggleParameter('use base line edge', false, 'g')
 table.insert(parameters, useBaselineEdge)
 local showDebugInfo = ToggleParameter('show debug info', false, 'd', true)
 table.insert(parameters, showDebugInfo)
@@ -76,6 +76,8 @@ local showSwath = ToggleParameter('show swath', false, '1', true)
 table.insert(parameters, showSwath)
 local reverseCourse = ToggleParameter('reverse', false, 'v', true)
 table.insert(parameters, reverseCourse)
+local smallOverlaps = ToggleParameter('small overlaps', false, 'm', true)
+table.insert(parameters, smallOverlaps)
 
 local profilerEnabled = false
 local fileName = ''
@@ -157,6 +159,7 @@ local function generate()
                 :setStartLocation(startX, startY)
                 :setBaselineEdge(startX, startY)
                 :setBaselineEdge(baselineX, baselineY)
+                :setEnableSmallOverlapsWithHeadland(smallOverlaps:get())
     if profilerEnabled then
         love.profiler.start()
     end

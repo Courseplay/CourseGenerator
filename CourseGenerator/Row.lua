@@ -81,11 +81,14 @@ end
 ---
 ---@param headland cg.Headland the field boundary (or innermost headland)
 ---@param bigIslands cg.Island[] islands big enough to split a row (we'll not just drive around them but turn)
----@param onlyFirstAndLastIntersections|nil boolean ignore all intersections between the first and the last. This makes
---- only sense if there are no islands. For cases where the row is almost parallel to the boundary and crosses it
---- multiple times, so we rather not split it
+---@param onlyFirstAndLastIntersections boolean|nil ignore all intersections between the first and the last. This makes
+--- only sense if there are no islands.
+---@param enableSmallOverlaps boolean|nil if true, and the row is almost parallel to the boundary and crosses it
+--- multiple times (for instance a slightly zigzagging headland), do not split the row unless it is getting too
+--- far from the boundary (it is like a smart version of onlyFirstAndLastInterSections, but significantly will slow
+--- down the generation)
 ---@return cg.Row[]
-function Row:split(headland, bigIslands, onlyFirstAndLastIntersections)
+function Row:split(headland, bigIslands, onlyFirstAndLastIntersections, enableSmallOverlaps)
     -- get all the intersections with the field boundary
     local intersections = self:getIntersections(headland:getPolygon(), 1,
             {
@@ -156,7 +159,8 @@ function Row:split(headland, bigIslands, onlyFirstAndLastIntersections)
         -- counter go below 0 here
         outside = math.max(0, outside + (isEnteringField and -1 or 1))
         if not isEnteringField and outside == 1 then
-            if not self:_isSectionCloseToHeadland(intersections[i]:getUserData().headland:getPolygon(), intersections[i], intersections[i + 1]) then
+            if not enableSmallOverlaps or (enableSmallOverlaps and
+                    not self:_isSectionCloseToHeadland(intersections[i]:getUserData().headland:getPolygon(), intersections[i], intersections[i + 1])) then
                 -- exiting the polygon and we were inside before (outside was 0)
                 -- create a section here
                 local section = self:_cutAtIntersections(intersections[lastInsideIx], intersections[i])
@@ -175,13 +179,10 @@ function Row:split(headland, bigIslands, onlyFirstAndLastIntersections)
                     table.insert(sections, section)
                 end
                 outsideButClose = false
-                cg.addSmallDebugPoint(intersections[i].is, tostring(i) .. ' far ' .. tostring(outside))
             else
                 outsideButClose = true
-                cg.addSmallDebugPoint(intersections[i].is, tostring(i) .. ' close ' .. tostring(outside))
             end
         elseif isEnteringField then
-            cg.addSmallDebugPoint(intersections[i].is, tostring(i) .. ' entry ' .. tostring(outside))
             if not outsideButClose then
                 lastInsideIx = i
             end

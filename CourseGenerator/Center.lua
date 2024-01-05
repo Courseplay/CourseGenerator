@@ -400,7 +400,7 @@ function Center:_splitIntoBlocks(rows, headland)
     local blockId = 1
 
     for i, row in ipairs(rows) do
-        local sections = row:split(headland, self.bigIslands)
+        local sections = row:split(headland, self.bigIslands, false, self.context.enableSmallOverlapsWithHeadland)
         self.logger:trace('Row %d has %d section(s)', i, #sections)
         -- first check if there is a block which overlaps with more than one section
         -- if that's the case, close the open blocks. This forces the creation of new blocks

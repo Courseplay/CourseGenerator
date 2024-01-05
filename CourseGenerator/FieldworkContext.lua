@@ -28,6 +28,7 @@ function FieldworkContext:init(field, workingWidth, turningRadius, nHeadlands)
     self.rowAngle = 0
     self.evenRowDistribution = false
     self.useBaselineEdge = false
+    self.enableSmallOverlapsWithHeadland = false
     self.logger = Logger('FieldworkContext')
     self.errors = {}
 end
@@ -37,8 +38,8 @@ function FieldworkContext:log()
             self.workingWidth, self.turningRadius, self.nHeadlands, self.nHeadlandsWithRoundCorners, self.headlandClockwise)
     self.logger:debug('field corner radius: %.1f, sharpen corners: %s, bypass islands: %s, headlands around islands %d, island headland cw %s',
             self.fieldCornerRadius, self.sharpenCorners, self.bypassIslands, self.nIslandHeadlands, self.islandHeadlandClockwise)
-    self.logger:debug('row pattern: %s, row angle auto: %s, %.1fº, even row distribution: %s, use baseline edge: %s',
-            self.rowPattern, self.autoRowAngle, math.deg(self.rowAngle), self.evenRowDistribution, self.useBaselineEdge)
+    self.logger:debug('row pattern: %s, row angle auto: %s, %.1fº, even row distribution: %s, use baseline edge: %s, small overlaps: %s',
+            self.rowPattern, self.autoRowAngle, math.deg(self.rowAngle), self.evenRowDistribution, self.useBaselineEdge, self.enableSmallOverlapsWithHeadland)
 end
 
 function FieldworkContext:addError(logger, ...)
@@ -169,6 +170,15 @@ end
 ---@param rowPattern cg.RowPattern
 function FieldworkContext:setRowPattern(rowPattern)
     self.rowPattern = rowPattern
+    return self
+end
+
+---@param enableSmallOverlaps boolean|nil if true, and the row is almost parallel to the boundary and crosses it
+--- multiple times (for instance a slightly zigzagging headland), do not split the row unless it is getting too
+--- far from the boundary (it is like a smart version of onlyFirstAndLastInterSections, but significantly will slow
+--- down the generation)
+function FieldworkContext:setEnableSmallOverlapsWithHeadland(enableSmallOverlaps)
+    self.enableSmallOverlapsWithHeadland = enableSmallOverlaps
     return self
 end
 
