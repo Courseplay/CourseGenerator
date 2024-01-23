@@ -31,14 +31,18 @@ jobs:
       - name: Run unit tests
         run: |
           cd CourseGenerator/test
-          lua WrapAroundIndexTest.lua
-          lua LineSegmentTest.lua
-          lua VertexTest.lua
-          lua SliderTest.lua
-          lua TransformTest.lua
-          lua PolylineTest.lua
-          lua PolygonTest.lua
-          lua HeadlandConnectorTest.lua
+          lua BlockSequencerTest.lua
+          lua CacheMapTest.lua
           lua FieldTest.lua
           lua FieldworkCourseTest.lua
+          lua HeadlandConnectorTest.lua
+          lua LineSegmentTest.lua
+          lua PolygonTest.lua
+          lua PolylineTest.lua
+          lua SliderTest.lua
           lua RowPatternTest.lua
+          lua RowTest.lua
+          lua SliderTest.lua
+          lua TransformTest.lua
+          lua VertexTest.lua
+          lua WrapAroundIndexTest.lua

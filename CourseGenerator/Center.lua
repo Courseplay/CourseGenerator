@@ -276,7 +276,7 @@ function Center:_findBestRowAngle()
         -- sin(a - longestEdgeDirection) will be 0 when angle is the closest.
         local notLongestEdgePenalty = 5 * math.abs(math.sin(cg.Math.getDeltaAngle(math.rad(a), longestEdgeDirection)))
         local score = 6 * #blocks + #rows + smallBlockPenalty + notLongestEdgePenalty
-        self.logger:debug('  %dº - rows: %d blocks: %d small block penalty: %.1f not longest edge penalty: %.1f score: %.3f',
+        self.logger:trace('  %dº - rows: %d blocks: %d small block penalty: %.1f not longest edge penalty: %.1f score: %.3f',
                 a, #rows, #blocks, smallBlockPenalty, notLongestEdgePenalty, score)
         if score < minScore then
             minScore = score
@@ -400,7 +400,7 @@ function Center:_splitIntoBlocks(rows, headland)
     local blockId = 1
 
     for i, row in ipairs(rows) do
-        local sections = row:split(headland, self.bigIslands)
+        local sections = row:split(headland, self.bigIslands, false, self.context.enableSmallOverlapsWithHeadland)
         self.logger:trace('Row %d has %d section(s)', i, #sections)
         -- first check if there is a block which overlaps with more than one section
         -- if that's the case, close the open blocks. This forces the creation of new blocks

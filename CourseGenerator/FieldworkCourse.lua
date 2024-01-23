@@ -104,7 +104,7 @@ end
 
 ---@return cg.Polyline
 function FieldworkCourse:getCenterPath()
-    return self.center:getPath()
+    return self.center and self.center:getPath() or cg.Polyline()
 end
 
 ------------------------------------------------------------------------------------------------------------------------

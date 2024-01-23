@@ -81,11 +81,14 @@ end
 ---
 ---@param headland cg.Headland the field boundary (or innermost headland)
 ---@param bigIslands cg.Island[] islands big enough to split a row (we'll not just drive around them but turn)
----@param onlyFirstAndLastIntersections|nil boolean ignore all intersections between the first and the last. This makes
---- only sense if there are no islands. For cases where the row is almost parallel to the boundary and crosses it
---- multiple times, so we rather not split it
+---@param onlyFirstAndLastIntersections boolean|nil ignore all intersections between the first and the last. This makes
+--- only sense if there are no islands.
+---@param enableSmallOverlaps boolean|nil if true, and the row is almost parallel to the boundary and crosses it
+--- multiple times (for instance a slightly zigzagging headland), do not split the row unless it is getting too
+--- far from the boundary (it is like a smart version of onlyFirstAndLastInterSections, but significantly will slow
+--- down the generation)
 ---@return cg.Row[]
-function Row:split(headland, bigIslands, onlyFirstAndLastIntersections)
+function Row:split(headland, bigIslands, onlyFirstAndLastIntersections, enableSmallOverlaps)
     -- get all the intersections with the field boundary
     local intersections = self:getIntersections(headland:getPolygon(), 1,
             {
@@ -103,6 +106,7 @@ function Row:split(headland, bigIslands, onlyFirstAndLastIntersections)
         self.logger:warning('Row has only %d intersection with headland %d', #intersections, headland:getPassNumber())
         return {}
     end
+    self.logger:trace('Row has %d intersection(s) with headland %d', #intersections, headland:getPassNumber())
 
     if onlyFirstAndLastIntersections then
         intersections[2] = intersections[#intersections]
@@ -141,6 +145,9 @@ function Row:split(headland, bigIslands, onlyFirstAndLastIntersections)
     -- field width (irregularly shaped fields, like ones with a peninsula)
     -- we start outside of the boundary. If we cross it entering, we'll decrement this, if we cross leaving, we'll increment it.
     local outside = 1
+    -- we left the field but staying very close to the headland, so from a practical perspective it does not
+    -- make sense to split the row and potentially creating a new block
+    local outsideButClose = false
     local lastInsideIx
     local sections = {}
     for i = 1, #intersections do
@@ -152,25 +159,33 @@ function Row:split(headland, bigIslands, onlyFirstAndLastIntersections)
         -- counter go below 0 here
         outside = math.max(0, outside + (isEnteringField and -1 or 1))
         if not isEnteringField and outside == 1 then
-            -- exiting the polygon and we were inside before (outside was 0)
-            -- create a section here
-            local section = self:_cutAtIntersections(intersections[lastInsideIx], intersections[i])
-            -- remember the angle we met the headland so we can adjust the length of the row to have 100% coverage
-            -- skip very short rows, if it is shorter than the working width then the area will
-            -- be covered anyway by the headland passes
-            if section:getLength() < self.workingWidth then
-                self.logger:trace('ROW TOO SHORT %.1f, %s', section:getLength(), intersections[i])
+            if not enableSmallOverlaps or (enableSmallOverlaps and
+                    not self:_isSectionCloseToHeadland(intersections[i]:getUserData().headland:getPolygon(), intersections[i], intersections[i + 1])) then
+                -- exiting the polygon and we were inside before (outside was 0)
+                -- create a section here
+                local section = self:_cutAtIntersections(intersections[lastInsideIx], intersections[i])
+                -- remember the angle we met the headland so we can adjust the length of the row to have 100% coverage
+                -- skip very short rows, if it is shorter than the working width then the area will
+                -- be covered anyway by the headland passes
+                if section:getLength() < self.workingWidth then
+                    self.logger:trace('ROW TOO SHORT %.1f, %s', section:getLength(), intersections[i])
+                else
+                    section.startHeadlandAngle = intersections[lastInsideIx]:getAngle()
+                    -- remember at what headland the row ends
+                    section.startsAtHeadland = intersections[lastInsideIx]:getUserData().headland
+                    section.endHeadlandAngle = intersections[i]:getAngle()
+                    section.endsAtHeadland = intersections[i]:getUserData().headland
+                    section:setEndAttributes()
+                    table.insert(sections, section)
+                end
+                outsideButClose = false
             else
-                section.startHeadlandAngle = intersections[lastInsideIx]:getAngle()
-                -- remember at what headland the row ends
-                section.startsAtHeadland = intersections[lastInsideIx]:getUserData().headland
-                section.endHeadlandAngle = intersections[i]:getAngle()
-                section.endsAtHeadland = intersections[i]:getUserData().headland
-                section:setEndAttributes()
-                table.insert(sections, section)
+                outsideButClose = true
             end
         elseif isEnteringField then
-            lastInsideIx = i
+            if not outsideButClose then
+                lastInsideIx = i
+            end
         end
     end
     return sections
@@ -256,22 +271,47 @@ end
 --- Private functions
 ------------------------------------------------------------------------------------------------------------------------
 
------- Cut a polyline at is1 and is2, keeping the section between the two. is1 and is2 becomes the start and
---- end of the cut polyline.
----@param is1 cg.Intersection
----@param is2 cg.Intersection
----@return cg.Row
 function Row:_cutAtIntersections(is1, is2)
     local section = cg.Row(self.workingWidth)
-    section:append(is1.is)
-    local src = is1.ixA + 1
-    while src < is2.ixA do
-        section:append(self[src])
-        src = src + 1
+    -- want a Row to be returned, not a Polyline
+    return cg.Polyline._cutAtIntersections(self, is1, is2, section)
+end
+
+--- Does the section of row between the intersections is1 and is2 with the headland remain close to the headland?
+--- This is to avoid splitting a row when it crosses the headland multiple times but runs more ore less parallel
+--- to the headland all the time. This can happen when the headland or the row or both are not perfectly straight.
+--- Splitting a row in this case may generate multiple blocks which increase the complexity without bringing any
+--- value in this case.
+--- "Close" means never further away than half the working width.
+---@param headland Polygon
+---@param is1 cg.Intersection
+---@param is2 cg.Intersection
+function Row:_isSectionCloseToHeadland(headland, is1, is2)
+    if is1 == nil or is2 == nil or headland == nil then
+        return false
     end
-    section:append(is2.is)
-    section:calculateProperties()
-    return section
+    -- build two paths, each starting at is1 and ending at is2, one following the row, one the headland
+    local rowSection = self:_cutAtIntersections(is1, is2)
+    local headlandSection = headland:getShortestPathBetween(is1.ixB, is2.ixB)
+    headlandSection:calculateProperties()
+    headlandSection:cutStartAtIx(2)
+    local sameDirection = is1:getAngle() < math.pi / 2
+    if not sameDirection then
+        headlandSection:reverse()
+    end
+    headlandSection:prepend(is1.is)
+    headlandSection:append(is2.is)
+    headlandSection:calculateProperties()
+    -- now run along both paths and see how far we get from each other
+    local rowSlider = cg.Slider(rowSection, 1)
+    local headlandSlider = cg.Slider(headlandSection, 1)
+    while rowSlider:move(1) and headlandSlider:move(1) do
+        local d = (rowSlider:getBase() - headlandSlider:getBase()):length()
+        if d > self.workingWidth / 2 then
+            return false
+        end
+    end
+    return true
 end
 
 ---@class cg.Row

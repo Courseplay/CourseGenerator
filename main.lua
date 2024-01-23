@@ -14,12 +14,12 @@ dofile('include.lua')
 local logger = Logger('main', Logger.level.debug)
 local parameters = {}
 -- working width of the equipment
-local workingWidth = AdjustableParameter(6, 'width', 'W', 'w', 0.2, 0, 100)
+local workingWidth = AdjustableParameter(24, 'width', 'W', 'w', 0.2, 0, 100)
 table.insert(parameters, workingWidth)
 local turningRadius = AdjustableParameter(7, 'radius', 'T', 't', 0.2, 0, 20)
 table.insert(parameters, turningRadius)
 -- number of headland passes around the field boundary
-local nHeadlandPasses = AdjustableParameter(4, 'headlands', 'P', 'p', 1, 0, 100)
+local nHeadlandPasses = AdjustableParameter(3, 'headlands', 'P', 'p', 1, 0, 100)
 table.insert(parameters, nHeadlandPasses)
 local nHeadlandsWithRoundCorners = AdjustableParameter(0, 'headlands with round corners', 'R', 'r', 1, 0, 100)
 table.insert(parameters, nHeadlandsWithRoundCorners)
@@ -76,6 +76,8 @@ local showSwath = ToggleParameter('show swath', false, '1', true)
 table.insert(parameters, showSwath)
 local reverseCourse = ToggleParameter('reverse', false, 'v', true)
 table.insert(parameters, reverseCourse)
+local smallOverlaps = ToggleParameter('small overlaps', false, 'm', true)
+table.insert(parameters, smallOverlaps)
 
 local profilerEnabled = false
 local fileName = ''
@@ -105,7 +107,7 @@ local islandHeadlandColor = { 1, 1, 1, 0.2 }
 local waypointColor = { 0.7, 0.5, 0.2 }
 local cornerColor = { 1, 1, 0.0, 0.8 }
 local islandBypassColor = { 0, 0.2, 1.0 }
-local debugColor = { 1, 1, 1, 0.1 }
+local debugColor = { 1, 0.5, 0.5, 0.7 }
 local debugTextColor = { 0.8, 0, 0, 1 }
 local warningColor = { 1, 0.5, 0 }
 local highlightedWaypointColor = { 0.7, 0.7, 0.7, 1 }
@@ -157,6 +159,7 @@ local function generate()
                 :setStartLocation(startX, startY)
                 :setBaselineEdge(startX, startY)
                 :setBaselineEdge(baselineX, baselineY)
+                :setEnableSmallOverlapsWithHeadland(smallOverlaps:get())
     if profilerEnabled then
         love.profiler.start()
     end
@@ -232,6 +235,9 @@ function love.load(arg)
         scale = 0.9 * xScale
         pointSize = 0.9 * xScale
     end
+    -- window is 80% of the screen size
+    windowWidth, windowHeight = love.window.getDesktopDimensions()
+    windowWidth, windowHeight = 0.8 * windowWidth, 0.8 * windowHeight
     -- initially, start in the lower left corner
     startX, startY = x1 + 10, y1 + 10
     local fieldCenter = selectedField:getCenter()
@@ -604,10 +610,13 @@ local function drawContext()
     love.graphics.replaceTransform(contextTransform)
     love.graphics.setColor(0.2, 0.2, 0.2, 0.6)
     local fontsize = 12
+    local y = 0
     love.graphics.rectangle('fill', 0, 0, 300, (3 + #parameters) * fontsize)
     love.graphics.setColor(1, 1, 1) -- base color for the coloredText is white (love2D can sometimes be strange)
-    love.graphics.print({ parameterNameColor, 'To generate, hit ', parameterKeyColor, 'SPACE or right click' }, 0, 0)
-    local y = 2 * fontsize
+    love.graphics.print({ parameterNameColor, 'To generate, hit ', parameterKeyColor, 'SPACE or right click' }, 0, y)
+    y = y + fontsize
+    love.graphics.print({ parameterNameColor, 'To mark baseline edge ', parameterKeyColor, 'hold SHIFT + right click' }, 0, y)
+    y = y + 2 * fontsize
     for _, p in ipairs(parameters) do
         love.graphics.print(p:toColoredText(parameterNameColor, parameterKeyColor, parameterValueColor), 0, y)
         y = y + fontsize
@@ -724,9 +733,9 @@ end
 function love.mousereleased(x, y, button, istouch)
     if button == 1 then
         dragging = false
-    elseif button == 2 then
+    elseif button == 2 and not love.keyboard.isDown('lshift') then
         selectFieldUnderCursor()
-    elseif button == 3 then
+    elseif button == 3 or (button == 2 and love.keyboard.isDown('lshift')) then
         x, y = love.mouse.getPosition()
         baselineX, baselineY = screenToWorld(x, y)
         generate()

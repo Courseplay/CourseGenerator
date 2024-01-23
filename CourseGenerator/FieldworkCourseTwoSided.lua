@@ -197,7 +197,7 @@ function FieldworkCourseTwoSided:_trim(row, middleHeadlandRow)
     end
     -- where is the longer part?
     local is = intersections[1]
-    local lengthFromIntersectionToEnd = row:getLength(is.ixA)
+    local lengthFromIntersectionToEnd = row:getLengthBetween(is.ixA)
     if lengthFromIntersectionToEnd < row:getLength() / 2 then
         -- shorter part towards the end
         row:cutEndAtIx(is.ixA)
