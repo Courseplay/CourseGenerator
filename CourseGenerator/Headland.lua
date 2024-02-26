@@ -89,7 +89,7 @@ end
 
 --- Make sure all corners are rounded to have at least minimumRadius radius.
 function Headland:roundCorners(minimumRadius)
-    self.logger:debug('applying minimum radius %.1f', minimumRadius)
+    self.logger:debug('round corners to radius %.1f', minimumRadius)
     self.polygon:ensureMinimumRadius(minimumRadius, false)
     self.polygon:calculateProperties()
 end

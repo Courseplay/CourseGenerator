@@ -471,11 +471,12 @@ function Polyline:ensureMinimumRadius(r, makeCorners)
     local currentIx
     local nextIx = 1
     repeat
+        local debugId = cg.getDebugId()
         currentIx = nextIx
         nextIx = currentIx + 1
         local xte = self:at(currentIx):getXte(r)
         if xte > cg.cMaxCrossTrackError then
-            self.logger:debug('ensureMinimumRadius: found a corner at %d, r: %.1f, xte: %.1f', currentIx, r, xte)
+            self.logger:debug('ensureMinimumRadius (%s): found a corner at %d, r: %.1f, xte: %.1f', debugId, currentIx, r, xte)
             -- looks like we can't make this turn without deviating too much from the course,
             local entry = cg.Slider(self, currentIx, 0)
             local exit = cg.Slider(self, currentIx, 0)
@@ -502,13 +503,14 @@ function Polyline:ensureMinimumRadius(r, makeCorners)
                     -- there are cases, for instance in narrow nooks which already have turns, where
                     -- it does not make sense trying to sharpen as we'll end up a very small angle with a
                     -- corner point very far away.
+                    self[currentIx].isCorner = true
                     self.logger:warning(
-                            'ensureMinimumRadius: will not sharpen this corner, had to move too far (%.1f) back',
-                            totalMoved)
-                    cg.addDebugPoint(entry:getBase())
-                    cg.addDebugPoint(exit:getBase())
-                    cg.addDebugPoint(self[currentIx])
+                            'ensureMinimumRadius (%s): will not sharpen this corner, had to move too far (%.1f) back',
+                            debugId, totalMoved)
                 end
+                cg.addDebugPoint(entry:getBase(), debugId .. ' entry')
+                cg.addDebugPoint(exit:getBase(), debugId .. ' exit')
+                cg.addDebugPoint(self[currentIx], debugId .. ' center')
             else
                 adjustedCornerVertices = makeArc(entry, exit)
             end
@@ -517,15 +519,15 @@ function Polyline:ensureMinimumRadius(r, makeCorners)
                 local sizeBeforeReplace = #self
                 -- replace the section with an arc or a corner
                 nextIx, wrappedAround = self:replace(entry.ix, exit.ix + 1, adjustedCornerVertices)
-                self.logger:debug('ensureMinimumRadius: replaced corner vertices between %d to %d with %d waypoint(s), continue at %d (of %d), wrapped around %s',
-                        entry.ix, exit.ix, #adjustedCornerVertices, nextIx, #self, wrappedAround)
+                self.logger:debug('ensureMinimumRadius (%s): replaced corner vertices between %d to %d with %d waypoint(s), continue at %d (of %d), wrapped around %s',
+                        debugId, entry.ix, exit.ix, #adjustedCornerVertices, nextIx, #self, wrappedAround)
                 if #self < sizeBeforeReplace then
                     self:calculateProperties(entry.ix - (sizeBeforeReplace - #self), nextIx)
                 else
                     self:calculateProperties(entry.ix, nextIx)
                 end
             else
-                self.logger:debug('ensureMinimumRadius: could not calculate adjusted corner vertices')
+                self.logger:debug('ensureMinimumRadius (%s): could not calculate adjusted corner vertices', debugId)
             end
         end
     until wrappedAround or currentIx >= #self

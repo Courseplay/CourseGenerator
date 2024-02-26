@@ -19,9 +19,9 @@ NewCourseGenerator.cMaxDeltaAngleForMaxEdgeLength = math.rad(30)
 -- Approximate distance of waypoints on up/down rows
 NewCourseGenerator.cRowWaypointDistance = 10
 -- Maximum cross track error we tolerate when a vehicle follows a path. This is used to
--- find corners which the vehicle can't make due to its turning radius without being more than
+-- find corners which the vehicle can't make due to its turning radius, without deviating more than
 -- cMaxCrossTrackError meters from the vertex in the corner.
-NewCourseGenerator.cMaxCrossTrackError = 0.3
+NewCourseGenerator.cMaxCrossTrackError = 0.5
 -- The delta angle above which smoothing kicks in. No smoothing around vertices with a delta
 -- angle below this
 NewCourseGenerator.cMinSmoothingAngle = math.rad(15)
@@ -58,6 +58,14 @@ function NewCourseGenerator.addDebugPoint(v, text, color)
     debugPoint.debugColor = color
     debugPoint.debugText = text
     table.insert(NewCourseGenerator.debugPoints, debugPoint)
+end
+
+local debugId = 1
+--- Get a unique ID to be used in debug messages, to identify a message and the corresponding
+--- debug point on the graphics. Use this in the debug message AND in the debug point text.
+function NewCourseGenerator.getDebugId()
+    debugId = debugId + 1
+    return string.format('%d', debugId)
 end
 
 function NewCourseGenerator.addSmallDebugPoint(v, text, color)

@@ -537,7 +537,8 @@ local function drawVertexInfo()
             text = text .. '---\n'
         end
         text = text .. string.format('ix: %s\n', intToString(v.ix))
-        text = text .. string.format('r: %s xte: %s\n', floatToString(v:getSignedRadius()), floatToString(v.xte))
+        text = text .. string.format('r: %s xte: %s\n', floatToString(v:getSignedRadius()),
+                floatToString(v:getXte(turningRadius:get())))
         text = text .. string.format('corner: %s\n', v.isCorner)
         text = text .. string.format('x: %s y: %s\n', floatToString(v.x), floatToString(v.y))
         text = text .. tostring(v:getAttributes()) .. '\n'

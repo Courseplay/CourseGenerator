@@ -5,7 +5,7 @@ local SplineHelper = {}
 ---@param from number start index
 ---@param to number end index (may be less than from, to wrap around a polygon's end
 ---@param s number tuck factor
-function SplineHelper.tuck(p, from, to, s)
+local function tuck(p, from, to, s)
     for _, cv, pv, nv in p:vertices(from, to) do
         if pv and cv and nv then
             if not cv.isCorner and cv.dA and math.abs(cv.dA) > cg.cMinSmoothingAngle then
@@ -19,7 +19,7 @@ function SplineHelper.tuck(p, from, to, s)
 end
 
 --- Add a vertex between existing ones
-function SplineHelper.refine(p, from, to)
+local function refine(p, from, to)
     -- iterate through the existing table but do not insert the
     -- new points, only remember the index where they would end up
     -- (as we do not want to modify the table while iterating)
@@ -50,10 +50,10 @@ function SplineHelper.smooth(p, order, from, to)
         return
     else
         local origSize = #p
-        SplineHelper.refine(p, from, to)
+        refine(p, from, to)
         to = to + #p - origSize
-        SplineHelper.tuck(p, from, to, 0.5)
-        SplineHelper.tuck(p, from, to, -0.15)
+        tuck(p, from, to, 0.5)
+        tuck(p, from, to, -0.15)
         SplineHelper.smooth(p, order - 1, from, to)
     end
     return to
