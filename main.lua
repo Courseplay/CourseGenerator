@@ -14,7 +14,7 @@ dofile('include.lua')
 local logger = Logger('main', Logger.level.debug)
 local parameters = {}
 -- working width of the equipment
-local workingWidth = AdjustableParameter(24, 'width', 'W', 'w', 0.2, 0, 100)
+local workingWidth = AdjustableParameter(6, 'width', 'W', 'w', 0.2, 0, 100)
 table.insert(parameters, workingWidth)
 local turningRadius = AdjustableParameter(7, 'radius', 'T', 't', 0.2, 0, 20)
 table.insert(parameters, turningRadius)
@@ -163,12 +163,16 @@ local function generate()
     if profilerEnabled then
         love.profiler.start()
     end
-    if rowPattern:get() == cg.RowPattern.SPIRAL then
+    if rowPattern:get() == cg.RowPattern.SKIP then
+        context:setRowPattern(cg.RowPattern.create(rowPattern:get(), nRows:get(), leaveSkippedRowsUnworked:get()))
+    elseif rowPattern:get() == cg.RowPattern.SPIRAL then
         context:setRowPattern(cg.RowPattern.create(rowPattern:get(), centerClockwise:get(), spiralFromInside:get()))
     elseif rowPattern:get() == cg.RowPattern.LANDS then
         context:setRowPattern(cg.RowPattern.create(rowPattern:get(), centerClockwise:get(), nRows:get()))
+    elseif rowPattern:get() == cg.RowPattern.RACETRACK then
+        context:setRowPattern(cg.RowPattern.create(rowPattern:get(), nRows:get()))
     else
-        context:setRowPattern(cg.RowPattern.create(rowPattern:get(), nRows:get(), leaveSkippedRowsUnworked:get()))
+        context:setRowPattern(cg.RowPattern.create(rowPattern:get()))
     end
     local generatorFunc
     if twoSided:get() then
