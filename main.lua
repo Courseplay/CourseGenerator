@@ -495,7 +495,12 @@ local function drawFields()
         local unpackedVertices = f:getUnpackedVertices()
         if #unpackedVertices > 2 then
             love.graphics.polygon('line', unpackedVertices)
-            for _, v in ipairs(f:getBoundary()) do
+            for i, v in ipairs(f:getBoundary()) do
+                if v:getRadius() < 10 then
+                    love.graphics.setColor(debugColor)
+                else
+                    love.graphics.setColor(fieldBoundaryColor)
+                end
                 love.graphics.points(v.x, v.y)
             end
             for _, i in ipairs(f:getIslands()) do
@@ -571,7 +576,8 @@ local function highlightPathAroundVertex(v)
 end
 
 local function highlightPathToNextRow(vertices)
-    for i, v in ipairs(vertices) do
+    for i = 1, #vertices - 1 do
+        local v = vertices[i]
         if v:getAttributes():isRowEnd() then
             local innermostHeadland = course:findPathToNextRow(v:getAttributes():getAtBoundaryId(),
                     v, course:getPath()[v.ix + 1], turningRadius:get())

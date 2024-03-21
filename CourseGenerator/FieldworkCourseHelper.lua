@@ -95,6 +95,7 @@ function FieldworkCourseHelper.createUsableBoundary(originalBoundary, clockwise)
     local usableBoundary = originalBoundary:clone()
     -- some field scans are not perfect and have sudden direction changes which screws up the clockwise calculation
     usableBoundary:removeGlitches()
+    usableBoundary:ensureMinimumEdgeLength(cg.cMinEdgeLength)
     if usableBoundary:isClockwise() ~= clockwise then
         -- all headlands are generated in the same direction as the field boundary,
         -- so if it does not match the required cw/ccw, reverse it

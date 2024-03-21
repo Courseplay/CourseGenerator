@@ -22,6 +22,9 @@ NewCourseGenerator.cRowWaypointDistance = 10
 -- find corners which the vehicle can't make due to its turning radius, without deviating more than
 -- cMaxCrossTrackError meters from the vertex in the corner.
 NewCourseGenerator.cMaxCrossTrackError = 0.5
+-- Maximum cross track error when generating rows parallel to a non-straight field edge. The row will end when
+-- the cross track error is bigger than this limit
+NewCourseGenerator.cMaxCrossTrackErrorForCurvedRows = 0.15
 -- The delta angle above which smoothing kicks in. No smoothing around vertices with a delta
 -- angle below this
 NewCourseGenerator.cMinSmoothingAngle = math.rad(15)
