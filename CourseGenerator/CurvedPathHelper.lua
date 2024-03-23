@@ -72,14 +72,14 @@ end
 function CurvedPathHelper.findLongestStraightSection(boundary, ix, radiusThreshold, section)
     local i, n, j = ix, 1
     -- max one round only (n <) self:at(currentIx):getXte(r)
-    while n < #boundary and boundary:at(i):getXte(radiusThreshold) < cg.cMaxCrossTrackError do
+    while n < #boundary and boundary:at(i):getXte(radiusThreshold) < cg.cMaxCrossTrackErrorForCurvedRows do
         section:append((boundary:at(i)):clone())
         i = i - 1
         n = n + 1
     end
     section:reverse()
     j, n = ix + 1, 1
-    while n < #boundary and boundary:at(j):getXte(radiusThreshold) < cg.cMaxCrossTrackError do
+    while n < #boundary and boundary:at(j):getXte(radiusThreshold) < cg.cMaxCrossTrackErrorForCurvedRows do
         section:append((boundary:at(j)):clone())
         j = j + 1
         n = n + 1

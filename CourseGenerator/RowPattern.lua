@@ -545,10 +545,12 @@ cg.RowPatternLands = RowPatternLands
 ---@class RowPatternRacetrack
 local RowPatternRacetrack = CpObject(RowPattern)
 
-function RowPatternRacetrack:init()
+---@param nSkip number the number of rows to skip when beginning work. This determines the size of the block, which
+--- will be 2 * nSkip rows
+function RowPatternRacetrack:init(nSkip)
     cg.RowPattern.init(self, 'RowPatternRaceTrack')
     -- by default we skip the first four rows when starting
-    self.nSkip = 4
+    self.nSkip = nSkip or 4
 end
 
 function RowPatternRacetrack:__tostring()

@@ -507,10 +507,10 @@ function Polyline:ensureMinimumRadius(r, makeCorners)
                     self.logger:warning(
                             'ensureMinimumRadius (%s): will not sharpen this corner, had to move too far (%.1f) back',
                             debugId, totalMoved)
+                    cg.addDebugPoint(entry:getBase(), debugId .. ' entry')
+                    cg.addDebugPoint(exit:getBase(), debugId .. ' exit')
+                    cg.addDebugPoint(self[currentIx], debugId .. ' center')
                 end
-                cg.addDebugPoint(entry:getBase(), debugId .. ' entry')
-                cg.addDebugPoint(exit:getBase(), debugId .. ' exit')
-                cg.addDebugPoint(self[currentIx], debugId .. ' center')
             else
                 adjustedCornerVertices = makeArc(entry, exit)
             end
