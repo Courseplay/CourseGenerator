@@ -182,8 +182,8 @@ function WaypointAttributes:setRowStart()
     self.rowStart = true
 end
 
-function WaypointAttributes:setHeadlandTurn()
-    self.headlandTurn = true
+function WaypointAttributes:setHeadlandTurn(isHeadlandTurn)
+    self.headlandTurn = isHeadlandTurn
 end
 
 function WaypointAttributes:setIslandHeadland()

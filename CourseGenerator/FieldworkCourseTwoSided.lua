@@ -110,7 +110,7 @@ function FieldworkCourseTwoSided:generateHeadlands()
     local intersections = lastStartHeadlandRow:getIntersections(self.middleHeadlandBlock:getFirstRow())
     lastStartHeadlandRow:cutEndAtIx(intersections[1].ixA)
     lastStartHeadlandRow:append(intersections[1].is)
-    lastStartHeadlandRow:setAttribute(#lastStartHeadlandRow, cg.WaypointAttributes.setHeadlandTurn)
+    lastStartHeadlandRow:setAttribute(#lastStartHeadlandRow, cg.WaypointAttributes.setHeadlandTurn, true)
     self.middleHeadlandBlock:getFirstRow():cutStartAtIx(intersections[1].ixB + 1)
 
     -- connect the middle and the end
@@ -121,7 +121,7 @@ function FieldworkCourseTwoSided:generateHeadlands()
         local firstMiddleHeadlandRow = self.middleHeadlandBlock:getFirstRow()
         firstMiddleHeadlandRow:cutEndAtIx(intersections[1].ixB)
         firstMiddleHeadlandRow:append(intersections[1].is)
-        firstMiddleHeadlandRow:setAttribute(#firstMiddleHeadlandRow, cg.WaypointAttributes.setHeadlandTurn)
+        firstMiddleHeadlandRow:setAttribute(#firstMiddleHeadlandRow, cg.WaypointAttributes.setHeadlandTurn, true)
     else
         self.context:addError(self.logger, 'Can\'t connect headlands for this field with the current settings')
         return

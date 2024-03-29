@@ -76,7 +76,7 @@ function Headland:getPath()
     -- mark corners as headland turns
     for _, v in ipairs(self.polygon) do
         if v.isCorner then
-            v:getAttributes():setHeadlandTurn()
+            v:getAttributes():setHeadlandTurn(true)
         end
     end
     return self.polygon

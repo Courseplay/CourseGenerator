@@ -489,6 +489,7 @@ function Center:_wrapUpConnectingPaths()
     else
         for _, c in ipairs(self.connectingPaths) do
             c:setAttribute(nil, cg.WaypointAttributes.setOnConnectingPath)
+            c:setAttribute(nil, cg.WaypointAttributes.setHeadlandTurn, nil)
         end
     end
 end
