@@ -103,7 +103,7 @@ function Row:split(headland, bigIslands, onlyFirstAndLastIntersections, enableSm
     )
 
     if #intersections < 2 then
-        self.logger:warning('Row has only %d intersection with headland %d', #intersections, headland:getPassNumber())
+        self.logger:trace('Row has only %d intersection with headland %d', #intersections, headland:getPassNumber())
         return {}
     end
     self.logger:trace('Row has %d intersection(s) with headland %d', #intersections, headland:getPassNumber())

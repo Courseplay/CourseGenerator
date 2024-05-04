@@ -198,6 +198,9 @@ end
 --- the longer sides of the rectangle.
 ---@return number approximate direction of the longest edge
 function Polygon:getLongestEdgeDirection()
+    -- resolution of the longest edge detection, 1 degree often gives
+    -- in ambiguous results, like 89 and 91 instead of 90
+    local resolutionDeg = 2
     if not self.longestEdgeDirection then
         -- total length of edges at angles 0-179, weighted by their length
         local totalEdgeLength = {}
@@ -207,13 +210,14 @@ function Polygon:getLongestEdgeDirection()
             a = a < 0 and (a + 180) or a
             a = math.floor(a + 0.5)
             a = a % 180
+            a = math.floor(a / resolutionDeg)
             totalEdgeLength[a] = (totalEdgeLength[a] or 0) + e:getLength()
         end
         local bestAngle, longest = 0, -math.huge
         for a, l in pairs(totalEdgeLength) do
             if l > longest then
                 longest = l
-                bestAngle = a
+                bestAngle = a * resolutionDeg
             end
         end
         self.longestEdgeDirection = math.rad(bestAngle)
