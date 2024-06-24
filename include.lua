@@ -1,46 +1,10 @@
-dofile('Courseplay_FS22/scripts/CpObject.lua')
-dofile('Courseplay_FS22/scripts/CpUtil.lua')
-dofile('Courseplay_FS22/scripts/util/CpMathUtil.lua')
-dofile('Courseplay_FS22/scripts/pathfinder/AnalyticSolution.lua')
-dofile('Courseplay_FS22/scripts/pathfinder/State3D.lua')
-dofile('Courseplay_FS22/scripts/pathfinder/Dubins.lua')
-
-dofile('CourseGenerator/CourseGenerator.lua')
-dofile('CourseGenerator/Logger.lua')
-dofile('CourseGenerator/Util.lua')
-dofile('CourseGenerator/CacheMap.lua')
-
-dofile('CourseGenerator/Geometry/Vector.lua')
-dofile('CourseGenerator/Geometry/Vertex.lua')
-dofile('CourseGenerator/Geometry/WrapAroundIndex.lua')
-dofile('CourseGenerator/Geometry/LineSegment.lua')
-dofile('CourseGenerator/Geometry/Polyline.lua')
-dofile('CourseGenerator/Geometry/Polygon.lua')
-dofile('CourseGenerator/Geometry/Intersection.lua')
-dofile('CourseGenerator/Geometry/Slider.lua')
-dofile('CourseGenerator/Geometry/Offset.lua')
-
-dofile('CourseGenerator/Math.lua')
-dofile('CourseGenerator/WaypointAttributes.lua')
-dofile('CourseGenerator/Field.lua')
-dofile('CourseGenerator/FieldworkCourseHelper.lua')
-dofile('CourseGenerator/CurvedPathHelper.lua')
-dofile('CourseGenerator/HeadlandConnector.lua')
-dofile('CourseGenerator/Row.lua')
-dofile('CourseGenerator/RowPattern.lua')
-dofile('CourseGenerator/Block.lua')
-dofile('CourseGenerator/Headland.lua')
-dofile('CourseGenerator/Center.lua')
-dofile('CourseGenerator/FieldworkContext.lua')
-dofile('CourseGenerator/FieldworkCourse.lua')
-dofile('CourseGenerator/FieldworkCourseTwoSided.lua')
-dofile('CourseGenerator/CenterTwoSided.lua')
-dofile('CourseGenerator/Island.lua')
-dofile('CourseGenerator/SplineHelper.lua')
-dofile('CourseGenerator/AnalyticHelper.lua')
-dofile('CourseGenerator/Genetic/Genetic.lua')
-dofile('CourseGenerator/Genetic/BlockSequencer.lua')
-
-dofile('AdjustableParameter.lua')
-dofile('ToggleParameter.lua')
-dofile('ListParameter.lua')
+package.path = package.path .. ";FS22_Courseplay/scripts/?.lua"
+package.path = package.path .. ";FS22_Courseplay/scripts/util/?.lua"
+package.path = package.path .. ";FS22_Courseplay/scripts/pathfinder/?.lua"
+package.path = package.path .. ";FS22_Courseplay/scripts/courseGenerator/?.lua"
+package.path = package.path .. ";FS22_Courseplay/scripts/courseGenerator/Geometry/?.lua"
+package.path = package.path .. ";FS22_Courseplay/scripts/courseGenerator/Genetic/?.lua"
+dofile('FS22_Courseplay/scripts/courseGenerator/test/require.lua')
+require('AdjustableParameter')
+require('ToggleParameter')
+require('ListParameter')
