@@ -1,0 +1,13 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Main (Big Islands) (32)" type="lua.app" factoryName="Lua Application">
+    <module name="CourseGenerator" />
+    <option name="program" value="$PROJECT_DIR$/love/love.exe" />
+    <option name="file" value="" />
+    <option name="workingDir" value="$PROJECT_DIR$" />
+    <option name="debuggerType" value="2" />
+    <option name="params" value=". fields/BigIslands.xml 32" />
+    <option name="charset" value="UTF-8" />
+    <option name="showConsole" value="true" />
+    <method v="2" />
+  </configuration>
+</component>
