@@ -23,6 +23,7 @@ jobs:
         with:
           repository: Courseplay/Courseplay_FS22
           path: FS22_Courseplay
+          ref: coursegenerator2
       - name: Lua Setup
         uses: leafo/gh-actions-lua@v10
         with:
