@@ -41,12 +41,12 @@ local autoRowAngle = ToggleParameter('auto row angle', true, '6')
 table.insert(parameters, autoRowAngle)
 local rowAngleDeg = AdjustableParameter(-90, 'row angle', 'A', 'a', 10, -90, 90)
 table.insert(parameters, rowAngleDeg)
-local rowPattern = ListParameter(cg.RowPattern.RACETRACK, 'row pattern', 'O', 'o',
-        { cg.RowPattern.ALTERNATING,
-          cg.RowPattern.SKIP,
-          cg.RowPattern.SPIRAL,
-          cg.RowPattern.LANDS,
-          cg.RowPattern.RACETRACK
+local rowPattern = ListParameter(CourseGenerator.RowPattern.RACETRACK, 'row pattern', 'O', 'o',
+        { CourseGenerator.RowPattern.ALTERNATING,
+          CourseGenerator.RowPattern.SKIP,
+          CourseGenerator.RowPattern.SPIRAL,
+          CourseGenerator.RowPattern.LANDS,
+          CourseGenerator.RowPattern.RACETRACK
         },
         {
             'alternating',
@@ -128,10 +128,10 @@ local islandPerimeterPointColor = { 1, 0.4, 1 }
 
 
 -- the selectedField to generate the course for
----@type cg.Field
+---@type CourseGenerator.Field
 local selectedField
 -- the generated fieldwork course
----@type cg.FieldworkCourse
+---@type CourseGenerator.FieldworkCourse
 local course
 local savedFields
 local currentVertices
@@ -142,8 +142,8 @@ local context
 ---------------------------------------------------------------------------------------------------------------------------
 local function generate()
     Logger.setLogfile(string.format('log/%s.log', selectedField:getId()))
-    cg.clearDebugObjects()
-    context = cg.FieldworkContext(selectedField, workingWidth:get(), turningRadius:get(), nHeadlandPasses:get())
+    CourseGenerator.clearDebugObjects()
+    context = CourseGenerator.FieldworkContext(selectedField, workingWidth:get(), turningRadius:get(), nHeadlandPasses:get())
                 :setHeadlandsWithRoundCorners(nHeadlandsWithRoundCorners:get())
                 :setHeadlandClockwise(headlandClockwise:get())
                 :setIslandHeadlandClockwise(islandHeadlandClockwise:get())
@@ -163,25 +163,25 @@ local function generate()
     if profilerEnabled then
         love.profiler.start()
     end
-    if rowPattern:get() == cg.RowPattern.SKIP then
-        context:setRowPattern(cg.RowPattern.create(rowPattern:get(), nRows:get(), leaveSkippedRowsUnworked:get()))
-    elseif rowPattern:get() == cg.RowPattern.SPIRAL then
-        context:setRowPattern(cg.RowPattern.create(rowPattern:get(), centerClockwise:get(), spiralFromInside:get()))
-    elseif rowPattern:get() == cg.RowPattern.LANDS then
-        context:setRowPattern(cg.RowPattern.create(rowPattern:get(), centerClockwise:get(), nRows:get()))
-    elseif rowPattern:get() == cg.RowPattern.RACETRACK then
-        context:setRowPattern(cg.RowPattern.create(rowPattern:get(), nRows:get()))
+    if rowPattern:get() == CourseGenerator.RowPattern.SKIP then
+        context:setRowPattern(CourseGenerator.RowPattern.create(rowPattern:get(), nRows:get(), leaveSkippedRowsUnworked:get()))
+    elseif rowPattern:get() == CourseGenerator.RowPattern.SPIRAL then
+        context:setRowPattern(CourseGenerator.RowPattern.create(rowPattern:get(), centerClockwise:get(), spiralFromInside:get()))
+    elseif rowPattern:get() == CourseGenerator.RowPattern.LANDS then
+        context:setRowPattern(CourseGenerator.RowPattern.create(rowPattern:get(), centerClockwise:get(), nRows:get()))
+    elseif rowPattern:get() == CourseGenerator.RowPattern.RACETRACK then
+        context:setRowPattern(CourseGenerator.RowPattern.create(rowPattern:get(), nRows:get()))
     else
-        context:setRowPattern(cg.RowPattern.create(rowPattern:get()))
+        context:setRowPattern(CourseGenerator.RowPattern.create(rowPattern:get()))
     end
     local generatorFunc
     if twoSided:get() then
         generatorFunc = function()
-            return cg.FieldworkCourseTwoSided(context)
+            return CourseGenerator.FieldworkCourseTwoSided(context)
         end
     else
         generatorFunc = function()
-            return cg.FieldworkCourse(context)
+            return CourseGenerator.FieldworkCourse(context)
         end
     end
     local success
@@ -226,7 +226,7 @@ function love.load(arg)
     end
     fileName = arg[1]
     logger:debug('Reading %s...', fileName)
-    savedFields = cg.Field.loadSavedFields(fileName)
+    savedFields = CourseGenerator.Field.loadSavedFields(fileName)
     selectedField = savedFields[tonumber(arg[2])]
     local x1, y1, x2, y2 = selectedField:getBoundingBox()
     local fieldWidth, fieldHeight = x2 - x1, y2 - y1
@@ -423,7 +423,7 @@ local function drawText(x, y, color, textScale, ...)
     love.graphics.pop()
 end
 
----@param block cg.Block
+---@param block CourseGenerator.Block
 local function drawRows(block)
     for i, r in ipairs(block:getRows()) do
         love.graphics.push()
@@ -437,7 +437,7 @@ local function drawRows(block)
     end
 end
 
----@param block cg.Center
+---@param block CourseGenerator.Center
 local function drawConnectingPaths(center)
     if center == nil or center:getConnectingPaths() == nil then
         return
@@ -663,8 +663,8 @@ local function drawStatus()
 end
 
 local function drawDebugPoints()
-    if cg.debugPoints then
-        for _, p in ipairs(cg.debugPoints) do
+    if CourseGenerator.debugPoints then
+        for _, p in ipairs(CourseGenerator.debugPoints) do
             love.graphics.setColor(p.debugColor or debugColor)
             love.graphics.replaceTransform(graphicsTransform)
             love.graphics.setPointSize(p.small and pointSize * 0.3 or pointSize * 3)
@@ -677,12 +677,12 @@ local function drawDebugPoints()
 end
 
 local function drawDebugPolylines()
-    if cg.debugPolylines then
+    if CourseGenerator.debugPolylines then
         love.graphics.push()
         love.graphics.replaceTransform(graphicsTransform)
         love.graphics.setPointSize(pointSize)
         love.graphics.setLineWidth(pointSize)
-        for _, p in ipairs(cg.debugPolylines) do
+        for _, p in ipairs(CourseGenerator.debugPolylines) do
             if #p > 1 then
                 love.graphics.setColor(debugColor)
                 love.graphics.line(p:getUnpackedVertices())
