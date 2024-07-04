@@ -14,12 +14,12 @@ dofile('include.lua')
 local logger = Logger('main', Logger.level.debug)
 local parameters = {}
 -- working width of the equipment
-local workingWidth = AdjustableParameter(6, 'width', 'W', 'w', 0.2, 0, 100)
+local workingWidth = AdjustableParameter(1.41, 'width', 'W', 'w', 0.01, 0, 100)
 table.insert(parameters, workingWidth)
 local turningRadius = AdjustableParameter(7, 'radius', 'T', 't', 0.2, 0, 20)
 table.insert(parameters, turningRadius)
 -- number of headland passes around the field boundary
-local nHeadlandPasses = AdjustableParameter(3, 'headlands', 'P', 'p', 1, 0, 100)
+local nHeadlandPasses = AdjustableParameter(0, 'headlands', 'P', 'p', 1, 0, 100)
 table.insert(parameters, nHeadlandPasses)
 local nHeadlandsWithRoundCorners = AdjustableParameter(0, 'headlands with round corners', 'R', 'r', 1, 0, 100)
 table.insert(parameters, nHeadlandsWithRoundCorners)
@@ -37,11 +37,11 @@ local nIslandHeadlandPasses = AdjustableParameter(2, 'island headlands', 'I', 'i
 table.insert(parameters, nIslandHeadlandPasses)
 local islandHeadlandClockwise = ToggleParameter('island headlands clockwise', false, 'C')
 table.insert(parameters, islandHeadlandClockwise)
-local autoRowAngle = ToggleParameter('auto row angle', true, '6')
+local autoRowAngle = ToggleParameter('auto row angle', false, '6')
 table.insert(parameters, autoRowAngle)
-local rowAngleDeg = AdjustableParameter(-90, 'row angle', 'A', 'a', 10, -90, 90)
+local rowAngleDeg = AdjustableParameter(0, 'row angle', 'A', 'a', 10, -90, 90)
 table.insert(parameters, rowAngleDeg)
-local rowPattern = ListParameter(CourseGenerator.RowPattern.RACETRACK, 'row pattern', 'O', 'o',
+local rowPattern = ListParameter(CourseGenerator.RowPattern.ALTERNATING, 'row pattern', 'O', 'o',
         { CourseGenerator.RowPattern.ALTERNATING,
           CourseGenerator.RowPattern.SKIP,
           CourseGenerator.RowPattern.SPIRAL,

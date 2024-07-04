@@ -32,10 +32,10 @@ end
 ---@return table to use with love.graphics.print()
 function AdjustableParameter:toColoredText(nameColor, keyColor, valueColor)
 	return {nameColor, self.name, keyColor, string.format(' (%s/%s): ', self.down, self.up),
-			valueColor, string.format('%.1f', self.value)}
+			valueColor, string.format('%.2f', self.value)}
 end
 
 
 function AdjustableParameter:__tostring()
-	return string.format('%s (%s/%s): %.1f', self.name, self.down, self.up, self.value)
+	return string.format('%s (%s/%s): %.2f', self.name, self.down, self.up, self.value)
 end
