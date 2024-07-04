@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<CPFields>
+    <field fieldNum="1" numPoints="4">
+        <point1 pos="-100 0 -10"/>
+        <point2 pos="100 0 -10"/>
+        <point3 pos="100 0 10"/>
+        <point4 pos="-100 0 10"/>
+    </field>
+</CPFields>
