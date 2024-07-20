@@ -2,6 +2,6 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/Courseplay_FS22" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/FS22_Courseplay" vcs="Git" />
   </component>
 </project>
