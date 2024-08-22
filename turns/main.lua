@@ -19,6 +19,7 @@ require('ai.turns.Corner')
 require('ai.turns.TurnContext')
 require('ai.turns.TurnManeuver')
 require('PathfinderUtil')
+require('ai.AIUtil')
 
 local parameterNameColor = { 1, 1, 1 }
 local parameterKeyColor = { 0, 1, 1 }
@@ -43,9 +44,9 @@ local turningRadius = AdjustableParameter(5.6, 'turning radius', 'R', 'r', 0.2, 
 table.insert(parameters, turningRadius)
 local distanceToFieldEdge = AdjustableParameter(10, 'distance to field edge', 'E', 'e', 0.5, 0, 40)
 table.insert(parameters, distanceToFieldEdge)
-local backMarkerDistance = AdjustableParameter(2.8, 'back marker', 'B', 'b', 0.2, -20, 10)
+local backMarkerDistance = AdjustableParameter(-2.8, 'back marker', 'B', 'b', 0.2, -20, 10)
 table.insert(parameters, backMarkerDistance)
-local frontMarkerDistance = AdjustableParameter(3.3, 'front marker', 'F', 'f', 0.2, -20, 10)
+local frontMarkerDistance = AdjustableParameter(-3.3, 'front marker', 'F', 'f', 0.2, -20, 10)
 table.insert(parameters, frontMarkerDistance)
 local steeringLength = AdjustableParameter(5, 'steering length', 'S', 's', 0.2, 0, 20)
 table.insert(parameters, steeringLength)
@@ -103,14 +104,15 @@ end
 
 local function calculateTurn()
 	vehicle = TurnTestHelper.createVehicle('test vehicle')
+    turnCourses = {}
 
     -- Headland turn ------------
 	local x, z = 0, -20
 	courses[1], turnStartIx = TurnTestHelper.createCornerCourse(vehicle, x, z, angleDeg:get())
 	turnContext = TurnTestHelper.createTurnContext(vehicle, courses[1], turnStartIx, workWidth:get(), frontMarkerDistance:get(), backMarkerDistance:get())
 	turnContexts[1] = turnContext
-	turnCourses[1] = HeadlandCornerTurnManeuver(vehicle, turnContext, turnContext.vehicleAtTurnStartNode, turningRadius:get(),
-		workWidth:get(), steeringLength:get() > 0, steeringLength:get()):getCourse()
+	--turnCourses[1] = HeadlandCornerTurnManeuver(vehicle, turnContext, turnContext.vehicleAtTurnStartNode, turningRadius:get(),
+	--	workWidth:get(), steeringLength:get() > 0, steeringLength:get()):getCourse()
 
     -- 180 turn ------------
 	x, z = 0, 20
@@ -120,6 +122,7 @@ local function calculateTurn()
 
     vehicle.getAIDirectionNode = function () return turnContext.vehicleAtTurnStartNode end
 	AIUtil = {
+        getOffsetForTowBarLength = AIUtil.getOffsetForTowBarLength,
 		getTowBarLength = function () return steeringLength:get() end,
 		canReverse = function () return true end,
 		getReverserNode = function () return end
@@ -129,14 +132,18 @@ local function calculateTurn()
 	-- distanceToFieldEdge is measured from the turn waypoints, not from the vehicle here in the test tool,
 	-- therefore, we need to add the distance between the turn end and the vehicle to calculate the distance
 	-- in front of the vehicle. This calculation works only in this tool as the 180 turn course is in the x direction...
-	if distanceToFieldEdge:get() > workWidth:get() then
-		turnCourses[2] = DubinsTurnManeuver(vehicle, turnContext, turnContext.vehicleAtTurnStartNode,
-			turningRadius:get(), workWidth:get(), steeringLength:get(), distanceToFieldEdge:get() + x2 - x):getCourse()
-	else
-		turnCourses[2] = ReedsSheppTurnManeuver(vehicle, turnContext, turnContext.vehicleAtTurnStartNode,
-			turningRadius:get(), workWidth:get(), steeringLength:get(), distanceToFieldEdge:get() + x2 - x):getCourse()
-	end
-    turnCourses[3] = calculateTractorCourse(turnCourses[2])
+    if distanceToFieldEdge:get() > workWidth:get() then
+        table.insert(turnCourses, DubinsTurnManeuver(vehicle, turnContext, turnContext.vehicleAtTurnStartNode,
+                turningRadius:get(), workWidth:get(), steeringLength:get(), distanceToFieldEdge:get() + x2 - x):getCourse())
+        for _, wp in ipairs(turnCourses[#turnCourses].waypoints) do
+            print(wp.calculatedRadius)
+        end
+    else
+        table.insert(turnCourses, ReedsSheppTurnManeuver(vehicle, turnContext, turnContext.vehicleAtTurnStartNode,
+                turningRadius:get(), workWidth:get(), steeringLength:get(), distanceToFieldEdge:get() + x2 - x):getCourse())
+    end
+
+    --table.insert(turnCourses, calculateTractorCourse(turnCourses[#turnCourses]))
 end
 
 function love.load()
