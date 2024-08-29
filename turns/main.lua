@@ -133,17 +133,30 @@ local function calculateTurn()
 	-- therefore, we need to add the distance between the turn end and the vehicle to calculate the distance
 	-- in front of the vehicle. This calculation works only in this tool as the 180 turn course is in the x direction...
     if distanceToFieldEdge:get() > workWidth:get() then
-        table.insert(turnCourses, DubinsTurnManeuver(vehicle, turnContext, turnContext.vehicleAtTurnStartNode,
-                turningRadius:get(), workWidth:get(), steeringLength:get(), distanceToFieldEdge:get() + x2 - x):getCourse())
-        for _, wp in ipairs(turnCourses[#turnCourses].waypoints) do
-            print(wp.calculatedRadius)
-        end
+        table.insert(turnCourses, {
+                color = {0, 1, 0},
+                course = DubinsTurnManeuver(vehicle, turnContext, turnContext.vehicleAtTurnStartNode,
+                turningRadius:get(), workWidth:get(), steeringLength:get(), distanceToFieldEdge:get() + x2 - x):getCourse()
+        })
+        table.insert(turnCourses, {
+            color = {0, 1, 1},
+            course = calculateTractorCourse(turnCourses[#turnCourses].course)
+        })
+        table.insert(turnCourses, {
+            color = {1, 0, 0},
+            course = TowedDubinsTurnManeuver(vehicle, turnContext, turnContext.vehicleAtTurnStartNode,
+                turningRadius:get(), workWidth:get(), steeringLength:get(), distanceToFieldEdge:get() + x2 - x):getCourse()
+        })
     else
-        table.insert(turnCourses, ReedsSheppTurnManeuver(vehicle, turnContext, turnContext.vehicleAtTurnStartNode,
-                turningRadius:get(), workWidth:get(), steeringLength:get(), distanceToFieldEdge:get() + x2 - x):getCourse())
+        table.insert(turnCourses, {
+            color = {0, 1, 0},
+            course = ReedsSheppTurnManeuver(vehicle, turnContext, turnContext.vehicleAtTurnStartNode,
+                turningRadius:get(), workWidth:get(), steeringLength:get(), distanceToFieldEdge:get() + x2 - x):getCourse()
+        })
     end
-
-    --table.insert(turnCourses, calculateTractorCourse(turnCourses[#turnCourses]))
+    for _, wp in ipairs(turnCourses[#turnCourses].course.waypoints) do
+        print(wp.calculatedRadius)
+    end
 end
 
 function love.load()
@@ -206,23 +219,21 @@ local function drawPath(path, pointSize, r, g, b)
     end
 end
 
-local function drawCourse(course, lineWidth, pointSize, r, g, b)
+local function drawCourse(course, lineWidth, pointSize, color)
+    local r, g, b = unpack(color)
 	if course then
 		love.graphics.setLineWidth(lineWidth)
 		for i = 1, #course do
 			local cp, pp = course[i], course[i - 1]
-			if r then
-				love.graphics.setColor(r, g, b, 0.2)
-				if pp then love.graphics.line(pp.z, pp.x, cp.z, cp.x) end
-			elseif cp.rev then
-				love.graphics.setColor(0, 0.3, 1, 1)
+			if cp.rev then
+				love.graphics.setColor(r, g, b, 1)
 				love.graphics.print(string.format('%d', i), cp.z, cp.x, 0, 0.04, -0.04, 15, 15)
-				love.graphics.setColor(0, 0, 1, 0.5)
+                love.graphics.setColor(r, g, b, 0.5)
 				if pp then love.graphics.line(pp.z + 0.1, pp.x + 0.1, cp.z + 0.1, cp.x + 0.1) end
 			else
-				love.graphics.setColor(0.2, 1, 0.2, 1)
+                love.graphics.setColor(r, g, b, 1)
 				love.graphics.print(string.format('%d', i), cp.z, cp.x, 0, 0.04, -0.04, -5, -5)
-				love.graphics.setColor(0.2, 1, 0.2, 0.5)
+                love.graphics.setColor(r, g, b, 0.5)
 				if pp then love.graphics.line(pp.z, pp.x, cp.z, cp.x) end
 			end
 			love.graphics.setPointSize(pointSize)
@@ -310,10 +321,10 @@ function love.draw()
             courseLength + distanceToFieldEdge:get())
 
 	for _, c in pairs(courses) do
-		drawCourse(c.waypoints, workWidth:get(), 8, 0.5, 0.5, 0.5)
+		drawCourse(c.waypoints, workWidth:get(), 8, {0.5, 0.5, 0.5})
 	end
 	for _, c in pairs(turnCourses) do
-		drawCourse(c.waypoints, 0.1, 4)
+		drawCourse(c.course.waypoints, 0.1, 4, c.color)
 	end
 	for _, c in pairs(turnContexts) do
 		c:drawDebug()

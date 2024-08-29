@@ -18,6 +18,8 @@ local workingWidth = AdjustableParameter(8, 'width', 'W', 'w', 0.1, 0, 100)
 table.insert(parameters, workingWidth)
 local turningRadius = AdjustableParameter(5, 'radius', 'T', 't', 0.1, 0, 20)
 table.insert(parameters, turningRadius)
+local fieldMargin = AdjustableParameter(0, 'margin', 'N', 'n', 0.1, -5, 5)
+table.insert(parameters, fieldMargin)
 -- number of headland passes around the field boundary
 local nHeadlandPasses = AdjustableParameter(2, 'headlands', 'P', 'p', 1, 0, 100)
 table.insert(parameters, nHeadlandPasses)
@@ -160,6 +162,7 @@ local function generate()
                 :setBaselineEdge(startX, startY)
                 :setBaselineEdge(baselineX, baselineY)
                 :setEnableSmallOverlapsWithHeadland(smallOverlaps:get())
+                :setFieldMargin(fieldMargin:get())
     if profilerEnabled then
         love.profiler.start()
     end
