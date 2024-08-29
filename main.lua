@@ -14,14 +14,14 @@ dofile('include.lua')
 local logger = Logger('main', Logger.level.debug)
 local parameters = {}
 -- working width of the equipment
-local workingWidth = AdjustableParameter(8, 'width', 'W', 'w', 0.1, 0, 100)
+local workingWidth = AdjustableParameter(15, 'width', 'W', 'w', 0.1, 0, 100)
 table.insert(parameters, workingWidth)
 local turningRadius = AdjustableParameter(5, 'radius', 'T', 't', 0.1, 0, 20)
 table.insert(parameters, turningRadius)
 local fieldMargin = AdjustableParameter(0, 'margin', 'N', 'n', 0.1, -5, 5)
 table.insert(parameters, fieldMargin)
 -- number of headland passes around the field boundary
-local nHeadlandPasses = AdjustableParameter(2, 'headlands', 'P', 'p', 1, 0, 100)
+local nHeadlandPasses = AdjustableParameter(3, 'headlands', 'P', 'p', 1, 0, 100)
 table.insert(parameters, nHeadlandPasses)
 local nHeadlandsWithRoundCorners = AdjustableParameter(0, 'headlands with round corners', 'R', 'r', 1, 0, 100)
 table.insert(parameters, nHeadlandsWithRoundCorners)
@@ -29,7 +29,7 @@ local headlandClockwise = ToggleParameter('headlands clockwise', true, 'c')
 table.insert(parameters, headlandClockwise)
 local headlandFirst = ToggleParameter('headlands first', true, 'h')
 table.insert(parameters, headlandFirst)
-local fieldCornerRadius = AdjustableParameter(6, 'field corner radius', 'F', 'f', 1, 0, 30)
+local fieldCornerRadius = AdjustableParameter(7, 'field corner radius', 'F', 'f', 1, 0, 30)
 table.insert(parameters, fieldCornerRadius)
 local sharpenCorners = ToggleParameter('sharpen corners', true, 's')
 table.insert(parameters, sharpenCorners)
@@ -80,6 +80,10 @@ local reverseCourse = ToggleParameter('reverse', false, 'v', true)
 table.insert(parameters, reverseCourse)
 local smallOverlaps = ToggleParameter('small overlaps', false, 'm', true)
 table.insert(parameters, smallOverlaps)
+local nVehicles = AdjustableParameter(2, 'number of vehicles', 'Y', 'y', 1, 1, 5)
+table.insert(parameters, nVehicles)
+local position =AdjustableParameter(1, 'position', '.', ',', 1, -2, 2)
+table.insert(parameters, position)
 
 local profilerEnabled = false
 local fileName = ''
@@ -163,6 +167,10 @@ local function generate()
                 :setBaselineEdge(baselineX, baselineY)
                 :setEnableSmallOverlapsWithHeadland(smallOverlaps:get())
                 :setFieldMargin(fieldMargin:get())
+    if context.setNumberOfVehicles then
+        context:setNumberOfVehicles(nVehicles:get())
+               :setPositionInGroup(position:get())
+    end
     if profilerEnabled then
         love.profiler.start()
     end
@@ -181,6 +189,10 @@ local function generate()
     if twoSided:get() then
         generatorFunc = function()
             return CourseGenerator.FieldworkCourseTwoSided(context)
+        end
+    elseif nVehicles:get() > 1 then
+        generatorFunc = function()
+            return CourseGenerator.FieldworkCourseMultiVehicle(context)
         end
     else
         generatorFunc = function()
@@ -481,10 +493,15 @@ end
 local function drawCenter(center)
     if center:getDebugRows() then
         if showDebugInfo:get() then
-            for _, r in ipairs(course:getCenter():getDebugRows()) do
+            for i, r in ipairs(course:getCenter():getDebugRows()) do
                 love.graphics.setColor(debugColor)
                 love.graphics.setLineWidth(3 * lineWidth)
                 love.graphics.line(r:getUnpackedVertices())
+                for _, v in r:vertices() do
+                    love.graphics.setColor(debugColor)
+                    love.graphics.points(v.x, v.y)
+                end
+                drawText(r:getMiddle().x, r:getMiddle().y, debugTextColor, 1, '%d', i)
             end
         end
     end
@@ -687,10 +704,9 @@ local function drawDebugPolylines()
         love.graphics.setLineWidth(pointSize)
         for _, p in ipairs(CourseGenerator.debugPolylines) do
             if #p > 1 then
-                love.graphics.setColor(debugColor)
-                love.graphics.line(p:getUnpackedVertices())
                 local color = p.debugColor or debugColor
                 love.graphics.setColor(color)
+                love.graphics.line(p:getUnpackedVertices())
                 for i, v in ipairs(p) do
                     drawVertexAsArrow(v)
                     drawText(v.x + 1, v.y + 1, color, 1, i)

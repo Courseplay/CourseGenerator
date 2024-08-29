@@ -54,6 +54,9 @@ local zOffset = AdjustableParameter(0, 'zOffset', 'Z', 'z', 0.5, -40, 40)
 table.insert(parameters, zOffset)
 local angleDeg = AdjustableParameter(0, 'angle', 'A', 'a', 10, -90, 90)
 table.insert(parameters, angleDeg)
+    local stepSize = AdjustableParameter(1, 'Dubins step size', 'D', 'd', 0.05, 0.1, 2)
+table.insert(parameters, stepSize)
+
 
 startPosition:setTrailerHeading(startHeading)
 
@@ -105,7 +108,7 @@ end
 local function calculateTurn()
 	vehicle = TurnTestHelper.createVehicle('test vehicle')
     turnCourses = {}
-
+    dubinsStepSize = stepSize:get()
     -- Headland turn ------------
 	local x, z = 0, -20
 	courses[1], turnStartIx = TurnTestHelper.createCornerCourse(vehicle, x, z, angleDeg:get())
