@@ -14,14 +14,14 @@ dofile('include.lua')
 local logger = Logger('main', Logger.level.debug)
 local parameters = {}
 -- working width of the equipment
-local workingWidth = AdjustableParameter(15, 'width', 'W', 'w', 0.1, 0, 100)
+local workingWidth = AdjustableParameter(7.5, 'width', 'W', 'w', 0.1, 0, 100)
 table.insert(parameters, workingWidth)
 local turningRadius = AdjustableParameter(5, 'radius', 'T', 't', 0.1, 0, 20)
 table.insert(parameters, turningRadius)
 local fieldMargin = AdjustableParameter(0, 'margin', 'N', 'n', 0.1, -5, 5)
 table.insert(parameters, fieldMargin)
 -- number of headland passes around the field boundary
-local nHeadlandPasses = AdjustableParameter(3, 'headlands', 'P', 'p', 1, 0, 100)
+local nHeadlandPasses = AdjustableParameter(2, 'headlands', 'P', 'p', 1, 0, 100)
 table.insert(parameters, nHeadlandPasses)
 local nHeadlandsWithRoundCorners = AdjustableParameter(0, 'headlands with round corners', 'R', 'r', 1, 0, 100)
 table.insert(parameters, nHeadlandsWithRoundCorners)
@@ -43,7 +43,7 @@ local autoRowAngle = ToggleParameter('auto row angle', true, '6')
 table.insert(parameters, autoRowAngle)
 local rowAngleDeg = AdjustableParameter(0, 'row angle', 'A', 'a', 10, -90, 90)
 table.insert(parameters, rowAngleDeg)
-local rowPattern = ListParameter(CourseGenerator.RowPattern.ALTERNATING, 'row pattern', 'O', 'o',
+local rowPattern = ListParameter(CourseGenerator.RowPattern.SKIP, 'row pattern', 'O', 'o',
         { CourseGenerator.RowPattern.ALTERNATING,
           CourseGenerator.RowPattern.SKIP,
           CourseGenerator.RowPattern.SPIRAL,
@@ -58,7 +58,7 @@ local rowPattern = ListParameter(CourseGenerator.RowPattern.ALTERNATING, 'row pa
             'racetrack'
         })
 table.insert(parameters, rowPattern)
-local nRows = AdjustableParameter(4, 'rows to skip/rows per land', 'K', 'k', 1, 0, 10)
+local nRows = AdjustableParameter(1, 'rows to skip/rows per land', 'K', 'k', 1, 0, 10)
 table.insert(parameters, nRows)
 local leaveSkippedRowsUnworked = ToggleParameter('leave skipped rows unworked', false, 'u')
 table.insert(parameters, leaveSkippedRowsUnworked)
@@ -80,7 +80,7 @@ local reverseCourse = ToggleParameter('reverse', false, 'v', true)
 table.insert(parameters, reverseCourse)
 local smallOverlaps = ToggleParameter('small overlaps', false, 'm', true)
 table.insert(parameters, smallOverlaps)
-local nVehicles = AdjustableParameter(2, 'number of vehicles', 'Y', 'y', 1, 1, 5)
+local nVehicles = AdjustableParameter(1, 'number of vehicles', 'Y', 'y', 1, 1, 5)
 table.insert(parameters, nVehicles)
 local position =AdjustableParameter(1, 'position', '.', ',', 1, -2, 2)
 table.insert(parameters, position)
