@@ -80,7 +80,7 @@ local reverseCourse = ToggleParameter('reverse', false, 'v', true)
 table.insert(parameters, reverseCourse)
 local smallOverlaps = ToggleParameter('small overlaps', false, 'm', true)
 table.insert(parameters, smallOverlaps)
-local nVehicles = AdjustableParameter(1, 'number of vehicles', 'Y', 'y', 1, 1, 5)
+local nVehicles = AdjustableParameter(2, 'number of vehicles', 'Y', 'y', 1, 1, 5)
 table.insert(parameters, nVehicles)
 local position =AdjustableParameter(1, 'position', '.', ',', 1, -2, 2)
 table.insert(parameters, position)
@@ -131,7 +131,12 @@ local swathColor = { 0, 0.7, 0, 0.25 }
 local islandColor = { 0.7, 0, 0.7, 1 }
 local islandPointColor = { 0.7, 0, 0.7, 0.4 }
 local islandPerimeterPointColor = { 1, 0.4, 1 }
-
+local multiVehicleColorForPosition = {}
+multiVehicleColorForPosition[-2] = { 1, 0, 0 }
+multiVehicleColorForPosition[-1] = { 1, 0.3, 0.3 }
+multiVehicleColorForPosition[0] = courseColor
+multiVehicleColorForPosition[1] = { 0.3, 1, 0.3 }
+multiVehicleColorForPosition[2] = { 0, 1, 0 }
 
 -- the selectedField to generate the course for
 ---@type CourseGenerator.Field
@@ -365,7 +370,7 @@ local function drawWaypoint(v)
     drawVertexAsArrow(v)
 end
 
-local function drawPath(p)
+local function drawPath(p, color)
     if #p > 1 then
         for i, v in p:vertices() do
             if v:getExitEdge() then
@@ -377,7 +382,7 @@ local function drawPath(p)
                     love.graphics.setColor(turnColor)
                 else
                     love.graphics.setLineWidth(lineWidth)
-                    love.graphics.setColor(courseColor)
+                    love.graphics.setColor(color or courseColor)
                 end
                 love.graphics.line(v.x, v.y, v:getExitEdge():getEnd().x, v:getExitEdge():getEnd().y)
             end
@@ -631,7 +636,16 @@ local function drawGraphics()
         if course:getCenter() then
             drawCenter(course:getCenter())
         end
-        drawPath(course:getPath())
+        if nVehicles:get() > 1 then
+            for p = - math.floor(nVehicles:get() / 2), math.floor(nVehicles:get() / 2) do
+                if p ~= 0 or nVehicles:get() % 2 ~= 0 then
+                    -- 0 position makes sense only with odd number of vehicles
+                    drawPath(course:getPath(p), multiVehicleColorForPosition[p])
+                end
+            end
+        else
+            drawPath(course:getPath())
+        end
         drawSwath(course:getPath())
     end
     drawStartLocation()
@@ -737,7 +751,8 @@ function love.textinput(key)
             return true
         end)
     end
-    if key == ' ' then
+    if key == ' ' or key == 'y' or key == 'Y' then
+        -- regenerate when the number of vehicles changes
         generate()
     end
 end
