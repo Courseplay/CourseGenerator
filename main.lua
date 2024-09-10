@@ -14,7 +14,7 @@ dofile('include.lua')
 local logger = Logger('main', Logger.level.debug)
 local parameters = {}
 -- working width of the equipment
-local workingWidth = AdjustableParameter(7.5, 'width', 'W', 'w', 0.1, 0, 100)
+local workingWidth = AdjustableParameter(10, 'width', 'W', 'w', 0.1, 0, 100)
 table.insert(parameters, workingWidth)
 local turningRadius = AdjustableParameter(5, 'radius', 'T', 't', 0.1, 0, 20)
 table.insert(parameters, turningRadius)
@@ -43,7 +43,7 @@ local autoRowAngle = ToggleParameter('auto row angle', true, '6')
 table.insert(parameters, autoRowAngle)
 local rowAngleDeg = AdjustableParameter(0, 'row angle', 'A', 'a', 10, -90, 90)
 table.insert(parameters, rowAngleDeg)
-local rowPattern = ListParameter(CourseGenerator.RowPattern.SKIP, 'row pattern', 'O', 'o',
+local rowPattern = ListParameter(CourseGenerator.RowPattern.ALTERNATING, 'row pattern', 'O', 'o',
         { CourseGenerator.RowPattern.ALTERNATING,
           CourseGenerator.RowPattern.SKIP,
           CourseGenerator.RowPattern.SPIRAL,
@@ -195,7 +195,7 @@ local function generate()
         generatorFunc = function()
             return CourseGenerator.FieldworkCourseTwoSided(context)
         end
-    elseif nVehicles:get() > 1 then
+    elseif nVehicles:get() > 1 and CourseGenerator.FieldworkCourseMultiVehicle then
         generatorFunc = function()
             return CourseGenerator.FieldworkCourseMultiVehicle(context)
         end
@@ -304,20 +304,21 @@ local function intToString(d)
     end
 end
 
-local function findVertexForPosition(polygon, rx, ry)
-    local vertices = {}
-    for _, v in polygon:vertices() do
-        if math.abs(v.x - rx) < 1 and math.abs(v.y - ry) < 1 then
-            table.insert(vertices, v)
-        end
-    end
-    return vertices
-end
-
 local function findCurrentVertices(sx, sy)
     local x, y = screenToWorld(sx, sy)
     if course and not context:hasErrors() then
-        return findVertexForPosition(course:getPath(), x, y)
+        local vertices = {}
+        for pos, path in course:pathIterator() do
+            for _, v in path:vertices() do
+                if math.abs(v.x - x) < 1 and math.abs(v.y - y) < 1 then
+                    if vertices[pos] == nil then
+                        vertices[pos] = {}
+                    end
+                    table.insert(vertices[pos], v)
+                end
+            end
+        end
+        return vertices
     end
 end
 
@@ -566,51 +567,57 @@ end
 local function drawVertexInfo()
     love.graphics.replaceTransform(mouseTransform)
     local text = ''
-    for i, v in ipairs(currentVertices) do
-        if i > 1 then
-            text = text .. '---\n'
+    for pos, vertices in pairs(currentVertices) do
+        for i, v in ipairs(vertices) do
+            if i > 1 then
+                text = text .. '---\n'
+            end
+            text = text .. string.format('v: %s ix: %s\n', intToString(pos), intToString(v.ix))
+            text = text .. string.format('r: %s xte: %s\n', floatToString(v:getSignedRadius()),
+                    floatToString(v:getXte(turningRadius:get())))
+            text = text .. string.format('corner: %s\n', v.isCorner)
+            text = text .. string.format('x: %s y: %s\n', floatToString(v.x), floatToString(v.y))
+            text = text .. tostring(v:getAttributes()) .. '\n'
         end
-        text = text .. string.format('ix: %s\n', intToString(v.ix))
-        text = text .. string.format('r: %s xte: %s\n', floatToString(v:getSignedRadius()),
-                floatToString(v:getXte(turningRadius:get())))
-        text = text .. string.format('corner: %s\n', v.isCorner)
-        text = text .. string.format('x: %s y: %s\n', floatToString(v.x), floatToString(v.y))
-        text = text .. tostring(v:getAttributes()) .. '\n'
     end
-    local width, margin = 300, 10
-    local _, wrappedText = love.graphics.getFont():getWrap(text, width - 2 * margin)
-    local h = love.graphics.getFont():getHeight()
-    love.graphics.setColor(0.2, 0.2, 0.2)
-    love.graphics.rectangle('fill', 0, 0, width, (#wrappedText + 1) * h)
-    love.graphics.setColor(0.9, 0.9, 0.9)
-    love.graphics.printf(text, margin, h, width - 2 * margin)
+    if text ~= '' then
+        local width, margin = 300, 10
+        local _, wrappedText = love.graphics.getFont():getWrap(text, width - 2 * margin)
+        local h = love.graphics.getFont():getHeight()
+        love.graphics.setColor(0.2, 0.2, 0.2)
+        love.graphics.rectangle('fill', 0, 0, width, (#wrappedText + 1) * h)
+        love.graphics.setColor(0.9, 0.9, 0.9)
+        love.graphics.printf(text, margin, h, width - 2 * margin)
+    end
 end
 
 -- Highlight a few vertices around the selected one
-local function highlightPathAroundVertex(v)
+local function highlightPathAroundVertex(polygon, v)
     love.graphics.replaceTransform(graphicsTransform)
     love.graphics.setLineWidth(lineWidth)
     for i = v.ix - 20, v.ix + 30 do
         love.graphics.setColor(i == v.ix and highlightedWaypointColor or
                 (i < v.ix and highlightedWaypointColorBackward or highlightedWaypointColorForward))
-        local p = course:getPath():at(i)
+        local p = polygon:at(i)
         if p then
             love.graphics.circle('line', p.x, p.y, 1.5)
         end
     end
 end
 
-local function highlightPathToNextRow(vertices)
-    for i = 1, #vertices - 1 do
-        local v = vertices[i]
-        if v:getAttributes():isRowEnd() then
-            local innermostHeadland = course:findPathToNextRow(v:getAttributes():getAtBoundaryId(),
-                    v, course:getPath()[v.ix + 1], turningRadius:get())
-            if #innermostHeadland > 1 then
-                love.graphics.replaceTransform(graphicsTransform)
-                love.graphics.setLineWidth(10 * lineWidth)
-                love.graphics.setColor({1, 1, 0, 0.3})
-                love.graphics.line(innermostHeadland:getUnpackedVertices())
+local function highlightPathToNextRow()
+    for pos, vertices in pairs(currentVertices) do
+        for i = 1, #vertices - 1 do
+            local v = vertices[i]
+            if v:getAttributes():isRowEnd() then
+                local innermostHeadland = course:findPathToNextRow(v:getAttributes():getAtBoundaryId(),
+                        v, course:getPath(pos)[v.ix + 1], turningRadius:get())
+                if #innermostHeadland > 1 then
+                    love.graphics.replaceTransform(graphicsTransform)
+                    love.graphics.setLineWidth(10 * lineWidth)
+                    love.graphics.setColor({1, 1, 0, 0.3})
+                    love.graphics.line(innermostHeadland:getUnpackedVertices())
+                end
             end
         end
     end
@@ -637,10 +644,10 @@ local function drawGraphics()
             drawCenter(course:getCenter())
         end
         if nVehicles:get() > 1 then
-            for p = - math.floor(nVehicles:get() / 2), math.floor(nVehicles:get() / 2) do
+            for pos, path in course:pathIterator() do
                 if p ~= 0 or nVehicles:get() % 2 ~= 0 then
                     -- 0 position makes sense only with odd number of vehicles
-                    drawPath(course:getPath(p), multiVehicleColorForPosition[p])
+                    drawPath(path, multiVehicleColorForPosition[pos])
                 end
             end
         else
@@ -689,8 +696,12 @@ local function drawStatus()
     local mx, my = love.mouse.getPosition()
     local x, y = screenToWorld(mx, my)
     love.graphics.print(string.format('%.1f %.1f (%.1f %.1f / %.1f)', x, y, xOffset, yOffset, scale), 0, 0)
-    if currentVertices and #currentVertices > 0 then
-        highlightPathAroundVertex(currentVertices[1])
+    if currentVertices then
+        for pos, path in course:pathIterator() do
+            if currentVertices[pos] then
+                highlightPathAroundVertex(path, currentVertices[pos][1])
+            end
+        end
         drawVertexInfo(currentVertices)
         highlightPathToNextRow(currentVertices)
     end
