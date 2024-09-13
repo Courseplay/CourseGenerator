@@ -14,7 +14,7 @@ dofile('include.lua')
 local logger = Logger('main', Logger.level.debug)
 local parameters = {}
 -- working width of the equipment
-local workingWidth = AdjustableParameter(10, 'width', 'W', 'w', 0.1, 0, 100)
+local workingWidth = AdjustableParameter(10, 'width', 'W', 'w', 2, 0, 100)
 table.insert(parameters, workingWidth)
 local turningRadius = AdjustableParameter(5, 'radius', 'T', 't', 0.1, 0, 20)
 table.insert(parameters, turningRadius)
@@ -60,7 +60,7 @@ local rowPattern = ListParameter(CourseGenerator.RowPattern.ALTERNATING, 'row pa
 table.insert(parameters, rowPattern)
 local nRows = AdjustableParameter(1, 'rows to skip/rows per land', 'K', 'k', 1, 0, 10)
 table.insert(parameters, nRows)
-local leaveSkippedRowsUnworked = ToggleParameter('leave skipped rows unworked', false, 'u')
+local leaveSkippedRowsUnworked = ToggleParameter('skipped rows unworked', false, 'u')
 table.insert(parameters, leaveSkippedRowsUnworked)
 local centerClockwise = ToggleParameter('spiral/lands clockwise', true, 'l')
 table.insert(parameters, centerClockwise)
@@ -82,8 +82,8 @@ local smallOverlaps = ToggleParameter('small overlaps', false, 'm', true)
 table.insert(parameters, smallOverlaps)
 local nVehicles = AdjustableParameter(2, 'number of vehicles', 'Y', 'y', 1, 1, 5)
 table.insert(parameters, nVehicles)
-local position =AdjustableParameter(1, 'position', '.', ',', 1, -2, 2)
-table.insert(parameters, position)
+local useSameTurnWidth = ToggleParameter('use same turn width', false, 'u')
+table.insert(parameters, useSameTurnWidth)
 
 local profilerEnabled = false
 local fileName = ''
@@ -174,7 +174,7 @@ local function generate()
                 :setFieldMargin(fieldMargin:get())
     if context.setNumberOfVehicles then
         context:setNumberOfVehicles(nVehicles:get())
-               :setPositionInGroup(position:get())
+        context:setUseSameTurnWidth(useSameTurnWidth:get())
     end
     if profilerEnabled then
         love.profiler.start()
@@ -308,7 +308,7 @@ local function findCurrentVertices(sx, sy)
     local x, y = screenToWorld(sx, sy)
     if course and not context:hasErrors() then
         local vertices = {}
-        for pos, path in course:pathIterator() do
+        for _, pos, path in course:pathIterator() do
             for _, v in path:vertices() do
                 if math.abs(v.x - x) < 1 and math.abs(v.y - y) < 1 then
                     if vertices[pos] == nil then
@@ -644,7 +644,7 @@ local function drawGraphics()
             drawCenter(course:getCenter())
         end
         if nVehicles:get() > 1 then
-            for pos, path in course:pathIterator() do
+            for _, pos, path in course:pathIterator() do
                 if p ~= 0 or nVehicles:get() % 2 ~= 0 then
                     -- 0 position makes sense only with odd number of vehicles
                     drawPath(path, multiVehicleColorForPosition[pos])
@@ -697,7 +697,7 @@ local function drawStatus()
     local x, y = screenToWorld(mx, my)
     love.graphics.print(string.format('%.1f %.1f (%.1f %.1f / %.1f)', x, y, xOffset, yOffset, scale), 0, 0)
     if currentVertices then
-        for pos, path in course:pathIterator() do
+        for _, pos, path in course:pathIterator() do
             if currentVertices[pos] then
                 highlightPathAroundVertex(path, currentVertices[pos][1])
             end
