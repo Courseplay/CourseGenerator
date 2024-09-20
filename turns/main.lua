@@ -36,6 +36,7 @@ local lastGoalPosition = State3D.copy(goalPosition)
 local vehicle, turnStartIx, turnContext
 -- length of the 180 course
 local courseLength = 20
+local startZ = 20
 
 local parameters = {}
 local workWidth = AdjustableParameter(6, 'width', 'W', 'w', 0.5, 2, 40)
@@ -110,7 +111,7 @@ local function calculateTurn()
     turnCourses = {}
     dubinsStepSize = stepSize:get()
     -- Headland turn ------------
-	local x, z = 0, -20
+	local x, z = 0, -startZ
 	courses[1], turnStartIx = TurnTestHelper.createCornerCourse(vehicle, x, z, angleDeg:get())
 	turnContext = TurnTestHelper.createTurnContext(vehicle, courses[1], turnStartIx, workWidth:get(), frontMarkerDistance:get(), backMarkerDistance:get())
 	turnContexts[1] = turnContext
@@ -118,7 +119,7 @@ local function calculateTurn()
 	--	workWidth:get(), steeringLength:get() > 0, steeringLength:get()):getCourse()
 
     -- 180 turn ------------
-	x, z = 0, 20
+	x, z = 0, startZ
 	courses[2], turnStartIx = TurnTestHelper.create180Course(vehicle, x, z, workWidth:get(), courseLength, zOffset:get())
 	turnContext = TurnTestHelper.createTurnContext(vehicle, courses[2], turnStartIx, workWidth:get(), frontMarkerDistance:get(), backMarkerDistance:get())
 	turnContexts[2] = turnContext
@@ -158,7 +159,7 @@ local function calculateTurn()
         })
     end
     for _, wp in ipairs(turnCourses[#turnCourses].course.waypoints) do
-        print(wp.calculatedRadius)
+        --print(wp.calculatedRadius)
     end
 end
 
@@ -320,8 +321,11 @@ function love.draw()
     end
 
 	love.graphics.setColor( 0.3, 0.3, 0.3 )
-	love.graphics.line(10, courseLength + distanceToFieldEdge:get(), 30,
-            courseLength + distanceToFieldEdge:get())
+    local edge = CourseGenerator.LineSegment(startZ, courseLength + distanceToFieldEdge:get(), startZ + workWidth:get(),
+            courseLength + distanceToFieldEdge:get() + zOffset:get())
+    edge:extend(1.5 * workWidth:get())
+    edge:extend(-1.5 * workWidth:get())
+	love.graphics.line(edge:getBase().x, edge:getBase().y, edge:getEnd().x, edge:getEnd().y)
 
 	for _, c in pairs(courses) do
 		drawCourse(c.waypoints, workWidth:get(), 8, {0.5, 0.5, 0.5})

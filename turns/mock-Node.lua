@@ -129,7 +129,8 @@ function worldToLocal(node, x, y, z)
 end
 
 function localToLocal(otherNode, node, x, y, z)
-	return 0, 0, 0
+	local wx, wy, wz = localToWorld(otherNode, x, y, z)
+	return worldToLocal(node, wx, wy, wz)
 end
 
 function localDirectionToWorld(node, dx, dy, dz)
