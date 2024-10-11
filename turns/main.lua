@@ -39,19 +39,37 @@ local courseLength = 20
 local startZ = 20
 
 local parameters = {}
-local workWidth = AdjustableParameter(6, 'width', 'W', 'w', 0.5, 2, 40)
+local workWidth = AdjustableParameter(12, 'width', 'W', 'w', 0.5, 2, 40)
 table.insert(parameters, workWidth)
-local turningRadius = AdjustableParameter(5.6, 'turning radius', 'R', 'r', 0.2, -20, 10)
+local turningRadius = AdjustableParameter(10, 'turning radius', 'R', 'r', 0.2, -20, 10)
 table.insert(parameters, turningRadius)
-local distanceToFieldEdge = AdjustableParameter(10, 'distance to field edge', 'E', 'e', 0.5, 0, 40)
+local distanceToFieldEdge = AdjustableParameter(6, 'distance to field edge', 'E', 'e', 0.5, 0, 40)
 table.insert(parameters, distanceToFieldEdge)
-local backMarkerDistance = AdjustableParameter(-2.8, 'back marker', 'B', 'b', 0.2, -20, 10)
+
+-- Plow
+local backMarkerDistance = AdjustableParameter(-6.8, 'back marker', 'B', 'b', 0.2, -20, 10)
 table.insert(parameters, backMarkerDistance)
-local frontMarkerDistance = AdjustableParameter(-3.3, 'front marker', 'F', 'f', 0.2, -20, 10)
+local frontMarkerDistance = AdjustableParameter(-21.1, 'front marker', 'F', 'f', 0.2, -20, 10)
 table.insert(parameters, frontMarkerDistance)
-local steeringLength = AdjustableParameter(5, 'steering length', 'S', 's', 0.2, 0, 20)
+local steeringLength = AdjustableParameter(13.7, 'steering length', 'S', 's', 0.2, 0, 20)
 table.insert(parameters, steeringLength)
-local zOffset = AdjustableParameter(0, 'zOffset', 'Z', 'z', 0.5, -40, 40)
+--[[
+local backMarkerDistance = AdjustableParameter(-4.8, 'back marker', 'B', 'b', 0.2, -20, 10)
+table.insert(parameters, backMarkerDistance)
+local frontMarkerDistance = AdjustableParameter(-9, 'front marker', 'F', 'f', 0.2, -20, 10)
+table.insert(parameters, frontMarkerDistance)
+local steeringLength = AdjustableParameter(6, 'steering length', 'S', 's', 0.2, 0, 20)
+table.insert(parameters, steeringLength)
+
+local backMarkerDistance = AdjustableParameter(4, 'back marker', 'B', 'b', 0.2, -20, 10)
+table.insert(parameters, backMarkerDistance)
+local frontMarkerDistance = AdjustableParameter(5, 'front marker', 'F', 'f', 0.2, -20, 10)
+table.insert(parameters, frontMarkerDistance)
+local steeringLength = AdjustableParameter(0, 'steering length', 'S', 's', 0.2, 0, 20)
+table.insert(parameters, steeringLength)
+]]
+
+local zOffset = AdjustableParameter(5, 'zOffset', 'Z', 'z', 0.5, -40, 40)
 table.insert(parameters, zOffset)
 local angleDeg = AdjustableParameter(0, 'angle', 'A', 'a', 10, -90, 90)
 table.insert(parameters, angleDeg)
@@ -136,12 +154,13 @@ local function calculateTurn()
 	-- distanceToFieldEdge is measured from the turn waypoints, not from the vehicle here in the test tool,
 	-- therefore, we need to add the distance between the turn end and the vehicle to calculate the distance
 	-- in front of the vehicle. This calculation works only in this tool as the 180 turn course is in the x direction...
-    if distanceToFieldEdge:get() > workWidth:get() then
+    if true or distanceToFieldEdge:get() > workWidth:get() then
         table.insert(turnCourses, {
                 color = {0, 1, 0},
                 course = DubinsTurnManeuver(vehicle, turnContext, turnContext.vehicleAtTurnStartNode,
                 turningRadius:get(), workWidth:get(), steeringLength:get(), distanceToFieldEdge:get() + x2 - x):getCourse()
         })
+--[[
         table.insert(turnCourses, {
             color = {0, 1, 1},
             course = calculateTractorCourse(turnCourses[#turnCourses].course)
@@ -151,6 +170,7 @@ local function calculateTurn()
             course = TowedDubinsTurnManeuver(vehicle, turnContext, turnContext.vehicleAtTurnStartNode,
                 turningRadius:get(), workWidth:get(), steeringLength:get(), distanceToFieldEdge:get() + x2 - x):getCourse()
         })
+]]
     else
         table.insert(turnCourses, {
             color = {0, 1, 0},
@@ -161,6 +181,8 @@ local function calculateTurn()
     for _, wp in ipairs(turnCourses[#turnCourses].course.waypoints) do
         --print(wp.calculatedRadius)
     end
+    io.stdout:flush()
+
 end
 
 function love.load()
@@ -170,8 +192,10 @@ function love.load()
 	--find(startPosition, goalPosition)
 end
 
+local logger = Logger()
+
 local function debug(...)
-    print(string.format(...))
+    logger:debug(...)
 end
 
 local function drawContext()
@@ -230,9 +254,9 @@ local function drawCourse(course, lineWidth, pointSize, color)
 		for i = 1, #course do
 			local cp, pp = course[i], course[i - 1]
 			if cp.rev then
-				love.graphics.setColor(r, g, b, 1)
+				love.graphics.setColor(0, 0, 1, 1)
 				love.graphics.print(string.format('%d', i), cp.z, cp.x, 0, 0.04, -0.04, 15, 15)
-                love.graphics.setColor(r, g, b, 0.5)
+                love.graphics.setColor(0, 0, 1, 0.5)
 				if pp then love.graphics.line(pp.z + 0.1, pp.x + 0.1, cp.z + 0.1, cp.x + 0.1) end
 			else
                 love.graphics.setColor(r, g, b, 1)
