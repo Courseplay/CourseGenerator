@@ -170,7 +170,6 @@ local function generate()
                 :setEvenRowDistribution(evenRowDistribution:get())
                 :setUseBaselineEdge(useBaselineEdge:get())
                 :setStartLocation(startX, startY)
-                :setBaselineEdge(startX, startY)
                 :setBaselineEdge(baselineX, baselineY)
                 :setEnableSmallOverlapsWithHeadland(smallOverlaps:get())
                 :setFieldMargin(fieldMargin:get())
@@ -195,6 +194,8 @@ local function generate()
     end
     local generatorFunc
     if twoSided:get() then
+        -- baseline edge is where the headlands are (there, and the opposite field edge)
+        context:setBaselineEdge(startX, startY)
         generatorFunc = function()
             return CourseGenerator.FieldworkCourseTwoSided(context)
         end

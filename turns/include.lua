@@ -3,7 +3,7 @@ courseplay = {}
 courseplay.RIDGEMARKER_NONE = 0
 courseplay.RIDGEMARKER_LEFT = 1
 courseplay.RIDGEMARKER_RIGHT = 2
-x
+
 local courseplayPath = '../courseplay/'
 local testPath = '../test/'
 
@@ -24,6 +24,7 @@ dofile(courseplayPath .. 'scripts/pathfinder/Dubins.lua' )
 dofile(courseplayPath .. 'scripts/pathfinder/State3D.lua')
 dofile(courseplayPath .. 'scripts/pathfinder/PathfinderUtil.lua')
 dofile('../courseplay/scripts/util/CpMathUtil.lua' )
+dofile('../courseplay/scripts/ai/AIUtil.lua' )
 dofile('../courseplay/scripts/ai/turns/TurnContext.lua' )
 dofile('../courseplay/scripts/ai/turns/Corner.lua' )
 dofile('../courseplay/scripts/ai/turns/TurnManeuver.lua' )

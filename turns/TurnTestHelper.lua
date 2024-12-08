@@ -40,7 +40,7 @@ function TurnTestHelper.create180Course(vehicle, startX, startZ, workWidth, leng
 	course.waypoints[#course.waypoints].rowEnd = true
 	local courseAfterTurn = Course.createFromTwoWorldPositions(vehicle,
 		startX + length + zOffset, startZ + workWidth,
-		startX, startZ + workWidth,
+		startX + zOffset, startZ + workWidth,
 		0, 0, 0, 5, false)
 	-- remove first point as it would be the same as the last point of course
 	courseAfterTurn.waypoints[1].rowStart = true

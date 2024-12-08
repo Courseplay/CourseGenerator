@@ -39,19 +39,19 @@ local courseLength = 20
 local startZ = 20
 
 local parameters = {}
-local workWidth = AdjustableParameter(12, 'width', 'W', 'w', 0.5, 2, 40)
+local workWidth = AdjustableParameter(15, 'width', 'W', 'w', 0.5, 2, 40)
 table.insert(parameters, workWidth)
-local turningRadius = AdjustableParameter(10, 'turning radius', 'R', 'r', 0.2, -20, 10)
+local turningRadius = AdjustableParameter(7.5, 'turning radius', 'R', 'r', 0.2, -20, 10)
 table.insert(parameters, turningRadius)
 local distanceToFieldEdge = AdjustableParameter(6, 'distance to field edge', 'E', 'e', 0.5, 0, 40)
 table.insert(parameters, distanceToFieldEdge)
 
 -- Plow
-local backMarkerDistance = AdjustableParameter(-6.8, 'back marker', 'B', 'b', 0.2, -20, 10)
+local backMarkerDistance = AdjustableParameter(-12.4, 'back marker', 'B', 'b', 0.2, -20, 10)
 table.insert(parameters, backMarkerDistance)
-local frontMarkerDistance = AdjustableParameter(-21.1, 'front marker', 'F', 'f', 0.2, -20, 10)
+local frontMarkerDistance = AdjustableParameter(-11.7, 'front marker', 'F', 'f', 0.2, -20, 10)
 table.insert(parameters, frontMarkerDistance)
-local steeringLength = AdjustableParameter(13.7, 'steering length', 'S', 's', 0.2, 0, 20)
+local steeringLength = AdjustableParameter(7.3, 'steering length', 'S', 's', 0.2, 0, 20)
 table.insert(parameters, steeringLength)
 --[[
 local backMarkerDistance = AdjustableParameter(-4.8, 'back marker', 'B', 'b', 0.2, -20, 10)
@@ -143,12 +143,9 @@ local function calculateTurn()
 	turnContexts[2] = turnContext
 
     vehicle.getAIDirectionNode = function () return turnContext.vehicleAtTurnStartNode end
-	AIUtil = {
-        getOffsetForTowBarLength = AIUtil.getOffsetForTowBarLength,
-		getTowBarLength = function () return steeringLength:get() end,
-		canReverse = function () return true end,
-		getReverserNode = function () return end
-	}
+    AIUtil.getTowBarLength = function () return steeringLength:get() end
+    AIUtil.canReverse = function () return true end
+    AIUtil.getReverserNode = function () return end
 	x, _, z = localToWorld(turnContext.vehicleAtTurnStartNode, 0, 0, 0)
 	local x2, _, _ = localToWorld(turnContext.workEndNode, 0, 0, 0)
 	-- distanceToFieldEdge is measured from the turn waypoints, not from the vehicle here in the test tool,
@@ -157,7 +154,7 @@ local function calculateTurn()
     if true or distanceToFieldEdge:get() > workWidth:get() then
         table.insert(turnCourses, {
                 color = {0, 1, 0},
-                course = DubinsTurnManeuver(vehicle, turnContext, turnContext.vehicleAtTurnStartNode,
+                course = TowedDubinsTurnManeuver(vehicle, turnContext, turnContext.vehicleAtTurnStartNode,
                 turningRadius:get(), workWidth:get(), steeringLength:get(), distanceToFieldEdge:get() + x2 - x):getCourse()
         })
 --[[
