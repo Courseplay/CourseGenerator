@@ -12,5 +12,5 @@ Course Generator in a standalone Love2D environment.
 
 The Course Generator code is in the Courseplay repository, this is 
 only the environment, so you'll need to clone the https://github.com/Courseplay/Courseplay_FS22 to
-the FS22_Courseplay folder under the root of this repo.
+the FS25_Courseplay folder under the root of this repo.
 

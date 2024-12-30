@@ -33,7 +33,27 @@ table.copy = function (t)
 	return result
 end
 
+--- luau language extensions
+math.sign = function(x)
+	if x > 0 then
+		return 1
+	elseif x < 0 then
+		return -1
+	else
+		return 0
+	end
+end
+
 function noOp() end
+
+-- These are the actual game values, but it is irrelevant
+CollisionFlag = {}
+CollisionFlag.DEFAULT = 0
+CollisionFlag.TREE = 11
+CollisionFlag.DYNAMIC_OBJECT = 18
+CollisionFlag.VEHICLE = 16
+CollisionFlag.BUILDING = 12
+CollisionFlag.STATIC_OBJECT = 1
 
 Cylindered = {}
 

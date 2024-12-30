@@ -1,8 +1,8 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="BlockSequenceTest" type="lua.app" factoryName="Lua Application">
     <option name="program" value="$PROJECT_DIR$/lua/lua53.exe" />
-    <option name="file" value="$PROJECT_DIR$/FS22_Courseplay/scripts/courseGenerator/test/BlockSequencerTest.lua" />
-    <option name="workingDir" value="$PROJECT_DIR$/FS22_Courseplay/scripts/courseGenerator/test" />
+    <option name="file" value="$PROJECT_DIR$/FS25_Courseplay/scripts/courseGenerator/test/BlockSequencerTest.lua" />
+    <option name="workingDir" value="$PROJECT_DIR$/FS25_Courseplay/scripts/courseGenerator/test" />
     <option name="debuggerType" value="2" />
     <option name="params" value="" />
     <option name="charset" value="UTF-8" />

@@ -22,7 +22,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           repository: Courseplay/Courseplay_FS22
-          path: FS22_Courseplay
+          path: FS25_Courseplay
           ref: main
       - name: Lua Setup
         uses: leafo/gh-actions-lua@v10

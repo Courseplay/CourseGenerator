@@ -282,8 +282,8 @@ function love.load(arg)
     love.window.setMode(windowWidth, windowHeight, { highdpi = true })
     love.window.setTitle(string.format('Course Generator - %s', selectedField:getId()))
 
-    startSign = love.graphics.newImage('FS22_Courseplay/img/signs/start.dds')
-    stopSign = love.graphics.newImage('FS22_Courseplay/img/signs/stop.dds')
+    startSign = love.graphics.newImage('FS25_Courseplay/img/signs/start.dds')
+    stopSign = love.graphics.newImage('FS25_Courseplay/img/signs/stop.dds')
 
     generate()
 end

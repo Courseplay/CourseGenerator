@@ -1,0 +1,709 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<CPFields>
+    <field/>
+    <field fieldNum="1" numPoints="5">
+        <point1 pos="-41.02 56.83 -878.50"/>
+        <point2 pos="94.04 59.56 -878.50"/>
+        <point3 pos="109.17 60.47 -905.50"/>
+        <point4 pos="21.50 58.75 -905.50"/>
+        <point5 pos="-13.97 57.59 -897.32"/>
+    </field>
+    <field fieldNum="2" numPoints="5">
+        <point1 pos="-42.05 57.01 -870.50"/>
+        <point2 pos="-48.05 57.48 -852.00"/>
+        <point3 pos="-39.36 57.98 -845.23"/>
+        <point4 pos="84.45 58.77 -845.00"/>
+        <point5 pos="90.45 59.35 -870.50"/>
+    </field>
+    <field fieldNum="3" numPoints="6">
+        <point1 pos="-40.55 59.31 -813.50"/>
+        <point2 pos="-60.55 58.30 -830.78"/>
+        <point3 pos="-99.05 59.73 -785.00"/>
+        <point4 pos="-99.05 58.85 -728.23"/>
+        <point5 pos="-85.55 57.78 -673.50"/>
+        <point6 pos="-40.05 57.20 -673.50"/>
+    </field>
+    <field fieldNum="4" numPoints="4">
+        <point1 pos="-31.55 56.95 -673.00"/>
+        <point2 pos="52.95 57.78 -673.00"/>
+        <point3 pos="52.95 58.34 -760.00"/>
+        <point4 pos="-31.55 59.51 -806.00"/>
+    </field>
+    <field fieldNum="5" numPoints="4">
+        <point1 pos="60.95 58.34 -758.00"/>
+        <point2 pos="60.95 57.98 -673.00"/>
+        <point3 pos="101.95 57.54 -673.00"/>
+        <point4 pos="94.45 57.58 -742.00"/>
+    </field>
+    <field fieldNum="6" numPoints="5">
+        <point1 pos="-19.55 56.96 -615.50"/>
+        <point2 pos="52.45 58.10 -615.50"/>
+        <point3 pos="52.45 57.62 -664.50"/>
+        <point4 pos="-85.55 57.50 -664.50"/>
+        <point5 pos="-98.00 56.15 -627.53"/>
+    </field>
+    <field fieldNum="7" numPoints="4">
+        <point1 pos="-65.05 56.13 -546.75"/>
+        <point2 pos="-65.05 55.99 -467.75"/>
+        <point3 pos="52.95 60.07 -467.75"/>
+        <point4 pos="52.95 58.59 -546.75"/>
+    </field>
+    <field fieldNum="8" numPoints="4">
+        <point1 pos="74.45 58.85 -554.50"/>
+        <point2 pos="121.95 58.81 -554.50"/>
+        <point3 pos="121.95 61.22 -382.00"/>
+        <point4 pos="74.45 59.85 -382.00"/>
+    </field>
+    <field fieldNum="9" numPoints="5">
+        <point1 pos="-72.55 55.72 -468.50"/>
+        <point2 pos="-72.55 55.67 -547.50"/>
+        <point3 pos="-182.05 56.43 -547.50"/>
+        <point4 pos="-229.55 56.92 -512.50"/>
+        <point5 pos="-237.21 57.72 -468.00"/>
+    </field>
+    <field fieldNum="10" numPoints="5">
+        <point1 pos="-180.66 58.42 -747.20"/>
+        <point2 pos="-212.94 58.98 -658.31"/>
+        <point3 pos="-136.23 56.86 -636.35"/>
+        <point4 pos="-121.90 57.44 -672.64"/>
+        <point5 pos="-145.94 58.06 -748.26"/>
+    </field>
+    <field fieldNum="11" numPoints="5">
+        <point1 pos="177.46 62.52 -912.29"/>
+        <point2 pos="136.11 60.28 -894.32"/>
+        <point3 pos="295.86 77.56 -894.06"/>
+        <point4 pos="267.18 74.41 -937.27"/>
+        <point5 pos="260.15 73.42 -937.64"/>
+    </field>
+    <field fieldNum="12" numPoints="4">
+        <point1 pos="327.18 79.20 -843.50"/>
+        <point2 pos="300.86 77.90 -885.50"/>
+        <point3 pos="126.78 59.83 -885.44"/>
+        <point4 pos="110.21 58.46 -843.44"/>
+    </field>
+    <field fieldNum="13" numPoints="5">
+        <point1 pos="358.94 79.27 -792.03"/>
+        <point2 pos="332.62 79.35 -835.03"/>
+        <point3 pos="108.45 58.28 -835.00"/>
+        <point4 pos="104.45 57.80 -810.00"/>
+        <point5 pos="108.61 57.43 -791.82"/>
+    </field>
+    <field fieldNum="14" numPoints="6">
+        <point1 pos="318.80 74.18 -757.61"/>
+        <point2 pos="281.22 69.75 -766.92"/>
+        <point3 pos="148.16 57.18 -766.92"/>
+        <point4 pos="126.01 56.97 -763.05"/>
+        <point5 pos="148.56 55.94 -715.99"/>
+        <point6 pos="355.37 74.60 -715.91"/>
+    </field>
+    <field fieldNum="15" numPoints="5">
+        <point1 pos="153.56 55.74 -707.01"/>
+        <point2 pos="210.57 58.21 -643.45"/>
+        <point3 pos="399.35 73.63 -643.45"/>
+        <point4 pos="390.98 74.37 -666.50"/>
+        <point5 pos="362.49 75.11 -706.94"/>
+    </field>
+    <field/>
+    <field fieldNum="17" numPoints="9">
+        <point1 pos="260.95 60.40 -575.00"/>
+        <point2 pos="260.95 59.37 -381.50"/>
+        <point3 pos="296.45 59.95 -381.50"/>
+        <point4 pos="296.45 58.92 -475.95"/>
+        <point5 pos="308.60 58.97 -493.45"/>
+        <point6 pos="309.10 61.67 -573.45"/>
+        <point7 pos="305.27 62.18 -587.40"/>
+        <point8 pos="288.23 61.32 -591.44"/>
+        <point9 pos="265.51 60.89 -585.73"/>
+    </field>
+    <field fieldNum="18" numPoints="4">
+        <point1 pos="180.45 59.68 -520.00"/>
+        <point2 pos="252.45 60.19 -520.00"/>
+        <point3 pos="252.45 59.32 -382.00"/>
+        <point4 pos="180.45 60.22 -382.00"/>
+    </field>
+    <field fieldNum="19" numPoints="4">
+        <point1 pos="131.01 58.82 -549.00"/>
+        <point2 pos="171.51 59.48 -524.80"/>
+        <point3 pos="171.51 60.37 -381.80"/>
+        <point4 pos="130.95 61.14 -382.00"/>
+    </field>
+    <field fieldNum="20" numPoints="5">
+        <point1 pos="345.95 61.84 -531.48"/>
+        <point2 pos="345.95 66.59 -610.00"/>
+        <point3 pos="401.95 73.79 -619.50"/>
+        <point4 pos="401.95 61.41 -446.50"/>
+        <point5 pos="365.95 59.43 -464.00"/>
+    </field>
+    <field/>
+    <field fieldNum="22" numPoints="4">
+        <point1 pos="409.95 62.23 -445.84"/>
+        <point2 pos="410.45 74.99 -603.00"/>
+        <point3 pos="464.95 78.79 -603.00"/>
+        <point4 pos="464.55 70.09 -402.13"/>
+    </field>
+    <field fieldNum="23" numPoints="6">
+        <point1 pos="473.95 70.70 -387.00"/>
+        <point2 pos="473.95 79.64 -603.14"/>
+        <point3 pos="480.95 79.87 -603.14"/>
+        <point4 pos="532.45 79.96 -510.00"/>
+        <point5 pos="531.95 73.03 -326.00"/>
+        <point6 pos="493.45 70.70 -358.50"/>
+    </field>
+    <field fieldNum="24" numPoints="7">
+        <point1 pos="540.45 79.84 -491.50"/>
+        <point2 pos="589.45 79.91 -355.00"/>
+        <point3 pos="608.95 76.90 -279.00"/>
+        <point4 pos="618.95 74.39 -232.50"/>
+        <point5 pos="598.49 73.15 -231.36"/>
+        <point6 pos="589.45 73.98 -266.50"/>
+        <point7 pos="540.45 73.19 -317.71"/>
+    </field>
+    <field fieldNum="25" numPoints="8">
+        <point1 pos="484.28 63.58 163.53"/>
+        <point2 pos="540.59 67.85 114.95"/>
+        <point3 pos="560.38 71.21 83.10"/>
+        <point4 pos="560.45 71.42 77.00"/>
+        <point5 pos="636.45 71.67 77.00"/>
+        <point6 pos="614.95 67.35 221.00"/>
+        <point7 pos="459.52 63.26 220.91"/>
+        <point8 pos="459.06 63.19 210.19"/>
+    </field>
+    <field fieldNum="26" numPoints="8">
+        <point1 pos="378.95 60.03 -414.00"/>
+        <point2 pos="429.45 64.64 -381.50"/>
+        <point3 pos="451.95 65.72 -350.00"/>
+        <point4 pos="463.85 65.18 -300.28"/>
+        <point5 pos="486.45 68.47 -267.50"/>
+        <point6 pos="514.05 71.79 -247.55"/>
+        <point7 pos="486.45 69.89 -233.50"/>
+        <point8 pos="378.95 61.36 -233.50"/>
+    </field>
+    <field fieldNum="27" numPoints="4">
+        <point1 pos="305.45 58.56 -443.50"/>
+        <point2 pos="370.45 59.62 -418.50"/>
+        <point3 pos="370.45 60.92 -234.85"/>
+        <point4 pos="305.45 58.67 -233.50"/>
+    </field>
+    <field fieldNum="28" numPoints="4">
+        <point1 pos="241.45 59.51 -373.50"/>
+        <point2 pos="297.45 60.51 -373.50"/>
+        <point3 pos="297.45 58.58 -233.50"/>
+        <point4 pos="241.45 58.10 -233.50"/>
+    </field>
+    <field fieldNum="29" numPoints="4">
+        <point1 pos="180.95 60.10 -373.50"/>
+        <point2 pos="233.45 59.53 -373.50"/>
+        <point3 pos="233.45 57.96 -233.50"/>
+        <point4 pos="180.95 56.76 -233.50"/>
+    </field>
+    <field fieldNum="30" numPoints="4">
+        <point1 pos="130.95 61.19 -373.50"/>
+        <point2 pos="171.95 60.27 -373.50"/>
+        <point3 pos="171.95 56.59 -233.50"/>
+        <point4 pos="130.95 56.05 -233.50"/>
+    </field>
+    <field fieldNum="31" numPoints="4">
+        <point1 pos="74.45 59.77 -373.50"/>
+        <point2 pos="121.95 61.29 -373.50"/>
+        <point3 pos="121.95 55.96 -233.50"/>
+        <point4 pos="74.45 56.59 -233.50"/>
+    </field>
+    <field fieldNum="32" numPoints="4">
+        <point1 pos="-64.55 56.18 -459.00"/>
+        <point2 pos="-64.55 57.67 -364.00"/>
+        <point3 pos="53.45 58.14 -364.00"/>
+        <point4 pos="53.45 60.11 -459.00"/>
+    </field>
+    <field fieldNum="33" numPoints="4">
+        <point1 pos="-63.55 57.78 -355.00"/>
+        <point2 pos="-63.55 61.10 -233.50"/>
+        <point3 pos="52.45 57.58 -233.50"/>
+        <point4 pos="52.45 57.91 -355.00"/>
+    </field>
+    <field fieldNum="34" numPoints="4">
+        <point1 pos="-72.55 57.58 -364.50"/>
+        <point2 pos="-72.55 55.89 -459.50"/>
+        <point3 pos="-239.05 58.01 -459.50"/>
+        <point4 pos="-252.55 59.47 -364.50"/>
+    </field>
+    <field fieldNum="35" numPoints="4">
+        <point1 pos="-253.55 58.77 -355.00"/>
+        <point2 pos="-253.55 55.99 -233.50"/>
+        <point3 pos="-73.05 61.02 -233.96"/>
+        <point4 pos="-73.05 57.75 -355.46"/>
+    </field>
+    <field fieldNum="36" numPoints="6">
+        <point1 pos="-375.55 59.44 -234.00"/>
+        <point2 pos="-281.05 56.20 -234.00"/>
+        <point3 pos="-281.05 57.76 -333.00"/>
+        <point4 pos="-393.05 60.67 -333.00"/>
+        <point5 pos="-389.47 60.29 -287.85"/>
+        <point6 pos="-376.07 59.45 -233.85"/>
+    </field>
+    <field fieldNum="37" numPoints="4">
+        <point1 pos="-350.55 58.63 -820.00"/>
+        <point2 pos="-365.05 59.45 -784.00"/>
+        <point3 pos="-191.05 59.10 -784.00"/>
+        <point4 pos="-176.55 59.70 -820.00"/>
+    </field>
+    <field fieldNum="38" numPoints="4">
+        <point1 pos="-329.05 58.74 -874.00"/>
+        <point2 pos="-346.60 58.66 -829.00"/>
+        <point3 pos="-171.69 59.73 -829.00"/>
+        <point4 pos="-162.05 58.93 -874.16"/>
+    </field>
+    <field fieldNum="39" numPoints="4">
+        <point1 pos="-316.55 57.63 -925.00"/>
+        <point2 pos="-326.05 58.53 -882.50"/>
+        <point3 pos="-161.05 58.66 -882.50"/>
+        <point4 pos="-158.52 57.16 -925.00"/>
+    </field>
+    <field fieldNum="40" numPoints="6">
+        <point1 pos="250.95 59.83 -198.50"/>
+        <point2 pos="250.95 62.96 -132.50"/>
+        <point3 pos="471.95 60.68 -132.50"/>
+        <point4 pos="487.87 64.37 -161.40"/>
+        <point5 pos="524.95 70.53 -180.00"/>
+        <point6 pos="524.95 71.18 -198.50"/>
+    </field>
+    <field fieldNum="41" numPoints="4">
+        <point1 pos="23.95 59.92 -197.50"/>
+        <point2 pos="242.45 59.93 -197.50"/>
+        <point3 pos="242.45 63.01 -133.00"/>
+        <point4 pos="23.95 62.23 -133.00"/>
+    </field>
+    <field fieldNum="42" numPoints="4">
+        <point1 pos="-264.34 64.37 -161.00"/>
+        <point2 pos="-0.05 61.13 -161.00"/>
+        <point3 pos="-0.05 61.19 -198.50"/>
+        <point4 pos="-260.55 59.91 -198.50"/>
+    </field>
+    <field fieldNum="43" numPoints="4">
+        <point1 pos="0.45 63.67 -102.50"/>
+        <point2 pos="0.45 61.27 -152.00"/>
+        <point3 pos="-266.05 64.73 -152.00"/>
+        <point4 pos="-271.60 64.88 -102.30"/>
+    </field>
+    <field fieldNum="44" numPoints="7">
+        <point1 pos="-396.05 59.36 -197.00"/>
+        <point2 pos="-396.05 59.49 -168.00"/>
+        <point3 pos="-396.05 58.50 -23.50"/>
+        <point4 pos="-327.55 59.27 -8.00"/>
+        <point5 pos="-317.55 62.03 -77.00"/>
+        <point6 pos="-318.05 62.73 -90.00"/>
+        <point7 pos="-388.55 59.47 -197.22"/>
+    </field>
+    <field fieldNum="45" numPoints="4">
+        <point1 pos="-126.55 60.31 -29.38"/>
+        <point2 pos="-126.55 60.91 -94.38"/>
+        <point3 pos="-273.05 64.62 -94.38"/>
+        <point4 pos="-283.27 61.57 -29.59"/>
+    </field>
+    <field fieldNum="46" numPoints="4">
+        <point1 pos="-118.55 60.84 -94.50"/>
+        <point2 pos="-118.55 55.60 59.00"/>
+        <point3 pos="-57.05 55.64 84.19"/>
+        <point4 pos="-57.05 62.83 -94.50"/>
+        <islandNode1 pos="-94.55 -2"/>
+        <islandNode2 pos="-93.55 -2"/>
+        <islandNode3 pos="-91.55 -2"/>
+        <islandNode4 pos="-90.55 -2"/>
+        <islandNode5 pos="-89.55 -2"/>
+        <islandNode6 pos="-88.55 -2"/>
+        <islandNode7 pos="-87.55 -2"/>
+        <islandNode8 pos="-95.55 -3"/>
+        <islandNode9 pos="-94.55 -3"/>
+        <islandNode10 pos="-93.55 -3"/>
+        <islandNode11 pos="-92.55 -3"/>
+        <islandNode12 pos="-91.55 -3"/>
+        <islandNode13 pos="-90.55 -3"/>
+        <islandNode14 pos="-89.55 -3"/>
+        <islandNode15 pos="-88.55 -3"/>
+        <islandNode16 pos="-87.55 -3"/>
+        <islandNode17 pos="-86.55 -3"/>
+        <islandNode18 pos="-95.55 -4"/>
+        <islandNode19 pos="-94.55 -4"/>
+        <islandNode20 pos="-93.55 -4"/>
+        <islandNode21 pos="-92.55 -4"/>
+        <islandNode22 pos="-91.55 -4"/>
+        <islandNode23 pos="-90.55 -4"/>
+        <islandNode24 pos="-89.55 -4"/>
+        <islandNode25 pos="-88.55 -4"/>
+        <islandNode26 pos="-87.55 -4"/>
+        <islandNode27 pos="-86.55 -4"/>
+        <islandNode28 pos="-96.55 -5"/>
+        <islandNode29 pos="-95.55 -5"/>
+        <islandNode30 pos="-94.55 -5"/>
+        <islandNode31 pos="-93.55 -5"/>
+        <islandNode32 pos="-92.55 -5"/>
+        <islandNode33 pos="-91.55 -5"/>
+        <islandNode34 pos="-90.55 -5"/>
+        <islandNode35 pos="-89.55 -5"/>
+        <islandNode36 pos="-88.55 -5"/>
+        <islandNode37 pos="-87.55 -5"/>
+        <islandNode38 pos="-86.55 -5"/>
+        <islandNode39 pos="-85.55 -5"/>
+        <islandNode40 pos="-96.55 -6"/>
+        <islandNode41 pos="-95.55 -6"/>
+        <islandNode42 pos="-94.55 -6"/>
+        <islandNode43 pos="-93.55 -6"/>
+        <islandNode44 pos="-92.55 -6"/>
+        <islandNode45 pos="-91.55 -6"/>
+        <islandNode46 pos="-90.55 -6"/>
+        <islandNode47 pos="-89.55 -6"/>
+        <islandNode48 pos="-88.55 -6"/>
+        <islandNode49 pos="-87.55 -6"/>
+        <islandNode50 pos="-86.55 -6"/>
+        <islandNode51 pos="-85.55 -6"/>
+        <islandNode52 pos="-96.55 -7"/>
+        <islandNode53 pos="-95.55 -7"/>
+        <islandNode54 pos="-94.55 -7"/>
+        <islandNode55 pos="-93.55 -7"/>
+        <islandNode56 pos="-92.55 -7"/>
+        <islandNode57 pos="-91.55 -7"/>
+        <islandNode58 pos="-90.55 -7"/>
+        <islandNode59 pos="-89.55 -7"/>
+        <islandNode60 pos="-88.55 -7"/>
+        <islandNode61 pos="-87.55 -7"/>
+        <islandNode62 pos="-86.55 -7"/>
+        <islandNode63 pos="-85.55 -7"/>
+        <islandNode64 pos="-96.55 -8"/>
+        <islandNode65 pos="-95.55 -8"/>
+        <islandNode66 pos="-94.55 -8"/>
+        <islandNode67 pos="-93.55 -8"/>
+        <islandNode68 pos="-92.55 -8"/>
+        <islandNode69 pos="-91.55 -8"/>
+        <islandNode70 pos="-90.55 -8"/>
+        <islandNode71 pos="-89.55 -8"/>
+        <islandNode72 pos="-88.55 -8"/>
+        <islandNode73 pos="-87.55 -8"/>
+        <islandNode74 pos="-86.55 -8"/>
+        <islandNode75 pos="-85.55 -8"/>
+        <islandNode76 pos="-95.55 -9"/>
+        <islandNode77 pos="-94.55 -9"/>
+        <islandNode78 pos="-93.55 -9"/>
+        <islandNode79 pos="-92.55 -9"/>
+        <islandNode80 pos="-91.55 -9"/>
+        <islandNode81 pos="-90.55 -9"/>
+        <islandNode82 pos="-89.55 -9"/>
+        <islandNode83 pos="-88.55 -9"/>
+        <islandNode84 pos="-87.55 -9"/>
+        <islandNode85 pos="-95.55 -10"/>
+        <islandNode86 pos="-94.55 -10"/>
+        <islandNode87 pos="-93.55 -10"/>
+        <islandNode88 pos="-92.55 -10"/>
+        <islandNode89 pos="-91.55 -10"/>
+        <islandNode90 pos="-90.55 -10"/>
+        <islandNode91 pos="-89.55 -10"/>
+        <islandNode92 pos="-88.55 -10"/>
+        <islandNode93 pos="-87.55 -10"/>
+        <islandNode94 pos="-92.55 -11"/>
+        <islandNode95 pos="-91.55 -11"/>
+        <islandNode96 pos="-90.55 -11"/>
+        <islandNode97 pos="-89.55 -11"/>
+        <islandNode98 pos="-88.55 -11"/>
+        <islandNode99 pos="-87.55 -11"/>
+        <islandNode100 pos="-90.55 -12"/>
+        <islandNode101 pos="-89.55 -12"/>
+        <islandNode102 pos="-88.55 -12"/>
+    </field>
+    <field fieldNum="47" numPoints="4">
+        <point1 pos="-49.05 63.23 -94.50"/>
+        <point2 pos="-49.05 55.87 87.50"/>
+        <point3 pos="0.45 57.50 112.03"/>
+        <point4 pos="0.45 63.73 -94.50"/>
+    </field>
+    <field fieldNum="48" numPoints="5">
+        <point1 pos="22.95 61.12 -51.50"/>
+        <point2 pos="22.95 62.70 -124.00"/>
+        <point3 pos="470.45 60.17 -124.00"/>
+        <point4 pos="470.45 59.72 -100.50"/>
+        <point5 pos="486.45 62.47 -51.00"/>
+    </field>
+    <field fieldNum="49" numPoints="4">
+        <point1 pos="23.45 56.20 29.50"/>
+        <point2 pos="23.45 60.33 -43.00"/>
+        <point3 pos="494.95 63.64 -43.00"/>
+        <point4 pos="542.92 70.92 29.60"/>
+    </field>
+    <field fieldNum="50" numPoints="6">
+        <point1 pos="282.95 57.57 38.00"/>
+        <point2 pos="282.95 57.52 124.00"/>
+        <point3 pos="463.95 62.36 124.00"/>
+        <point4 pos="501.29 65.38 102.53"/>
+        <point5 pos="517.63 68.31 82.06"/>
+        <point6 pos="522.33 68.90 38.00"/>
+    </field>
+    <field fieldNum="51" numPoints="4">
+        <point1 pos="-82.55 55.85 305.00"/>
+        <point2 pos="8.45 60.05 305.00"/>
+        <point3 pos="8.78 56.94 150.00"/>
+        <point4 pos="-82.55 55.84 107.50"/>
+    </field>
+    <field fieldNum="52" numPoints="4">
+        <point1 pos="-140.55 56.15 498.17"/>
+        <point2 pos="-90.55 54.76 495.78"/>
+        <point3 pos="-90.05 55.78 104.00"/>
+        <point4 pos="-140.55 56.08 83.50"/>
+    </field>
+    <field fieldNum="53" numPoints="4">
+        <point1 pos="-82.55 54.43 494.28"/>
+        <point2 pos="8.45 56.19 488.59"/>
+        <point3 pos="8.78 59.41 312.52"/>
+        <point4 pos="-82.55 56.03 312.41"/>
+    </field>
+    <field fieldNum="54" numPoints="6">
+        <point1 pos="-337.05 56.73 273.00"/>
+        <point2 pos="-337.05 58.08 510.50"/>
+        <point3 pos="-148.55 56.29 499.50"/>
+        <point4 pos="-149.05 57.58 143.00"/>
+        <point5 pos="-298.05 58.15 143.00"/>
+        <point6 pos="-298.67 56.62 193.58"/>
+    </field>
+    <field fieldNum="55" numPoints="4">
+        <point1 pos="-506.05 61.35 410.50"/>
+        <point2 pos="-506.05 60.64 485.50"/>
+        <point3 pos="-480.55 60.30 485.50"/>
+        <point4 pos="-459.55 59.63 410.50"/>
+    </field>
+    <field fieldNum="56" numPoints="4">
+        <point1 pos="-506.55 59.52 335.50"/>
+        <point2 pos="-506.55 61.23 402.00"/>
+        <point3 pos="-455.55 59.17 402.00"/>
+        <point4 pos="-410.55 57.21 335.50"/>
+    </field>
+    <field fieldNum="57" numPoints="4">
+        <point1 pos="-438.55 57.71 143.00"/>
+        <point2 pos="-438.55 58.87 188.00"/>
+        <point3 pos="-324.05 57.34 188.00"/>
+        <point4 pos="-324.05 58.48 143.00"/>
+    </field>
+    <field fieldNum="58" numPoints="4">
+        <point1 pos="-444.05 58.17 91.06"/>
+        <point2 pos="-444.05 57.49 134.06"/>
+        <point3 pos="-323.05 58.62 134.06"/>
+        <point4 pos="-323.05 59.23 91.06"/>
+    </field>
+    <field/>
+    <field fieldNum="60" numPoints="4">
+        <point1 pos="-777.05 57.46 -385.00"/>
+        <point2 pos="-500.05 60.69 -385.00"/>
+        <point3 pos="-499.98 59.28 -423.00"/>
+        <point4 pos="-785.55 58.37 -423.00"/>
+    </field>
+    <field fieldNum="61" numPoints="4">
+        <point1 pos="-768.55 58.73 -347.00"/>
+        <point2 pos="-520.05 60.62 -347.00"/>
+        <point3 pos="-519.31 60.22 -376.00"/>
+        <point4 pos="-774.55 57.58 -376.00"/>
+    </field>
+    <field fieldNum="62" numPoints="4">
+        <point1 pos="-767.55 59.19 -338.50"/>
+        <point2 pos="-763.80 60.58 -311.00"/>
+        <point3 pos="-525.55 59.98 -311.00"/>
+        <point4 pos="-525.05 60.30 -338.50"/>
+    </field>
+    <field fieldNum="63" numPoints="4">
+        <point1 pos="-763.05 60.73 -302.50"/>
+        <point2 pos="-758.05 60.93 -267.00"/>
+        <point3 pos="-533.55 58.45 -267.00"/>
+        <point4 pos="-533.55 59.26 -302.50"/>
+    </field>
+    <field fieldNum="64" numPoints="4">
+        <point1 pos="-757.05 60.86 -258.50"/>
+        <point2 pos="-752.05 60.60 -228.00"/>
+        <point3 pos="-551.05 57.84 -228.00"/>
+        <point4 pos="-551.05 57.38 -258.50"/>
+    </field>
+    <field fieldNum="65" numPoints="4">
+        <point1 pos="-750.55 60.79 -219.00"/>
+        <point2 pos="-745.55 61.80 -192.50"/>
+        <point3 pos="-556.73 57.48 -192.50"/>
+        <point4 pos="-556.73 57.67 -219.00"/>
+    </field>
+    <field fieldNum="66" numPoints="4">
+        <point1 pos="-743.60 62.09 -184.50"/>
+        <point2 pos="-740.60 62.21 -155.00"/>
+        <point3 pos="-564.76 56.96 -155.00"/>
+        <point4 pos="-563.55 56.83 -184.50"/>
+    </field>
+    <field fieldNum="67" numPoints="4">
+        <point1 pos="-739.55 62.13 -146.00"/>
+        <point2 pos="-736.55 61.21 -108.50"/>
+        <point3 pos="-570.55 58.87 -108.50"/>
+        <point4 pos="-569.94 57.40 -146.00"/>
+    </field>
+    <field fieldNum="68" numPoints="4">
+        <point1 pos="-735.05 61.02 -100.00"/>
+        <point2 pos="-735.05 60.25 -65.00"/>
+        <point3 pos="-574.05 59.50 -65.00"/>
+        <point4 pos="-574.05 59.21 -100.00"/>
+    </field>
+    <field fieldNum="69" numPoints="4">
+        <point1 pos="-880.22 57.86 -432.67"/>
+        <point2 pos="-827.43 59.44 -432.67"/>
+        <point3 pos="-817.46 57.78 -390.67"/>
+        <point4 pos="-908.72 57.21 -390.67"/>
+    </field>
+    <field fieldNum="70" numPoints="4">
+        <point1 pos="-912.27 57.41 -380.58"/>
+        <point2 pos="-814.22 57.55 -380.58"/>
+        <point3 pos="-808.44 57.57 -352.58"/>
+        <point4 pos="-913.47 58.44 -352.58"/>
+    </field>
+    <field fieldNum="71" numPoints="4">
+        <point1 pos="-910.80 58.81 -342.86"/>
+        <point2 pos="-903.49 59.63 -319.36"/>
+        <point3 pos="-803.21 58.47 -319.36"/>
+        <point4 pos="-806.27 57.77 -342.86"/>
+    </field>
+    <field fieldNum="72" numPoints="4">
+        <point1 pos="-899.90 59.90 -309.80"/>
+        <point2 pos="-893.61 60.65 -280.30"/>
+        <point3 pos="-799.48 59.33 -280.30"/>
+        <point4 pos="-802.25 58.75 -309.79"/>
+    </field>
+    <field fieldNum="73" numPoints="4">
+        <point1 pos="-893.87 60.87 -270.74"/>
+        <point2 pos="-893.87 60.82 -240.14"/>
+        <point3 pos="-797.42 59.70 -240.14"/>
+        <point4 pos="-797.43 59.41 -270.74"/>
+    </field>
+    <field fieldNum="74" numPoints="4">
+        <point1 pos="-890.81 60.53 -230.79"/>
+        <point2 pos="-879.87 59.35 -196.19"/>
+        <point3 pos="-789.13 61.52 -196.19"/>
+        <point4 pos="-792.22 59.97 -230.80"/>
+    </field>
+    <field fieldNum="75" numPoints="5">
+        <point1 pos="-872.93 59.22 -186.86"/>
+        <point2 pos="-859.97 59.24 -168.11"/>
+        <point3 pos="-846.82 59.20 -133.16"/>
+        <point4 pos="-779.04 60.76 -133.16"/>
+        <point5 pos="-787.23 61.79 -186.85"/>
+    </field>
+    <field fieldNum="76" numPoints="6">
+        <point1 pos="-840.74 59.34 -123.79"/>
+        <point2 pos="-830.89 59.99 -97.19"/>
+        <point3 pos="-820.91 60.34 32.98"/>
+        <point4 pos="-820.93 58.85 64.74"/>
+        <point5 pos="-779.16 58.76 64.74"/>
+        <point6 pos="-779.17 60.45 -123.77"/>
+    </field>
+    <field fieldNum="77" numPoints="5">
+        <point1 pos="-944.88 59.77 142.15"/>
+        <point2 pos="-944.87 58.45 190.75"/>
+        <point3 pos="-784.13 57.17 190.74"/>
+        <point4 pos="-779.16 58.00 156.19"/>
+        <point5 pos="-890.23 59.29 142.13"/>
+    </field>
+    <field fieldNum="78" numPoints="4">
+        <point1 pos="-944.67 57.93 200.17"/>
+        <point2 pos="-944.79 56.59 238.77"/>
+        <point3 pos="-796.11 55.01 238.77"/>
+        <point4 pos="-786.17 56.71 200.17"/>
+    </field>
+    <field fieldNum="79" numPoints="4">
+        <point1 pos="-944.82 56.64 248.17"/>
+        <point2 pos="-944.82 57.92 284.87"/>
+        <point3 pos="-812.16 54.75 284.87"/>
+        <point4 pos="-798.92 54.76 248.16"/>
+    </field>
+    <field fieldNum="80" numPoints="4">
+        <point1 pos="-944.81 58.31 294.16"/>
+        <point2 pos="-944.81 59.13 329.86"/>
+        <point3 pos="-831.18 54.96 329.86"/>
+        <point4 pos="-815.51 54.87 294.16"/>
+    </field>
+    <field fieldNum="81" numPoints="4">
+        <point1 pos="-944.86 59.08 339.14"/>
+        <point2 pos="-944.86 58.44 366.84"/>
+        <point3 pos="-851.10 55.61 366.84"/>
+        <point4 pos="-836.09 55.16 339.13"/>
+    </field>
+    <field fieldNum="82" numPoints="4">
+        <point1 pos="-944.85 58.12 376.11"/>
+        <point2 pos="-944.85 57.17 411.81"/>
+        <point3 pos="-875.17 56.04 411.81"/>
+        <point4 pos="-857.08 55.85 376.11"/>
+    </field>
+    <field fieldNum="83" numPoints="4">
+        <point1 pos="-762.55 57.89 660.00"/>
+        <point2 pos="-775.55 58.34 711.00"/>
+        <point3 pos="-568.05 56.77 711.00"/>
+        <point4 pos="-568.09 57.18 660.00"/>
+    </field>
+    <field fieldNum="84" numPoints="4">
+        <point1 pos="-777.55 58.38 719.50"/>
+        <point2 pos="-787.30 58.87 765.00"/>
+        <point3 pos="-587.45 57.16 765.00"/>
+        <point4 pos="-572.05 56.87 719.50"/>
+    </field>
+    <field fieldNum="85" numPoints="4">
+        <point1 pos="-791.05 58.88 774.00"/>
+        <point2 pos="-813.03 59.22 810.00"/>
+        <point3 pos="-602.05 57.25 810.00"/>
+        <point4 pos="-590.89 57.17 774.00"/>
+    </field>
+    <field fieldNum="86" numPoints="5">
+        <point1 pos="-819.05 59.20 818.50"/>
+        <point2 pos="-830.20 58.57 843.50"/>
+        <point3 pos="-826.79 58.02 857.00"/>
+        <point4 pos="-617.55 57.42 857.00"/>
+        <point5 pos="-605.55 57.29 818.50"/>
+    </field>
+    <field fieldNum="87" numPoints="4">
+        <point1 pos="-86.05 56.92 840.50"/>
+        <point2 pos="-86.05 55.63 758.00"/>
+        <point3 pos="-378.55 58.12 758.00"/>
+        <point4 pos="-392.05 57.87 840.50"/>
+    </field>
+    <field fieldNum="88" numPoints="4">
+        <point1 pos="-389.55 57.77 850.00"/>
+        <point2 pos="-389.55 58.45 920.00"/>
+        <point3 pos="-86.05 56.86 920.00"/>
+        <point4 pos="-86.05 57.01 850.00"/>
+    </field>
+    <field fieldNum="89" numPoints="4">
+        <point1 pos="-62.05 56.09 587.00"/>
+        <point2 pos="-62.05 56.11 665.50"/>
+        <point3 pos="80.80 55.97 665.50"/>
+        <point4 pos="70.96 53.53 587.00"/>
+    </field>
+    <field fieldNum="90" numPoints="4">
+        <point1 pos="-14.55 55.76 674.00"/>
+        <point2 pos="-14.55 53.68 748.50"/>
+        <point3 pos="65.45 52.57 748.50"/>
+        <point4 pos="79.45 55.76 674.00"/>
+    </field>
+    <field fieldNum="91" numPoints="6">
+        <point1 pos="60.95 52.30 757.50"/>
+        <point2 pos="-61.55 55.33 757.50"/>
+        <point3 pos="-61.55 56.54 840.50"/>
+        <point4 pos="74.45 54.78 841.00"/>
+        <point5 pos="50.15 54.40 811.47"/>
+        <point6 pos="50.95 52.94 787.60"/>
+    </field>
+    <field fieldNum="92" numPoints="5">
+        <point1 pos="84.95 54.49 850.00"/>
+        <point2 pos="-61.55 56.70 850.00"/>
+        <point3 pos="-61.55 56.33 920.00"/>
+        <point4 pos="93.10 54.69 920.00"/>
+        <point5 pos="98.36 54.12 890.00"/>
+    </field>
+    <field fieldNum="93" numPoints="6">
+        <point1 pos="111.45 53.37 841.00"/>
+        <point2 pos="500.45 72.79 841.00"/>
+        <point3 pos="505.95 69.84 772.50"/>
+        <point4 pos="82.24 52.60 772.33"/>
+        <point5 pos="73.06 52.88 793.84"/>
+        <point6 pos="109.55 53.56 841.43"/>
+    </field>
+    <field fieldNum="94" numPoints="5">
+        <point1 pos="118.71 53.39 920.14"/>
+        <point2 pos="494.76 72.03 920.14"/>
+        <point3 pos="498.18 73.02 850.14"/>
+        <point4 pos="114.72 53.37 850.18"/>
+        <point5 pos="123.60 53.06 880.68"/>
+    </field>
+</CPFields>

@@ -5,10 +5,10 @@ LOVE app to test the Courseplay turn maneuvers and pathfinding
 ]]--
 
 dofile( 'include.lua' )
-require('mock-GiantsEngine')
-require('mock-Node')
-require('mock-DebugUtil')
-require('mock-Courseplay')
+require('mocks.mock-GiantsEngine')
+require('mocks.mock-Node')
+require('mocks.mock-DebugUtil')
+require('mocks.mock-Courseplay')
 require('CpUtil')
 require('ReedsShepp')
 require('ReedsSheppSolver')
@@ -19,7 +19,7 @@ require('ai.turns.Corner')
 require('ai.turns.TurnContext')
 require('ai.turns.TurnManeuver')
 require('PathfinderUtil')
-require('ai.AIUtil')
+require('ai.util.AIUtil')
 
 local parameterNameColor = { 1, 1, 1 }
 local parameterKeyColor = { 0, 1, 1 }
@@ -39,9 +39,9 @@ local courseLength = 20
 local startZ = 20
 
 local parameters = {}
-local workWidth = AdjustableParameter(15, 'width', 'W', 'w', 0.5, 2, 40)
+local workWidth = AdjustableParameter(3, 'width', 'W', 'w', 0.5, 2, 40)
 table.insert(parameters, workWidth)
-local turningRadius = AdjustableParameter(7.5, 'turning radius', 'R', 'r', 0.2, -20, 10)
+local turningRadius = AdjustableParameter(9.3, 'turning radius', 'R', 'r', 0.2, -20, 10)
 table.insert(parameters, turningRadius)
 local distanceToFieldEdge = AdjustableParameter(6, 'distance to field edge', 'E', 'e', 0.5, 0, 40)
 table.insert(parameters, distanceToFieldEdge)
