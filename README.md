@@ -11,6 +11,5 @@ This repository contains everything you need to test the
 Course Generator in a standalone Love2D environment. 
 
 The Course Generator code is in the Courseplay repository, this is 
-only the environment, so you'll need to clone the https://github.com/Courseplay/Courseplay_FS22 to
+only the environment, so you'll need to clone the https://github.com/Courseplay/Courseplay_FS25 to
 the FS25_Courseplay folder under the root of this repo.
-
