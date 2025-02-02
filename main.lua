@@ -10,20 +10,21 @@
 --
 --
 dofile('include.lua')
+require('pathfinder.pathfinder')
 
 local logger = Logger('main', Logger.level.debug)
 local parameters = {}
 -- working width of the equipment
-local workingWidth = AdjustableParameter(4.9, 'width', 'W', 'w', 0.1, 0, 100)
+local workingWidth = AdjustableParameter(10, 'width', 'W', 'w', 0.1, 0, 100)
 table.insert(parameters, workingWidth)
-local turningRadius = AdjustableParameter(15, 'radius', 'T', 't', 0.1, 0, 20)
+local turningRadius = AdjustableParameter(7, 'radius', 'T', 't', 0.1, 0, 20)
 table.insert(parameters, turningRadius)
 local fieldMargin = AdjustableParameter(0, 'margin', 'N', 'n', 0.1, -5, 5)
 table.insert(parameters, fieldMargin)
 -- number of headland passes around the field boundary
-local nHeadlandPasses = AdjustableParameter(4, 'headlands', 'P', 'p', 1, 0, 100)
+local nHeadlandPasses = AdjustableParameter(1, 'headlands', 'P', 'p', 1, 0, 100)
 table.insert(parameters, nHeadlandPasses)
-local nHeadlandsWithRoundCorners = AdjustableParameter(0, 'headlands with round corners', 'R', 'r', 1, 0, 100)
+local nHeadlandsWithRoundCorners = AdjustableParameter(2, 'headlands with round corners', 'R', 'r', 1, 0, 100)
 table.insert(parameters, nHeadlandsWithRoundCorners)
 local headlandClockwise = ToggleParameter('headlands clockwise', true, 'c')
 table.insert(parameters, headlandClockwise)
@@ -82,7 +83,7 @@ local reverseCourse = ToggleParameter('reverse', false, 'v', true)
 table.insert(parameters, reverseCourse)
 local smallOverlaps = ToggleParameter('small overlaps', false, 'm', true)
 table.insert(parameters, smallOverlaps)
-local nVehicles = AdjustableParameter(1, 'number of vehicles', 'Y', 'y', 1, 1, 5)
+local nVehicles = AdjustableParameter(2, 'number of vehicles', 'Y', 'y', 1, 1, 5)
 table.insert(parameters, nVehicles)
 local useSameTurnWidth = ToggleParameter('use same turn width', false, 'u')
 table.insert(parameters, useSameTurnWidth)
@@ -811,3 +812,4 @@ function love.mousemoved(x, y, dx, dy)
     mouseTransform:setTransformation(x + 20, y + 20)
     currentVertices = findCurrentVertices(x, y)
 end
+
