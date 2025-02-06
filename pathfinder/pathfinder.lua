@@ -27,7 +27,14 @@ end
 function closeIntervalTimer(timer)
 end
 
+function printCallstack()
+    print(debug.traceback())
+end
+
 require('HybridAStar')
+require('AStar')
+require('HybridAStarWithAStarInTheMiddle')
+require('PathfinderUtil')
 
 ---@class TestConstraints : PathfinderConstraintInterface
 local TestConstraints = CpObject(PathfinderConstraintInterface)
@@ -58,11 +65,12 @@ function TestConstraints:getNodePenalty(node)
             return self.penalty
         end
     end
+    return 0
 end
 
 local constraints = TestConstraints()
-local pathfinder = HybridAStarWithAStarInTheMiddle(20)
-local pathfinder = AStar({})
+local pathfinder = HybridAStarWithAStarInTheMiddle({}, 20)
+--local pathfinder = AStar({})
 local path = nil
 
 TestPathfinder = {}
@@ -84,11 +92,11 @@ function TestPathfinder.update()
 end
 
 function TestPathfinder.onFinish(result)
-    local hasValidPath = result.path and #result.path > 2
+    local hasValidPath = result.path and #result.path >= 2
     if hasValidPath then
         path = result.path
-        if pathfinder.nodes then pathfinder.nodes:print()
-
+        if pathfinder.nodes then
+           -- pathfinder.nodes:print()
         end
     else
         path = nil
@@ -132,10 +140,10 @@ function TestPathfinder.getNodeIterator(iterator)
 end
 
 function TestPathfinder.call(func, ...)
-    local resultOrOk, done, resultPath = func(pathfinder, ...)
-    if type(resultOrOk) ~= 'table' then
-        return {done = done, path = resultPath}
+    local resultOrDone, resultPath = func(pathfinder, ...)
+    if type(resultOrDone) ~= 'table' then
+        return {done = resultOrDone, path = resultPath}
     else
-        return resultOrOk
+        return resultOrDone
     end
 end

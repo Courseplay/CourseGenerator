@@ -15,7 +15,6 @@ require('ReedsShepp')
 require('ReedsSheppSolver')
 require('Waypoint')
 require('Course')
-require('PathfinderUtil')
 require('ai.util.AIUtil')
 require('pathfinder.pathfinder')
 
@@ -199,7 +198,7 @@ local function drawPathFinderNodes()
         drawOne(cell, highestCost, lowestCost, alpha)
         nStartNodes = nStartNodes + 1
     end
-    alpha = 1 - math.min(0.5, nMiddleNodes / 1000)
+    alpha = 1 - math.min(0.3, nMiddleNodes / 1000)
     nMiddleNodes = 0
     for cell, lowestCost, highestCost in TestPathfinder.getNodeIteratorMiddle() do
         drawOne(cell, highestCost, lowestCost, alpha)
@@ -279,10 +278,10 @@ function love.draw()
 
     love.graphics.setPointSize(5)
 
-    drawPath(dubinsPath, 3, 0.8, 0.8, 0)
-    drawPath(rsPath, 2, 0, 0.3, 0.8)
+    --drawPath(dubinsPath, 3, 0.8, 0.8, 0)
+    --drawPath(rsPath, 2, 0, 0.3, 0.8)
     if TestPathfinder.getPath() then
-        drawPath(TestPathfinder.getPath(), 2, 0, 0.8, 0)
+        drawPath(TestPathfinder.getPath(), 0.3, 0, 0.6, 1)
     end
     drawProhibitedAreas()
     drawPathFinderNodes()
