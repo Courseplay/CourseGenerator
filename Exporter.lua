@@ -6,8 +6,8 @@ function Exporter:init(fieldworkCourse)
     self.fieldworkCourse = fieldworkCourse
 end
 
---- Export a headland as a CSV file. Only includes the given headland, without the
----@param headlandNumber number The headland to export, 1 ist the outermost
+--- Export a headland as a CSV file. Only includes the given headland, without the connecting path or transitions.
+---@param headlandNumber number The headland to export, 1 is the outermost
 ---@param filename string The filename to save the CSV file as, under the export/ directory
 function Exporter:exportHeadlandAsCsv(headlandNumber, filename)
     local file = io.open('export/' .. filename, 'w')
