@@ -18,7 +18,7 @@ The `fields` folder contains field definitions exported from many Farming Simula
 which will show you all fields of the map. You can select any of them, set the generator parameters and run the generator to 
 test how each setting work.
 
-To run in standalone mode, start a Windows terminal, change to the root directory of cloned repo and run 
+To run in standalone mode, start a Windows terminal, change to the root directory of the cloned repo and run 
 
 `.\love\love.exe . fields/<field file> <field number>`
 

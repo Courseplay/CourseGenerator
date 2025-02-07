@@ -21,7 +21,7 @@ jobs:
       - name: Checkout Courseplay repository
         uses: actions/checkout@v3
         with:
-          repository: Courseplay/Courseplay_FS22
+          repository: Courseplay/Courseplay_FS25
           path: FS25_Courseplay
           ref: main
       - name: Lua Setup
@@ -31,7 +31,7 @@ jobs:
           luaVersion: "5.2.4"
       - name: Run unit tests
         run: |
-          cd FS22_Courseplay/scripts/courseGenerator/test
+          cd FS25_Courseplay/scripts/courseGenerator/test
           lua BlockSequencerTest.lua
           lua CacheMapTest.lua
           lua FieldTest.lua
