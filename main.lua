@@ -14,7 +14,7 @@ dofile('include.lua')
 local logger = Logger('main', Logger.level.debug)
 local parameters = {}
 -- working width of the equipment
-local workingWidth = AdjustableParameter(3.2, 'width', 'W', 'w', 0.1, 0, 100)
+local workingWidth = AdjustableParameter(12, 'width', 'W', 'w', 0.1, 0, 100)
 table.insert(parameters, workingWidth)
 local turningRadius = AdjustableParameter(5, 'radius', 'T', 't', 0.1, 0, 20)
 table.insert(parameters, turningRadius)
