@@ -17,17 +17,18 @@ require('Waypoint')
 require('Course')
 require('ai.util.AIUtil')
 require('pathfinder.pathfinder')
+dofile('pathfinder/network.lua')
 
 local parameterNameColor = { 1, 1, 1 }
 local parameterKeyColor = { 0, 1, 1 }
 local parameterValueColor = { 1, 1, 0 }
 
 local startHeading = 2 * math.pi / 4
-local startPosition = State3D(0, 0, startHeading, 0)
+local startPosition = State3D(185, 135, startHeading, 0)
 local lastStartPosition = State3D.copy(startPosition)
 
 local goalHeading = 6 * math.pi / 4
-local goalPosition = State3D(15, 0, goalHeading, 0)
+local goalPosition = State3D(126, 100, goalHeading, 0)
 local lastGoalPosition = State3D.copy(goalPosition)
 
 local vehicle
@@ -48,7 +49,7 @@ table.insert(parameters, stepSize)
 startPosition:setTrailerHeading(startHeading)
 
 local scale, width, height = 5, 800, 360
-local xOffset, yOffset = width / scale / 4, height / scale
+local xOffset, yOffset = -100 + width / scale / 4, 100 + height / scale
 
 local vehicleData ={name = 'name', turningRadius = turningRadius:get(), dFront = 4, dRear = 2, dLeft = 1.5, dRight = 1.5}
 local trailerData ={name = 'name', turningRadius = turningRadius:get(), dFront = 3, dRear = 7, dLeft = 1.5, dRight = 1.5, hitchLength = 10}
@@ -108,6 +109,10 @@ local logger = Logger()
 
 local function debug(...)
     logger:debug(...)
+end
+
+local function love2real( x, y )
+    return ( x / scale ) - xOffset,  - ( y / scale ) + yOffset
 end
 
 local function drawContext()
@@ -239,6 +244,8 @@ local function showStatus()
     y = y + fontsize
     love.graphics.print(string.format('Total nodes: %d', nTotalNodes), 0, y)
     y = y + fontsize
+    love.graphics.print(string.format('Calls to getNodePenalty(): %d', TestPathfinder.getPenaltyCalls()), 0, y)
+    y = y + fontsize
 
     if path then
         if constraints:isValidNode(path[math.min(#path, currentHighlight)]) then
@@ -247,6 +254,9 @@ local function showStatus()
             love.graphics.print('NOT VALID', 10, 20)
         end
     end
+    local mx, my = love.mouse.getPosition()
+    local x, y = love2real(mx, my)
+    love.graphics.print(string.format('%.1f %.1f (%.1f %.1f / %.1f)', x, y, xOffset, yOffset, scale), width - 100, 0)
 end
 
 function love.draw()
@@ -277,14 +287,14 @@ function love.draw()
     love.graphics.setColor(0, 0.8, 0)
 
     love.graphics.setPointSize(5)
+    drawProhibitedAreas()
+    drawPathFinderNodes()
 
     --drawPath(dubinsPath, 3, 0.8, 0.8, 0)
     --drawPath(rsPath, 2, 0, 0.3, 0.8)
     if TestPathfinder.getPath() then
         drawPath(TestPathfinder.getPath(), 0.3, 0, 0.6, 1)
     end
-    drawProhibitedAreas()
-    drawPathFinderNodes()
 
     if path then
         love.graphics.setPointSize(0.5 * scale)
@@ -303,15 +313,13 @@ function love.draw()
             drawVehicle(p, i)
         end
     end
+    drawGraph()
 
 	love.graphics.setColor( 0.3, 0.3, 0.3 )
     love.graphics.pop()
 
-    showStatus()
-end
 
-local function love2real( x, y )
-    return ( x / scale ) - xOffset,  - ( y / scale ) + yOffset
+    showStatus()
 end
 
 function love.keypressed(key, scancode, isrepeat)
@@ -361,6 +369,7 @@ function love.mousepressed(x, y, button, istouch)
                 end
             end
         elseif love.keyboard.isDown('lalt') then
+            startPosition.x, startPosition.y = love2real( x, y )
         else
             dragging = true
         end
