@@ -48,3 +48,5 @@ jobs:
           lua TransformTest.lua
           lua VertexTest.lua
           lua WrapAroundIndexTest.lua
+          cd FS25_Courseplay/scripts/pathfinder/test
+          lua GraphPathfinderTest.lua
