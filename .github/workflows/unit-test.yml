@@ -31,7 +31,7 @@ jobs:
           luaVersion: "5.2.4"
       - name: Run unit tests
         run: |
-          cd FS25_Courseplay/scripts/courseGenerator/test
+          pushd FS25_Courseplay/scripts/courseGenerator/test
           lua BlockSequencerTest.lua
           lua CacheMapTest.lua
           lua FieldTest.lua
@@ -48,5 +48,6 @@ jobs:
           lua TransformTest.lua
           lua VertexTest.lua
           lua WrapAroundIndexTest.lua
-          cd FS25_Courseplay/scripts/pathfinder/test
+          popd
+          pushd FS25_Courseplay/scripts/pathfinder/test
           lua GraphPathfinderTest.lua

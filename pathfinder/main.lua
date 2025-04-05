@@ -1,6 +1,6 @@
 --[[
-
 LOVE app to test the Courseplay turn maneuvers and pathfinding
+
 
 ]]--
 
@@ -17,18 +17,19 @@ require('Waypoint')
 require('Course')
 require('ai.util.AIUtil')
 require('pathfinder.pathfinder')
-dofile('pathfinder/network.lua')
 
 local parameterNameColor = { 1, 1, 1 }
 local parameterKeyColor = { 0, 1, 1 }
 local parameterValueColor = { 1, 1, 0 }
 
-local startHeading = 2 * math.pi / 4
-local startPosition = State3D(185, 135, startHeading, 0)
+local startHeading = 4 * math.pi / 4
+local startPosition = State3D(-25, 25, startHeading, 0)
+local startPosition = State3D(185, 139, startHeading, 0)
 local lastStartPosition = State3D.copy(startPosition)
 
-local goalHeading = 6 * math.pi / 4
-local goalPosition = State3D(126, 100, goalHeading, 0)
+local goalHeading = 4 * math.pi / 4
+local goalPosition = State3D(-360, 65, goalHeading, 0)
+local goalPosition = State3D(153, 201, goalHeading, 0)
 local lastGoalPosition = State3D.copy(goalPosition)
 
 local vehicle
@@ -41,14 +42,14 @@ table.insert(parameters, turningRadius)
 
 local hybrid = ToggleParameter('hybrid', true, 'h')
 table.insert(parameters, hybrid)
-local penalty = AdjustableParameter(20, 'Penalty', 'P', 'p', 5, -100, 100)
+local penalty = AdjustableParameter(400, 'Penalty', 'P', 'p', 5, -100, 100)
 table.insert(parameters, penalty)
     local stepSize = AdjustableParameter(1, 'Dubins step size', 'D', 'd', 0.05, 0.1, 2)
 table.insert(parameters, stepSize)
 
 startPosition:setTrailerHeading(startHeading)
 
-local scale, width, height = 5, 800, 360
+local scale, width, height = 3, 800, 360
 local xOffset, yOffset = -100 + width / scale / 4, 100 + height / scale
 
 local vehicleData ={name = 'name', turningRadius = turningRadius:get(), dFront = 4, dRear = 2, dLeft = 1.5, dRight = 1.5}
@@ -63,8 +64,6 @@ local rsSolver = ReedsSheppSolver()
 local dubinsSolver = DubinsSolver()
 
 local currentHighlight = 1
-local currentPathfinderIndex = 1
-local done, path, goalNodeInvalid
 
 local nTotalNodes = 0
 local nStartNodes = 0
@@ -86,7 +85,6 @@ local function find(start, goal, allowReverse)
     io.stdout:flush()
 	lastStartPosition = State3D.copy(startPosition)
 	lastGoalPosition = State3D.copy(goalPosition)
-    return done, path, goalNodeInvalid
 end
 
 local dtTotal = 0
@@ -99,10 +97,15 @@ function love.update(dt)
     end
 end
 
-function love.load()
+function love.load(arg)
+    -- initialize the pathfinder
+    TestPathfinder.setGraph(GraphPathfinder.loadGraphEdgesFromXml(arg[1]))
+
+    -- initialize the LOVE window
+    love.window.setTitle('Courseplay Pathfinding Test')
 	love.window.setMode(1000, 700)
 	love.graphics.setPointSize(3)
-	find(startPosition, goalPosition)
+	--find(startPosition, goalPosition)
 end
 
 local logger = Logger()
@@ -165,10 +168,7 @@ local function drawPath(path, pointSize, r, g, b)
 end
 
 local function drawProhibitedAreas()
-    love.graphics.setColor(0.2, 0.2, 0.2)
-    for _, p in ipairs(TestPathfinder.getProhibitedPolygons()) do
-        love.graphics.polygon('line', p:getUnpackedVertices())
-    end
+
 end
 
 local function drawPathFinderNodes()
@@ -274,7 +274,9 @@ function love.draw()
     love.graphics.line(0, -1000, 0, 1000)
     love.graphics.setColor( 0.2, 0.2, 0.2, 0.5)
     love.graphics.setLineWidth(0.1)
-    drawGrid(3)
+    --drawGrid(3)
+
+    TestPathfinder.drawGraph()
 
     love.graphics.setColor( 0, 1, 0 )
     love.graphics.setPointSize(3)
@@ -287,37 +289,17 @@ function love.draw()
     love.graphics.setColor(0, 0.8, 0)
 
     love.graphics.setPointSize(5)
-    drawProhibitedAreas()
+    TestPathfinder.drawProhibitedAreas()
     drawPathFinderNodes()
 
     --drawPath(dubinsPath, 3, 0.8, 0.8, 0)
     --drawPath(rsPath, 2, 0, 0.3, 0.8)
     if TestPathfinder.getPath() then
-        drawPath(TestPathfinder.getPath(), 0.3, 0, 0.6, 1)
+        drawPath(TestPathfinder.getPath(), 0.5, 0, 0.6, 1)
     end
-
-    if path then
-        love.graphics.setPointSize(0.5 * scale)
-        for i = 2, #path do
-            local p = path[i]
-            if p.gear == Gear.Backward then
-                love.graphics.setColor(0, 0.4, 1)
-            elseif p.gear == Gear.Forward then
-                love.graphics.setColor( 1, 1, 1 )
-            else
-                love.graphics.setColor(0.4, 0, 0)
-            end
-            love.graphics.setLineWidth(0.1)
-            love.graphics.line(p.x, p.y, path[i-1].x, path[i - 1].y)
-            --love.graphics.points(p.x, p.y)
-            drawVehicle(p, i)
-        end
-    end
-    drawGraph()
 
 	love.graphics.setColor( 0.3, 0.3, 0.3 )
     love.graphics.pop()
-
 
     showStatus()
 end
@@ -325,13 +307,13 @@ end
 function love.keypressed(key, scancode, isrepeat)
     local headingStepDeg = 15
     if key == 'left' then
-        if love.keyboard.isDown('lshift') then
+        if love.keyboard.isDown('lalt') then
             startPosition:addHeading(math.rad(headingStepDeg))
         else
             goalPosition:addHeading(math.rad(headingStepDeg))
         end
     elseif key == 'right' then
-        if love.keyboard.isDown('lshift') then
+        if love.keyboard.isDown('lalt') then
             startPosition:addHeading(-math.rad(headingStepDeg))
         else
             goalPosition:addHeading(-math.rad(headingStepDeg))
@@ -358,16 +340,7 @@ function love.mousepressed(x, y, button, istouch)
         if love.keyboard.isDown('lshift') or love.keyboard.isDown('lctrl') then
             goalPosition.x, goalPosition.y = love2real( x, y )
             --print(love.profiler.report(profilerReportLength))
-            done, path, goalNodeInvalid = find(startPosition, goalPosition, love.keyboard.isDown('lctrl'))
-
-            if path then
-                debug('Path found with %d nodes', #path)
-            elseif done then
-                debug('No path found')
-                if goalNodeInvalid then
-                    debug('Goal node invalid')
-                end
-            end
+            find(startPosition, goalPosition, love.keyboard.isDown('lctrl'))
         elseif love.keyboard.isDown('lalt') then
             startPosition.x, startPosition.y = love2real( x, y )
         else
