@@ -39,19 +39,19 @@ local courseLength = 20
 local startZ = 20
 
 local parameters = {}
-local workWidth = AdjustableParameter(3, 'width', 'W', 'w', 0.5, 2, 40)
+local workWidth = AdjustableParameter(19.8, 'width', 'W', 'w', 0.5, 2, 40)
 table.insert(parameters, workWidth)
-local turningRadius = AdjustableParameter(9.3, 'turning radius', 'R', 'r', 0.2, -20, 10)
+local turningRadius = AdjustableParameter(5.2, 'turning radius', 'R', 'r', 0.2, -20, 10)
 table.insert(parameters, turningRadius)
-local distanceToFieldEdge = AdjustableParameter(6, 'distance to field edge', 'E', 'e', 0.5, 0, 40)
+local distanceToFieldEdge = AdjustableParameter(10, 'distance to field edge', 'E', 'e', 0.1, 0, 40)
 table.insert(parameters, distanceToFieldEdge)
 
 -- Plow
-local backMarkerDistance = AdjustableParameter(-12.4, 'back marker', 'B', 'b', 0.2, -20, 10)
+local backMarkerDistance = AdjustableParameter(-20.5, 'back marker', 'B', 'b', 0.2, -20, 10)
 table.insert(parameters, backMarkerDistance)
-local frontMarkerDistance = AdjustableParameter(-11.7, 'front marker', 'F', 'f', 0.2, -20, 10)
+local frontMarkerDistance = AdjustableParameter(-20.5, 'front marker', 'F', 'f', 0.2, -20, 10)
 table.insert(parameters, frontMarkerDistance)
-local steeringLength = AdjustableParameter(7.3, 'steering length', 'S', 's', 0.2, 0, 20)
+local steeringLength = AdjustableParameter(8.6, 'steering length', 'S', 's', 0.2, 0, 20)
 table.insert(parameters, steeringLength)
 --[[
 local backMarkerDistance = AdjustableParameter(-4.8, 'back marker', 'B', 'b', 0.2, -20, 10)
@@ -69,9 +69,9 @@ local steeringLength = AdjustableParameter(0, 'steering length', 'S', 's', 0.2, 
 table.insert(parameters, steeringLength)
 ]]
 
-local zOffset = AdjustableParameter(5, 'zOffset', 'Z', 'z', 0.5, -40, 40)
+local zOffset = AdjustableParameter(0, 'zOffset', 'Z', 'z', 0.5, -40, 40)
 table.insert(parameters, zOffset)
-local angleDeg = AdjustableParameter(0, 'angle', 'A', 'a', 10, -90, 90)
+local angleDeg = AdjustableParameter(90, 'angle', 'A', 'a', 10, -90, 90)
 table.insert(parameters, angleDeg)
     local stepSize = AdjustableParameter(1, 'Dubins step size', 'D', 'd', 0.05, 0.1, 2)
 table.insert(parameters, stepSize)
@@ -133,8 +133,12 @@ local function calculateTurn()
 	courses[1], turnStartIx = TurnTestHelper.createCornerCourse(vehicle, x, z, angleDeg:get())
 	turnContext = TurnTestHelper.createTurnContext(vehicle, courses[1], turnStartIx, workWidth:get(), frontMarkerDistance:get(), backMarkerDistance:get())
 	turnContexts[1] = turnContext
-	--turnCourses[1] = HeadlandCornerTurnManeuver(vehicle, turnContext, turnContext.vehicleAtTurnStartNode, turningRadius:get(),
-	--	workWidth:get(), steeringLength:get() > 0, steeringLength:get()):getCourse()
+    table.insert(turnCourses, {
+        color = {0, 1, 1},
+        course = LoopTurnManeuver(vehicle, turnContext, turnContext.vehicleAtTurnStartNode, turningRadius:get(),
+                workWidth:get(), steeringLength:get()):getCourse()
+    })
+
 
     -- 180 turn ------------
 	x, z = 0, startZ
@@ -154,7 +158,7 @@ local function calculateTurn()
     if true or distanceToFieldEdge:get() > workWidth:get() then
         table.insert(turnCourses, {
                 color = {0, 1, 0},
-                course = TowedDubinsTurnManeuver(vehicle, turnContext, turnContext.vehicleAtTurnStartNode,
+                course = ReedsSheppTurnManeuver(vehicle, turnContext, turnContext.vehicleAtTurnStartNode,
                 turningRadius:get(), workWidth:get(), steeringLength:get(), distanceToFieldEdge:get() + x2 - x):getCourse()
         })
 --[[

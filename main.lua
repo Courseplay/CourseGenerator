@@ -14,7 +14,7 @@ dofile('include.lua')
 local logger = Logger('main', Logger.level.debug)
 local parameters = {}
 -- working width of the equipment
-local workingWidth = AdjustableParameter(6, 'width', 'W', 'w', 0.1, 0, 100)
+local workingWidth = AdjustableParameter(2.8, 'width', 'W', 'w', 0.1, 0, 100)
 table.insert(parameters, workingWidth)
 local turningRadius = AdjustableParameter(5, 'radius', 'T', 't', 0.1, 0, 20)
 table.insert(parameters, turningRadius)
@@ -23,7 +23,7 @@ table.insert(parameters, fieldMargin)
 -- number of headland passes around the field boundary
 local nHeadlandPasses = AdjustableParameter(3, 'headlands', 'P', 'p', 1, 0, 100)
 table.insert(parameters, nHeadlandPasses)
-local nHeadlandsWithRoundCorners = AdjustableParameter(1, 'headlands with round corners', 'R', 'r', 1, 0, 100)
+local nHeadlandsWithRoundCorners = AdjustableParameter(2, 'headlands with round corners', 'R', 'r', 1, 0, 100)
 table.insert(parameters, nHeadlandsWithRoundCorners)
 local headlandClockwise = ToggleParameter('headlands clockwise', true, 'c')
 table.insert(parameters, headlandClockwise)

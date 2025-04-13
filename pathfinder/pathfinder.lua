@@ -31,7 +31,7 @@ function printCallstack()
     print(debug.traceback())
 end
 
-require('GraphSegment')
+--require('GraphSegment')
 require('HybridAStar')
 require('AStar')
 require('HybridAStarWithAStarInTheMiddle')
@@ -41,7 +41,6 @@ require('GraphPathfinder')
 local pathfinder = HybridAStarWithAStarInTheMiddle({}, 20)
 local path = nil
 
-local GraphEdge = GraphPathfinder.GraphEdge
 local graph = {}
 
 ---@class TestConstraints : PathfinderConstraintInterface

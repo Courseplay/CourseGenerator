@@ -33,6 +33,8 @@ table.copy = function (t)
 	return result
 end
 
+table.clone = table.copy
+
 --- luau language extensions
 math.sign = function(x)
 	if x > 0 then
